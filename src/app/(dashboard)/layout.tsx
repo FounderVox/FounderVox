@@ -6,8 +6,8 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
+    <div className="gradient-bg">
+      <header className="border-b bg-white/50 backdrop-blur-sm">
         <div className="container flex h-16 items-center px-4">
           <Logo size="sm" />
         </div>

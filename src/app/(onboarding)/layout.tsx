@@ -6,7 +6,7 @@ export default function OnboardingLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+    <div className="gradient-bg">
       <header className="p-6">
         <Logo size="md" />
       </header>
