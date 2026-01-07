@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Sidebar, useSidebar, SidebarContext } from '@/components/dashboard/sidebar'
+import { motion } from 'framer-motion'
+import { Mic } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 
 export default function DashboardLayout({
@@ -216,14 +219,58 @@ function SidebarContent({
   const sidebarWidth = isCollapsed ? 72 : 256
 
   return (
+    <>
+      <div
+        className="fixed top-0 bottom-0 right-0 transition-[left] duration-200 z-10"
+        style={{ left: sidebarWidth }}
+      >
+        {/* Main Content Area - scrollable */}
+        <main className="h-full w-full overflow-y-auto p-6 pb-24">
+          {children}
+        </main>
+      </div>
+
+      {/* Floating Record Button - Bottom Center */}
+      <FloatingRecordButton sidebarWidth={sidebarWidth} />
+    </>
+  )
+}
+
+function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
+  const [isRecording, setIsRecording] = useState(false)
+
+  const handleRecord = () => {
+    setIsRecording(!isRecording)
+    console.log('[FounderVox:Dashboard] Recording:', !isRecording)
+  }
+
+  return (
     <div
-      className="fixed top-0 bottom-0 right-0 transition-[left] duration-200 z-10"
-      style={{ left: sidebarWidth }}
+      className="fixed bottom-6 z-50 transition-[left] duration-200 flex justify-center"
+      style={{ 
+        left: sidebarWidth,
+        right: 0
+      }}
     >
-      {/* Main Content Area - scrollable */}
-      <main className="h-full w-full overflow-y-auto p-6">
-        {children}
-      </main>
+      <motion.button
+        onClick={handleRecord}
+        animate={isRecording ? { scale: [1, 1.05, 1] } : {}}
+        transition={{ repeat: Infinity, duration: 1.5 }}
+        className={cn(
+          'h-14 px-8 rounded-full shadow-xl flex items-center gap-3 font-medium transition-colors',
+          isRecording
+            ? 'bg-red-500 hover:bg-red-600 text-white'
+            : 'bg-black hover:bg-gray-900 text-white'
+        )}
+      >
+        <div className={cn(
+          'p-1.5 rounded-full',
+          isRecording ? 'bg-white/20 animate-pulse' : 'bg-white/20'
+        )}>
+          <Mic className="h-5 w-5" />
+        </div>
+        {isRecording ? 'Stop Recording' : 'Tap to record'}
+      </motion.button>
     </div>
   )
 }

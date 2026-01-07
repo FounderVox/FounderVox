@@ -104,21 +104,6 @@ export function Sidebar({ notesCount = 0 }: SidebarProps) {
           )}
         </div>
 
-        {/* New Recording CTA */}
-        <div className={cn('p-4', isCollapsed && 'px-2')}>
-          <Button
-            className={cn(
-              'bg-black hover:bg-gray-900 text-white shadow-lg',
-              isCollapsed ? 'w-full p-2' : 'w-full'
-            )}
-            size={isCollapsed ? 'icon' : 'lg'}
-            title={isCollapsed ? 'New Recording' : undefined}
-          >
-            <Mic className={cn('h-4 w-4', !isCollapsed && 'mr-2')} />
-            {!isCollapsed && 'New Recording'}
-          </Button>
-        </div>
-
         {/* Navigation */}
         <nav className={cn('flex-1 py-2 space-y-1 overflow-hidden', isCollapsed ? 'px-2' : 'px-3')}>
           {/* Main Nav */}

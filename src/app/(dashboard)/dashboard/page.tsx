@@ -11,40 +11,9 @@ import { FilterBar } from '@/components/dashboard/filter-bar'
 import { FileText, Mic } from 'lucide-react'
 import type { Profile } from '@/types/database'
 
-// Mock data for demo purposes
-const mockNotes = [
-  {
-    id: '1',
-    title: 'Product roadmap discussion',
-    preview: 'Key points from the team sync: Focus on mobile experience, prioritize user onboarding flow, and schedule user interviews for next sprint...',
-    createdAt: '2 hours ago',
-    duration: '3:24',
-    template: 'Meeting Notes',
-    isStarred: true,
-  },
-  {
-    id: '2',
-    title: 'Investor update draft',
-    preview: 'Q4 highlights: 2x user growth, launched premium tier, closed seed extension. Key metrics: 10k MAU, 85% retention...',
-    createdAt: 'Yesterday',
-    duration: '5:12',
-    template: 'Investor Update',
-    isStarred: false,
-  },
-  {
-    id: '3',
-    title: 'Feature idea: Voice commands',
-    preview: 'What if users could navigate the app entirely with voice? "Record a note", "Play my last recording", "Send to email"...',
-    createdAt: '3 days ago',
-    duration: '1:45',
-    template: 'Product Ideas',
-    isStarred: true,
-  },
-]
-
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [notes, setNotes] = useState(mockNotes)
+  const [notes, setNotes] = useState<any[]>([])
   const supabase = createClient()
 
   useEffect(() => {
@@ -97,10 +66,58 @@ export default function DashboardPage() {
     loadProfile()
   }, [supabase])
 
-  const toggleStar = (noteId: string) => {
-    setNotes(notes.map(note =>
-      note.id === noteId ? { ...note, isStarred: !note.isStarred } : note
-    ))
+  useEffect(() => {
+    const loadNotes = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data, error } = await supabase
+          .from('notes')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(6)
+
+        if (error) {
+          console.error('[FounderVox:Dashboard:Page] Error loading notes:', error)
+          return
+        }
+
+        setNotes(data || [])
+      } catch (error) {
+        console.error('[FounderVox:Dashboard:Page] Unexpected error loading notes:', error)
+      }
+    }
+
+    loadNotes()
+  }, [supabase])
+
+  const toggleStar = async (noteId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const note = notes.find(n => n.id === noteId)
+      if (!note) return
+
+      const { error } = await supabase
+        .from('notes')
+        .update({ is_starred: !note.is_starred })
+        .eq('id', noteId)
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('[FounderVox:Dashboard:Page] Error toggling star:', error)
+        return
+      }
+
+      setNotes(notes.map(note =>
+        note.id === noteId ? { ...note, is_starred: !note.is_starred } : note
+      ))
+    } catch (error) {
+      console.error('[FounderVox:Dashboard:Page] Unexpected error toggling star:', error)
+    }
   }
 
   return (
@@ -116,9 +133,6 @@ export default function DashboardPage() {
         email={profile?.email}
         recordingsCount={profile?.recordings_count || 0}
       />
-
-      {/* Quick Record Bar */}
-      <QuickRecord />
 
       {/* Recent Notes Section */}
       <div className="mb-8">
@@ -142,12 +156,12 @@ export default function DashboardPage() {
                 transition={{ delay: index * 0.1 }}
               >
                 <NoteCard
-                  title={note.title}
-                  preview={note.preview}
-                  createdAt={note.createdAt}
-                  duration={note.duration}
-                  template={note.template}
-                  isStarred={note.isStarred}
+                  title={note.title || 'Untitled Note'}
+                  preview={note.formatted_content?.substring(0, 150) || note.raw_transcript?.substring(0, 150) || 'No content'}
+                  createdAt={new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(note.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                  duration={note.duration || '0:00'}
+                  template={note.template_label || note.template_type || 'Note'}
+                  isStarred={note.is_starred || false}
                   onStar={() => toggleStar(note.id)}
                   onPlay={() => console.log('[FounderVox:Dashboard] Playing note:', note.id)}
                 />
