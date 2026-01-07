@@ -23,6 +23,8 @@ export interface Database {
           created_at: string
           updated_at: string
           last_active_at: string
+          first_login_at: string | null
+          demo_completed: boolean
         }
         Insert: {
           id: string
@@ -37,6 +39,8 @@ export interface Database {
           created_at?: string
           updated_at?: string
           last_active_at?: string
+          first_login_at?: string | null
+          demo_completed?: boolean
         }
         Update: {
           id?: string
@@ -51,6 +55,8 @@ export interface Database {
           created_at?: string
           updated_at?: string
           last_active_at?: string
+          first_login_at?: string | null
+          demo_completed?: boolean
         }
       }
     }

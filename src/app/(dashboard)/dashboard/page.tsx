@@ -3,149 +3,153 @@
 import { useEffect, useState } from 'react'
 
 export const dynamic = 'force-dynamic'
-import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Mic, LogOut } from 'lucide-react'
+import { QuickRecord } from '@/components/dashboard/quick-record'
+import { NoteCard } from '@/components/dashboard/note-card'
+import { FileText, Mic } from 'lucide-react'
 import type { Profile } from '@/types/database'
+
+// Mock data for demo purposes
+const mockNotes = [
+  {
+    id: '1',
+    title: 'Product roadmap discussion',
+    preview: 'Key points from the team sync: Focus on mobile experience, prioritize user onboarding flow, and schedule user interviews for next sprint...',
+    createdAt: '2 hours ago',
+    duration: '3:24',
+    template: 'Meeting Notes',
+    isStarred: true,
+  },
+  {
+    id: '2',
+    title: 'Investor update draft',
+    preview: 'Q4 highlights: 2x user growth, launched premium tier, closed seed extension. Key metrics: 10k MAU, 85% retention...',
+    createdAt: 'Yesterday',
+    duration: '5:12',
+    template: 'Investor Update',
+    isStarred: false,
+  },
+  {
+    id: '3',
+    title: 'Feature idea: Voice commands',
+    preview: 'What if users could navigate the app entirely with voice? "Record a note", "Play my last recording", "Send to email"...',
+    createdAt: '3 days ago',
+    duration: '1:45',
+    template: 'Product Ideas',
+    isStarred: true,
+  },
+]
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
+  const [notes, setNotes] = useState(mockNotes)
   const supabase = createClient()
 
   useEffect(() => {
     const loadProfile = async () => {
+      console.log('[FounderVox:Dashboard] Loading profile data...')
       const { data: { user } } = await supabase.auth.getUser()
 
-      if (!user) {
-        router.push('/login')
-        return
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        setProfile(data)
+        console.log('[FounderVox:Dashboard] Profile loaded successfully')
       }
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (data && !data.onboarding_completed) {
-        router.push('/welcome')
-        return
-      }
-
-      setProfile(data)
-      setIsLoading(false)
     }
 
     loadProfile()
-  }, [router, supabase])
+  }, [supabase])
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    )
+  const toggleStar = (noteId: string) => {
+    setNotes(notes.map(note =>
+      note.id === noteId ? { ...note, isStarred: !note.isStarred } : note
+    ))
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
     >
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">
-            Welcome back{profile?.display_name ? `, ${profile.display_name}` : ''}!
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Ready to capture your thoughts?
-          </p>
+      {/* Quick Record Bar */}
+      <QuickRecord />
+
+      {/* Recent Notes Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <FileText className="h-5 w-5 text-violet-400" />
+            Recent Notes
+          </h2>
+          <button className="text-sm text-violet-400 hover:text-violet-300 transition-colors">
+            View all
+          </button>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleSignOut}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Sign out
-        </Button>
-      </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="col-span-full md:col-span-2 lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mic className="h-5 w-5 text-primary" />
-              Start Recording
-            </CardTitle>
-            <CardDescription>
-              Capture your voice and transform it into actionable content
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button size="lg" className="w-full">
-              <Mic className="h-4 w-4 mr-2" />
-              New Voice Note
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Use Cases</CardTitle>
-            <CardDescription>
-              {profile?.use_cases?.length
-                ? `${profile.use_cases.length} selected`
-                : 'No use cases selected'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {profile?.use_cases?.length ? (
-              <div className="flex flex-wrap gap-2">
-                {profile.use_cases.map((useCase) => (
-                  <span
-                    key={useCase}
-                    className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full"
-                  >
-                    {useCase}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Configure your use cases to get personalized templates
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Notes</CardTitle>
-            <CardDescription>Your latest voice notes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              No voice notes yet. Start recording to see them here!
+        {notes.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {notes.map((note, index) => (
+              <motion.div
+                key={note.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <NoteCard
+                  title={note.title}
+                  preview={note.preview}
+                  createdAt={note.createdAt}
+                  duration={note.duration}
+                  template={note.template}
+                  isStarred={note.isStarred}
+                  onStar={() => toggleStar(note.id)}
+                  onPlay={() => console.log('[FounderVox:Dashboard] Playing note:', note.id)}
+                />
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-800/30 rounded-2xl p-12 text-center">
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-violet-500/20 mb-4">
+              <Mic className="h-8 w-8 text-violet-400" />
+            </div>
+            <h3 className="text-white font-semibold mb-2">No notes yet</h3>
+            <p className="text-gray-400 text-sm max-w-sm mx-auto">
+              Start recording your first voice note to see it here.
+              Your thoughts, organized and ready to use.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
 
-      <div className="mt-12 p-6 bg-muted/50 rounded-lg text-center">
-        <h2 className="text-lg font-semibold mb-2">Coming Soon</h2>
-        <p className="text-muted-foreground">
-          Voice recording, AI transcription, and smart templates are in development.
-          Stay tuned for updates!
-        </p>
-      </div>
+      {/* Use Cases Summary */}
+      {profile?.use_cases && profile.use_cases.length > 0 && (
+        <motion.div
+          className="bg-gray-800/30 rounded-2xl p-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h3 className="text-sm font-medium text-gray-400 mb-3">Your Focus Areas</h3>
+          <div className="flex flex-wrap gap-2">
+            {profile.use_cases.map((useCase) => (
+              <span
+                key={useCase}
+                className="px-3 py-1.5 bg-violet-500/20 text-violet-300 text-sm rounded-full"
+              >
+                {useCase}
+              </span>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   )
 }

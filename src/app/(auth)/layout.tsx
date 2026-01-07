@@ -1,3 +1,5 @@
+import { AnimatedBackground } from '@/components/shared/animated-background'
+
 export default function AuthLayout({
   children,
 }: {
@@ -5,7 +7,8 @@ export default function AuthLayout({
 }) {
   return (
     <div className="gradient-bg flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+      <AnimatedBackground />
+      <div className="w-full max-w-md relative z-10">
         {children}
       </div>
     </div>

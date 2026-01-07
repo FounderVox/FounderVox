@@ -33,7 +33,9 @@ create table if not exists public.profiles (
   -- Timestamps
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
-  last_active_at timestamptz default now()
+  last_active_at timestamptz default now(),
+  first_login_at timestamptz default null,
+  demo_completed boolean default false
 );
 
 -- Add comment for documentation

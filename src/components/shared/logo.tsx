@@ -6,6 +6,7 @@ import { Mic } from 'lucide-react'
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg'
   showText?: boolean
+  variant?: 'dark' | 'light'
 }
 
 const sizes = {
@@ -20,7 +21,10 @@ const textSizes = {
   lg: 'text-3xl',
 }
 
-export function Logo({ size = 'md', showText = true }: LogoProps) {
+export function Logo({ size = 'md', showText = true, variant = 'dark' }: LogoProps) {
+  const textColor = variant === 'light' ? 'text-white' : ''
+  const accentColor = variant === 'light' ? 'text-violet-300' : 'text-primary'
+
   return (
     <div className="flex items-center gap-2">
       <motion.div
@@ -31,8 +35,8 @@ export function Logo({ size = 'md', showText = true }: LogoProps) {
         <Mic className="h-1/2 w-1/2 text-primary-foreground" />
       </motion.div>
       {showText && (
-        <span className={`${textSizes[size]} font-bold tracking-tight`}>
-          Founder<span className="text-primary">Vox</span>
+        <span className={`${textSizes[size]} font-bold tracking-tight ${textColor}`}>
+          Founder<span className={accentColor}>Vox</span>
         </span>
       )}
     </div>

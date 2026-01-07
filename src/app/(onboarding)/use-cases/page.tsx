@@ -9,23 +9,39 @@ import { createClient } from '@/lib/supabase/client'
 import { UseCaseGrid } from '@/components/onboarding/use-case-grid'
 import { ProgressIndicator } from '@/components/onboarding/progress-indicator'
 import { Button } from '@/components/ui/button'
+import { Sparkles } from 'lucide-react'
 
 export default function UseCasesPage() {
   const [selectedUseCases, setSelectedUseCases] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [displayName, setDisplayName] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('[FounderVox:Onboarding] Loading user for use-cases page...')
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
+        console.log('[FounderVox:Onboarding] No user found, redirecting to login')
         router.push('/login')
         return
       }
 
+      // Get display name from profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.display_name) {
+        setDisplayName(profile.display_name)
+      }
+
+      console.log('[FounderVox:Onboarding] User authenticated:', user.email)
       setIsLoading(false)
     }
 
@@ -41,47 +57,63 @@ export default function UseCasesPage() {
   }
 
   const handleContinue = async () => {
+    console.log('[FounderVox:Onboarding] Saving use cases:', selectedUseCases)
     setIsSaving(true)
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user) {
-        await supabase
+        const { error } = await supabase
           .from('profiles')
           .update({
             use_cases: selectedUseCases,
             onboarding_completed: true,
+            onboarding_step: 2,
           })
           .eq('id', user.id)
+
+        if (error) {
+          console.error('[FounderVox:Onboarding] Error saving use cases:', error.message)
+          throw error
+        }
+
+        console.log('[FounderVox:Onboarding] Use cases saved, redirecting to demo')
       }
 
-      router.push('/dashboard')
+      router.push('/demo')
     } catch (error) {
-      console.error('Error saving use cases:', error)
+      console.error('[FounderVox:Onboarding] Error saving use cases:', error)
     } finally {
       setIsSaving(false)
     }
   }
 
   const handleSkip = async () => {
+    console.log('[FounderVox:Onboarding] Skipping use case selection')
     setIsSaving(true)
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user) {
-        await supabase
+        const { error } = await supabase
           .from('profiles')
           .update({
             onboarding_completed: true,
+            onboarding_step: 2,
           })
           .eq('id', user.id)
+
+        if (error) {
+          console.error('[FounderVox:Onboarding] Error skipping:', error.message)
+          throw error
+        }
       }
 
-      router.push('/dashboard')
+      router.push('/demo')
     } catch (error) {
-      console.error('Error skipping:', error)
+      console.error('[FounderVox:Onboarding] Error skipping:', error)
     } finally {
       setIsSaving(false)
     }
@@ -90,79 +122,99 @@ export default function UseCasesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
       </div>
     )
   }
 
   return (
     <motion.div
-      className="pt-4"
+      className="w-full max-w-3xl"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="text-center mb-8">
-        <motion.h1
-          className="text-3xl md:text-4xl font-bold mb-3"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          What will you use voice notes for?
-        </motion.h1>
+      {/* Glass card container */}
+      <div className="glass-card p-8 md:p-10">
+        <div className="text-center mb-8">
+          <motion.div
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/20 border border-violet-500/30 mb-6"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Sparkles className="h-4 w-4 text-violet-400" />
+            <span className="text-sm text-violet-300 font-medium">
+              Personalize your experience
+            </span>
+          </motion.div>
 
-        <motion.p
-          className="text-muted-foreground"
+          <motion.h1
+            className="text-2xl md:text-3xl font-bold mb-3 text-white"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            What will you use voice notes for{displayName ? `, ${displayName}` : ''}?
+          </motion.h1>
+
+          <motion.p
+            className="text-gray-400"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            Select all that apply - this helps us customize your templates
+          </motion.p>
+        </div>
+
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.4 }}
         >
-          Select all that apply
-        </motion.p>
+          <UseCaseGrid
+            selectedUseCases={selectedUseCases}
+            onToggle={toggleUseCase}
+          />
+        </motion.div>
+
+        <motion.div
+          className="mt-8 flex flex-col items-center gap-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Button
+            size="xl"
+            className="w-full max-w-xs bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white shadow-lg shadow-violet-500/25"
+            onClick={handleContinue}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              'Continue'
+            )}
+          </Button>
+
+          <button
+            onClick={handleSkip}
+            disabled={isSaving}
+            className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Skip for now
+          </button>
+        </motion.div>
       </div>
 
       <motion.div
+        className="mt-8 flex justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.6 }}
       >
-        <UseCaseGrid
-          selectedUseCases={selectedUseCases}
-          onToggle={toggleUseCase}
-        />
-      </motion.div>
-
-      <motion.div
-        className="mt-8 flex flex-col items-center gap-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-      >
-        <Button
-          size="xl"
-          className="w-full max-w-xs"
-          onClick={handleContinue}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-          ) : (
-            'Continue'
-          )}
-        </Button>
-
-        <button
-          onClick={handleSkip}
-          disabled={isSaving}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Skip for now
-        </button>
-
-        <div className="mt-4">
-          <ProgressIndicator current={2} total={2} />
-        </div>
+        <ProgressIndicator current={2} total={2} />
       </motion.div>
     </motion.div>
   )
