@@ -1,37 +1,35 @@
 'use client'
 
-import { useState } from 'react'
-
-export const dynamic = 'force-dynamic'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { Logo } from '@/components/shared/logo'
 import { SocialAuthButtons } from '@/components/auth/social-auth-buttons'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Mail, ArrowLeft, AlertCircle } from 'lucide-react'
-
-type ViewState = 'main' | 'email-form'
+import { AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
-  const [view, setView] = useState<ViewState>('main')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
-  console.log('[FounderVox:Auth] Login page rendered, current view:', view)
+  useEffect(() => {
+    // Show success message if coming from signup
+    if (searchParams.get('signup') === 'success') {
+      // Could show a success message here
+    }
+  }, [searchParams])
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-
-    console.log('[FounderVox:Auth] Starting email login for:', email)
     setIsLoading(true)
 
     try {
@@ -41,20 +39,84 @@ export default function LoginPage() {
       })
 
       if (signInError) {
-        console.error('[FounderVox:Auth] Login error:', signInError.message)
-        throw signInError
+        console.error('[Login] Error:', signInError)
+        setError('Invalid email or password. Please try again.')
+        setIsLoading(false)
+        return
       }
 
-      console.log('[FounderVox:Auth] Login successful, redirecting...')
-      router.push('/welcome')
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
-      if (errorMessage.includes('Invalid login credentials')) {
-        setError('Invalid email or password. Please try again.')
-      } else {
-        setError(errorMessage)
+      if (!data.user) {
+        setError('Login failed. Please try again.')
+        setIsLoading(false)
+        return
       }
-    } finally {
+
+      console.log('[Login] Success, checking profile...')
+
+      // Get profile to check onboarding status
+      let profile = null
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('onboarding_completed, demo_completed')
+        .eq('id', data.user.id)
+        .single()
+
+      if (profileError) {
+        console.error('[Login] Profile error:', profileError)
+        
+        // If profile doesn't exist, create it
+        if (profileError.code === 'PGRST116') {
+          console.log('[Login] Profile not found, creating it...')
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email,
+              display_name: data.user.email?.split('@')[0] || 'User',
+              onboarding_completed: false,
+              onboarding_step: 0,
+              recordings_count: 0,
+              demo_completed: false,
+              use_cases: [],
+              subscription_tier: 'free',
+            })
+
+          if (insertError) {
+            console.error('[Login] Failed to create profile:', insertError)
+            // Continue anyway - user can still proceed
+          } else {
+            console.log('[Login] Profile created successfully')
+            profile = {
+              onboarding_completed: false,
+              demo_completed: false
+            }
+          }
+        }
+      } else {
+        profile = profileData
+      }
+
+      console.log('[Login] Profile status:', {
+        onboarding_completed: profile?.onboarding_completed,
+        demo_completed: profile?.demo_completed
+      })
+
+      // Redirect based on onboarding status
+      if (profile?.onboarding_completed) {
+        if (profile.demo_completed) {
+          console.log('[Login] Redirecting to dashboard')
+          router.push('/dashboard')
+        } else {
+          console.log('[Login] Redirecting to demo')
+          router.push('/demo')
+        }
+      } else {
+        console.log('[Login] Redirecting to welcome (onboarding)')
+        router.push('/welcome')
+      }
+    } catch (err) {
+      console.error('[Login] Unexpected error:', err)
+      setError('An error occurred. Please try again.')
       setIsLoading(false)
     }
   }
@@ -63,167 +125,99 @@ export default function LoginPage() {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="glass-card-light p-8 md:p-10"
+      transition={{ duration: 0.4 }}
+      className="glass-card-light p-8 md:p-10 shadow-xl w-full"
     >
-      <AnimatePresence mode="wait">
-        {/* Main Login View */}
-        {view === 'main' && (
+      <div className="text-center mb-8">
+        <div className="flex justify-center mb-6">
+          <Logo size="lg" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">
+          Sign in to <span className="text-black">Founder</span><span className="text-gray-500">Vox</span>
+        </h1>
+        <p className="text-gray-600">
+          Enter your email and password to continue
+        </p>
+      </div>
+
+      <form onSubmit={handleLogin} className="space-y-5 mb-8">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-black font-medium">Email address</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isLoading}
+            className="h-12 bg-white/60 border-gray-300 text-black placeholder:text-gray-400 focus:border-gray-500 focus:ring-2 focus:ring-gray-300 focus:ring-offset-0"
+            autoFocus
+          />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password" className="text-black font-medium">Password</Label>
+            <a href="/forgot-password" className="text-sm text-black hover:underline font-medium">
+              Forgot password?
+            </a>
+          </div>
+          <Input
+            id="password"
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={isLoading}
+            className="h-12 bg-white/60 border-gray-300 text-black placeholder:text-gray-400 focus:border-gray-500 focus:ring-2 focus:ring-gray-300 focus:ring-offset-0"
+          />
+        </div>
+
+        {error && (
           <motion.div
-            key="main"
-            initial={{ opacity: 0, x: 0 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-3 rounded-lg bg-red-50 border border-red-100 flex items-start gap-2"
           >
-            <div className="text-center mb-8">
-              <div className="flex justify-center mb-6">
-                <Logo size="lg" />
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Welcome back
-              </h1>
-              <p className="text-gray-500">
-                Sign in to your account to continue
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <SocialAuthButtons mode="login" />
-
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-200" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-4 text-gray-400 font-medium">
-                    or continue with
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="xl"
-                className="w-full border-gray-200 hover:bg-gray-50 text-gray-700"
-                onClick={() => setView('email-form')}
-              >
-                <Mail className="mr-2 h-5 w-5" />
-                Sign in with Email
-              </Button>
-            </div>
-
-            <p className="text-center text-sm text-gray-500 mt-8">
-              Don&apos;t have an account?{' '}
-              <Link href="/signup" className="text-primary hover:underline font-medium">
-                Sign up
-              </Link>
-            </p>
+            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-600">{error}</p>
           </motion.div>
         )}
 
-        {/* Email Form View */}
-        {view === 'email-form' && (
-          <motion.div
-            key="email-form"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <button
-              onClick={() => setView('main')}
-              className="flex items-center text-gray-500 hover:text-gray-700 mb-6 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </button>
+        <Button
+          type="submit"
+          size="xl"
+          className="w-full bg-black hover:bg-black text-white shadow-lg backdrop-blur-sm border border-black/10"
+          disabled={isLoading || !email || !password}
+        >
+          {isLoading ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            'Sign In'
+          )}
+        </Button>
+      </form>
 
-            <div className="text-center mb-8">
-              <div className="flex justify-center mb-4">
-                <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Mail className="h-7 w-7 text-primary" />
-                </div>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Sign in with email
-              </h1>
-              <p className="text-gray-500">
-                Enter your credentials to continue
-              </p>
-            </div>
+      <div>
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-200" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-4 text-gray-500 font-medium">
+              or continue with
+            </span>
+          </div>
+        </div>
+        <SocialAuthButtons mode="login" />
+      </div>
 
-            <form onSubmit={handleEmailLogin} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-700">Email address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="h-12 border-gray-200 focus:border-primary focus:ring-primary"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-gray-700">Password</Label>
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="h-12 border-gray-200 focus:border-primary focus:ring-primary"
-                />
-              </div>
-
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-3 rounded-lg bg-red-50 border border-red-100 flex items-start gap-2"
-                >
-                  <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-600">{error}</p>
-                </motion.div>
-              )}
-
-              <Button
-                type="submit"
-                size="xl"
-                className="w-full"
-                disabled={isLoading || !email || !password}
-              >
-                {isLoading ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
-            </form>
-
-            <p className="text-center text-sm text-gray-500 mt-6">
-              Don&apos;t have an account?{' '}
-              <Link href="/signup" className="text-primary hover:underline font-medium">
-                Sign up
-              </Link>
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <p className="text-center text-sm text-gray-600 mt-8">
+        Don&apos;t have an account?{' '}
+        <a href="/signup" className="text-black hover:underline font-semibold">Sign up</a>
+      </p>
     </motion.div>
   )
 }

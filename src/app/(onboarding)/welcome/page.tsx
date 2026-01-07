@@ -87,7 +87,7 @@ export default function WelcomePage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent" />
       </div>
     )
   }
@@ -100,7 +100,7 @@ export default function WelcomePage() {
       transition={{ duration: 0.5 }}
     >
       {/* Glass card container */}
-      <div className="glass-card p-8 md:p-10">
+      <div className="glass-card-light p-8 md:p-10 shadow-xl">
         <div className="flex flex-col items-center text-center">
           <motion.div
             className="mb-8"
@@ -112,7 +112,7 @@ export default function WelcomePage() {
           </motion.div>
 
           <motion.h1
-            className="text-2xl md:text-3xl font-bold mb-3 text-white"
+            className="text-2xl md:text-3xl font-bold mb-3 text-black"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -121,7 +121,7 @@ export default function WelcomePage() {
           </motion.h1>
 
           <motion.p
-            className="text-gray-400 mb-8"
+            className="text-gray-600 mb-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
@@ -141,14 +141,14 @@ export default function WelcomePage() {
               placeholder="Your name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="text-center text-lg h-14 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-violet-500 focus:ring-violet-500/20"
+              className="text-center text-lg h-14 bg-white/60 border-gray-300 text-black placeholder:text-gray-400 focus:border-gray-500 focus:ring-2 focus:ring-gray-300 focus:ring-offset-0"
               autoFocus
             />
 
             <Button
               type="submit"
               size="xl"
-              className="w-full bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white shadow-lg shadow-violet-500/25"
+              className="w-full bg-black hover:bg-black text-white shadow-lg"
               disabled={!displayName.trim() || isSaving}
             >
               {isSaving ? (

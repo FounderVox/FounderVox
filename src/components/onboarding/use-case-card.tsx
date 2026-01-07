@@ -18,10 +18,10 @@ export function UseCaseCard({ useCase, isSelected, onToggle }: UseCaseCardProps)
     <motion.button
       onClick={onToggle}
       className={cn(
-        'relative flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-300 text-center min-h-[140px] group',
+        'relative flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-300 text-center min-h-[140px] group shadow-sm',
         isSelected
-          ? 'bg-violet-500/20 border-violet-500/50 shadow-lg shadow-violet-500/10'
-          : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+          ? 'bg-black border-black text-white shadow-lg'
+          : 'bg-white/60 border-gray-200 text-black hover:bg-black hover:text-white hover:border-black'
       )}
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
@@ -43,36 +43,39 @@ export function UseCaseCard({ useCase, isSelected, onToggle }: UseCaseCardProps)
       {/* Icon */}
       <div className={cn(
         'mb-3 p-3 rounded-xl transition-colors',
-        isSelected ? 'bg-violet-500/30' : 'bg-white/10 group-hover:bg-white/15'
+        isSelected ? 'bg-white/20' : 'bg-black/5 group-hover:bg-white/20'
       )}>
         <Icon className={cn(
           'h-6 w-6 transition-colors',
-          isSelected ? 'text-violet-300' : 'text-gray-400 group-hover:text-gray-300'
+          isSelected ? 'text-white' : 'text-black group-hover:text-white'
         )} strokeWidth={1.5} />
       </div>
 
       {/* Title */}
       <h3 className={cn(
         'font-semibold text-sm mb-1 transition-colors',
-        isSelected ? 'text-white' : 'text-gray-300'
+        isSelected ? 'text-white' : 'text-black group-hover:text-white'
       )}>
         {useCase.title}
       </h3>
 
       {/* Description */}
-      <p className="text-xs text-gray-500 line-clamp-2">
+      <p className={cn(
+        'text-xs line-clamp-2 transition-colors',
+        isSelected ? 'text-white/80' : 'text-gray-600 group-hover:text-white/80'
+      )}>
         {useCase.description}
       </p>
 
       {/* Selection indicator */}
       {isSelected && (
         <motion.div
-          className="absolute top-3 left-3 h-5 w-5 rounded-full bg-violet-500 flex items-center justify-center"
+          className="absolute top-3 left-3 h-5 w-5 rounded-full bg-white text-black flex items-center justify-center"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           exit={{ scale: 0 }}
         >
-          <Check className="h-3 w-3 text-white" strokeWidth={3} />
+          <Check className="h-3 w-3" strokeWidth={3} />
         </motion.div>
       )}
     </motion.button>

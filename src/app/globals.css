@@ -22,7 +22,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 262 83% 58%;
+    --ring: 0 0% 50%;
     --radius: 0.75rem;
   }
 
@@ -53,8 +53,14 @@
   * {
     @apply border-border;
   }
+  html {
+    background: 
+      linear-gradient(135deg, #fefefe 0%, #f8f9fa 20%, #fefefe 40%, #f8f9fa 60%, #fefefe 80%, #f8f9fa 100%);
+    min-height: 100vh;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-transparent text-foreground;
+    min-height: 100vh;
   }
 }
 
@@ -168,11 +174,178 @@
 }
 
 .glass-card-light {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 24px;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    0 2px 8px rgba(0, 0, 0, 0.05);
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Warm cloudish gradient background - consistent across all pages */
+.dashboard-bg-light {
+  position: relative;
+  min-height: 100vh;
+  background: 
+    linear-gradient(135deg, #fefefe 0%, #f8f9fa 20%, #fefefe 40%, #f8f9fa 60%, #fefefe 80%, #f8f9fa 100%),
+    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(255, 255, 255, 0.8) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 20% 100%, rgba(250, 250, 255, 0.6) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 50%, rgba(255, 250, 250, 0.4) 0%, transparent 50%);
+  overflow: hidden;
+}
+
+.dashboard-bg-light::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse 120% 80% at 30% 10%, rgba(255, 255, 255, 0.4) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 70% at 70% 30%, rgba(250, 250, 255, 0.3) 0%, transparent 60%),
+    radial-gradient(ellipse 90% 60% at 10% 70%, rgba(255, 250, 250, 0.25) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 90% 80%, rgba(250, 255, 250, 0.2) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+  animation: cloudFloat 20s ease-in-out infinite;
+}
+
+@keyframes cloudFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  33% {
+    transform: translate(20px, -15px) scale(1.05);
+    opacity: 0.95;
+  }
+  66% {
+    transform: translate(-15px, 10px) scale(0.98);
+    opacity: 0.9;
+  }
+}
+
+.dashboard-bg-light::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.01) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Animated floating orbs for dashboard - subtle cloud-like effect */
+.dashboard-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.dashboard-orb-1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(250, 250, 255, 0.6) 0%, transparent 70%);
+  top: -200px;
+  left: -200px;
+  animation: dashboardFloat1 25s ease-in-out infinite;
+}
+
+.dashboard-orb-2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255, 250, 250, 0.5) 0%, transparent 70%);
+  top: 15%;
+  right: -150px;
+  animation: dashboardFloat2 30s ease-in-out infinite;
+  animation-delay: -7s;
+}
+
+.dashboard-orb-3 {
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, rgba(250, 255, 250, 0.4) 0%, transparent 70%);
+  bottom: -200px;
+  left: 20%;
+  animation: dashboardFloat3 28s ease-in-out infinite;
+  animation-delay: -12s;
+}
+
+.dashboard-orb-4 {
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(255, 255, 250, 0.35) 0%, transparent 70%);
+  top: 55%;
+  right: 15%;
+  animation: dashboardFloat4 22s ease-in-out infinite;
+  animation-delay: -9s;
+}
+
+@keyframes dashboardFloat1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(40px, -40px) scale(1.1);
+  }
+  50% {
+    transform: translate(-30px, 30px) scale(0.9);
+  }
+  75% {
+    transform: translate(30px, 20px) scale(1.05);
+  }
+}
+
+@keyframes dashboardFloat2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-50px, 50px) scale(1.15);
+  }
+  66% {
+    transform: translate(40px, -30px) scale(0.85);
+  }
+}
+
+@keyframes dashboardFloat3 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(50px, -50px) scale(1.2);
+  }
+  50% {
+    transform: translate(-40px, 40px) scale(0.8);
+  }
+  75% {
+    transform: translate(-20px, -20px) scale(1.1);
+  }
+}
+
+@keyframes dashboardFloat4 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  30% {
+    transform: translate(-30px, 30px) scale(1.1);
+  }
+  60% {
+    transform: translate(35px, -35px) scale(0.9);
+  }
+}
+
+.dashboard-bg-light > * {
+  position: relative;
+  z-index: 1;
 }

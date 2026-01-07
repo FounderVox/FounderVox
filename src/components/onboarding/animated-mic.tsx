@@ -6,15 +6,12 @@ import { Mic } from 'lucide-react'
 export function AnimatedMic() {
   return (
     <div className="relative flex items-center justify-center">
-      {/* Outer glow ring */}
+      {/* Outer pulse ring - grey */}
       <motion.div
-        className="absolute h-32 w-32 rounded-full"
-        style={{
-          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)',
-        }}
+        className="absolute h-32 w-32 rounded-full border border-gray-300/30"
         animate={{
           scale: [1, 1.3, 1],
-          opacity: [0.5, 0.2, 0.5],
+          opacity: [0.3, 0.1, 0.3],
         }}
         transition={{
           duration: 3,
@@ -23,12 +20,12 @@ export function AnimatedMic() {
         }}
       />
 
-      {/* Inner pulse ring */}
+      {/* Inner pulse ring - grey */}
       <motion.div
-        className="absolute h-24 w-24 rounded-full border border-violet-400/30"
+        className="absolute h-24 w-24 rounded-full border border-gray-400/20"
         animate={{
           scale: [1, 1.2, 1],
-          opacity: [0.4, 0.1, 0.4],
+          opacity: [0.2, 0.05, 0.2],
         }}
         transition={{
           duration: 2,
@@ -38,9 +35,9 @@ export function AnimatedMic() {
         }}
       />
 
-      {/* Main mic container */}
+      {/* Main mic container - black background block */}
       <motion.div
-        className="relative z-10 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-xl shadow-violet-500/30"
+        className="relative z-10 flex h-20 w-20 items-center justify-center rounded-2xl bg-black shadow-xl"
         animate={{
           y: [0, -4, 0],
         }}
@@ -50,10 +47,8 @@ export function AnimatedMic() {
           ease: 'easeInOut',
         }}
       >
-        {/* Inner highlight */}
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent" />
-
-        <Mic className="h-9 w-9 text-white relative z-10" strokeWidth={1.5} />
+        {/* White mic icon */}
+        <Mic className="h-9 w-9 text-white relative z-10" strokeWidth={2} />
       </motion.div>
     </div>
   )

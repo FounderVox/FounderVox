@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { QuickRecord } from '@/components/dashboard/quick-record'
 import { NoteCard } from '@/components/dashboard/note-card'
+import { FilterBar } from '@/components/dashboard/filter-bar'
 import { FileText, Mic } from 'lucide-react'
 import type { Profile } from '@/types/database'
 
@@ -48,18 +49,48 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      console.log('[FounderVox:Dashboard] Loading profile data...')
-      const { data: { user } } = await supabase.auth.getUser()
+      try {
+        console.log('[FounderVox:Dashboard:Page] Loading profile data...')
+        
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      if (user) {
-        const { data } = await supabase
+        if (userError) {
+          console.error('[FounderVox:Dashboard:Page] Error getting user:', userError)
+          return
+        }
+
+        if (!user) {
+          console.warn('[FounderVox:Dashboard:Page] No user found')
+          return
+        }
+
+        console.log('[FounderVox:Dashboard:Page] User found:', user.id)
+
+        const { data, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single()
 
+        if (profileError) {
+          console.error('[FounderVox:Dashboard:Page] Error loading profile:', profileError)
+          console.error('[FounderVox:Dashboard:Page] Error details:', {
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint,
+            code: profileError.code
+          })
+          return
+        }
+
+        console.log('[FounderVox:Dashboard:Page] Profile loaded successfully:', {
+          display_name: data?.display_name,
+          email: data?.email,
+          use_cases: data?.use_cases
+        })
         setProfile(data)
-        console.log('[FounderVox:Dashboard] Profile loaded successfully')
+      } catch (error) {
+        console.error('[FounderVox:Dashboard:Page] Unexpected error:', error)
       }
     }
 
@@ -78,17 +109,25 @@ export default function DashboardPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Filter Bar */}
+      <FilterBar
+        avatarUrl={null}
+        displayName={profile?.display_name}
+        email={profile?.email}
+        recordingsCount={profile?.recordings_count || 0}
+      />
+
       {/* Quick Record Bar */}
       <QuickRecord />
 
       {/* Recent Notes Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <FileText className="h-5 w-5 text-violet-400" />
+          <h2 className="text-lg font-semibold text-black flex items-center gap-2">
+            <FileText className="h-5 w-5 text-black" />
             Recent Notes
           </h2>
-          <button className="text-sm text-violet-400 hover:text-violet-300 transition-colors">
+          <button className="text-sm text-black hover:bg-black hover:text-white px-3 py-1 rounded-lg transition-colors">
             View all
           </button>
         </div>
@@ -116,12 +155,12 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-gray-800/30 rounded-2xl p-12 text-center">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-violet-500/20 mb-4">
-              <Mic className="h-8 w-8 text-violet-400" />
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-violet-500/10 mb-4">
+              <Mic className="h-8 w-8 text-violet-600" />
             </div>
-            <h3 className="text-white font-semibold mb-2">No notes yet</h3>
-            <p className="text-gray-400 text-sm max-w-sm mx-auto">
+            <h3 className="text-black font-semibold mb-2">No notes yet</h3>
+            <p className="text-gray-600 text-sm max-w-sm mx-auto">
               Start recording your first voice note to see it here.
               Your thoughts, organized and ready to use.
             </p>
@@ -132,17 +171,17 @@ export default function DashboardPage() {
       {/* Use Cases Summary */}
       {profile?.use_cases && profile.use_cases.length > 0 && (
         <motion.div
-          className="bg-gray-800/30 rounded-2xl p-6"
+          className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-200/50"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <h3 className="text-sm font-medium text-gray-400 mb-3">Your Focus Areas</h3>
+          <h3 className="text-sm font-medium text-black mb-3">Your Focus Areas</h3>
           <div className="flex flex-wrap gap-2">
             {profile.use_cases.map((useCase) => (
               <span
                 key={useCase}
-                className="px-3 py-1.5 bg-violet-500/20 text-violet-300 text-sm rounded-full"
+                className="px-3 py-1.5 bg-black text-white text-sm rounded-full hover:bg-gray-900 transition-colors cursor-pointer"
               >
                 {useCase}
               </span>

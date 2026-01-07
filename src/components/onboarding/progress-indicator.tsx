@@ -16,14 +16,14 @@ export function ProgressIndicator({ current, total }: ProgressIndicatorProps) {
           className={cn(
             'h-2 rounded-full transition-all duration-300',
             index < current
-              ? 'w-8 bg-violet-500'
+              ? 'w-8 bg-black'
               : index === current
-              ? 'w-8 bg-violet-500/50'
-              : 'w-2 bg-white/20'
+              ? 'w-8 bg-black/50'
+              : 'w-2 bg-gray-300'
           )}
         />
       ))}
-      <span className="ml-2 text-sm text-gray-400">
+      <span className="ml-2 text-sm text-gray-600">
         {current} of {total}
       </span>
     </div>

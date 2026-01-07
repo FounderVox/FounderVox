@@ -5,7 +5,7 @@ import { updateSession } from '@/lib/supabase/middleware'
 const publicRoutes = ['/login', '/signup', '/auth/callback']
 
 // Routes that require authentication
-const protectedRoutes = ['/dashboard', '/welcome', '/use-cases']
+const protectedRoutes = ['/dashboard', '/welcome', '/use-cases', '/demo']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -35,13 +35,18 @@ export async function middleware(request: NextRequest) {
       console.log('[FounderVox:Middleware] Authenticated user at root, checking onboarding')
       const { data: profile } = await supabase
         .from('profiles')
-        .select('onboarding_completed')
+        .select('onboarding_completed, demo_completed')
         .eq('id', user.id)
         .single()
 
       if (profile?.onboarding_completed) {
-        console.log('[FounderVox:Middleware] Redirecting to dashboard')
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+        if (profile.demo_completed) {
+          console.log('[FounderVox:Middleware] Redirecting to dashboard')
+          return NextResponse.redirect(new URL('/dashboard', request.url))
+        } else {
+          console.log('[FounderVox:Middleware] Redirecting to demo')
+          return NextResponse.redirect(new URL('/demo', request.url))
+        }
       }
       console.log('[FounderVox:Middleware] Redirecting to welcome (onboarding)')
       return NextResponse.redirect(new URL('/welcome', request.url))
@@ -90,7 +95,37 @@ export async function middleware(request: NextRequest) {
       .single()
 
     if (profile?.onboarding_completed) {
-      console.log('[FounderVox:Middleware] Onboarding completed, redirecting to dashboard')
+      console.log('[FounderVox:Middleware] Onboarding completed, redirecting to demo or dashboard')
+      // Check if demo is completed
+      const { data: demoProfile } = await supabase
+        .from('profiles')
+        .select('demo_completed')
+        .eq('id', user.id)
+        .single()
+      
+      if (demoProfile?.demo_completed) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      } else {
+        return NextResponse.redirect(new URL('/demo', request.url))
+      }
+    }
+  }
+
+  // For demo route, check if user has completed onboarding
+  if (user && pathname === '/demo') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_completed, demo_completed')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.onboarding_completed) {
+      console.log('[FounderVox:Middleware] Onboarding not completed, redirecting to welcome')
+      return NextResponse.redirect(new URL('/welcome', request.url))
+    }
+
+    if (profile?.demo_completed) {
+      console.log('[FounderVox:Middleware] Demo already completed, redirecting to dashboard')
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }

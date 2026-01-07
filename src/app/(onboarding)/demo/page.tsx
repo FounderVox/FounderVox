@@ -20,88 +20,161 @@ export default function DemoPage() {
   const [displayName, setDisplayName] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isRecording, setIsRecording] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     const loadUser = async () => {
-      console.log('[FounderVox:Demo] Loading user for demo page...')
-      const { data: { user } } = await supabase.auth.getUser()
+      try {
+        console.log('[FounderVox:Demo] Loading user for demo page...')
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      if (!user) {
-        console.log('[FounderVox:Demo] No user found, redirecting to login')
-        router.push('/login')
-        return
+        if (userError) {
+          console.error('[FounderVox:Demo] Error getting user:', userError)
+          router.push('/login')
+          return
+        }
+
+        if (!user) {
+          console.log('[FounderVox:Demo] No user found, redirecting to login')
+          router.push('/login')
+          return
+        }
+
+        console.log('[FounderVox:Demo] User found:', user.id)
+
+        // Get display name from profile - use select('*') to avoid column errors
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        if (profileError) {
+          console.error('[FounderVox:Demo] Error loading profile:', profileError)
+          console.error('[FounderVox:Demo] Error details:', {
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint,
+            code: profileError.code
+          })
+          // Continue anyway with default values
+        }
+
+        // If demo already completed, go to dashboard
+        if (profile?.demo_completed) {
+          console.log('[FounderVox:Demo] Demo already completed, redirecting to dashboard')
+          router.push('/dashboard')
+          return
+        }
+
+        if (profile?.display_name) {
+          setDisplayName(profile.display_name)
+        }
+
+        // Mark first login time if not set - only if column exists
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ first_login_at: new Date().toISOString() })
+          .eq('id', user.id)
+          .is('first_login_at', null)
+
+        if (updateError) {
+          console.warn('[FounderVox:Demo] Could not update first_login_at (column may not exist):', updateError.message)
+        }
+
+        console.log('[FounderVox:Demo] User ready for demo:', user.email)
+        setIsLoading(false)
+      } catch (error) {
+        console.error('[FounderVox:Demo] Unexpected error:', error)
+        setIsLoading(false)
       }
-
-      // Get display name from profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name, demo_completed')
-        .eq('id', user.id)
-        .single()
-
-      // If demo already completed, go to dashboard
-      if (profile?.demo_completed) {
-        console.log('[FounderVox:Demo] Demo already completed, redirecting to dashboard')
-        router.push('/dashboard')
-        return
-      }
-
-      if (profile?.display_name) {
-        setDisplayName(profile.display_name)
-      }
-
-      // Mark first login time if not set
-      await supabase
-        .from('profiles')
-        .update({ first_login_at: new Date().toISOString() })
-        .eq('id', user.id)
-        .is('first_login_at', null)
-
-      console.log('[FounderVox:Demo] User ready for demo:', user.email)
-      setIsLoading(false)
     }
 
     loadUser()
   }, [router, supabase])
 
-  const handleStartRecording = () => {
+  const handleStartRecording = async () => {
     console.log('[FounderVox:Demo] Starting first recording...')
     setIsRecording(true)
     // TODO: Implement actual recording
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsRecording(false)
-      handleSkipTosDashboard()
+      await handleSkipTosDashboard()
     }, 2000)
   }
 
   const handleTemplateClick = async (templateId: string) => {
     console.log('[FounderVox:Demo] Template selected:', templateId)
-    await markDemoComplete()
-    router.push(`/dashboard?template=${templateId}`)
+    setIsSaving(true)
+    
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (user) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ demo_completed: true })
+          .eq('id', user.id)
+
+        if (updateError) {
+          console.error('[FounderVox:Demo] Error updating demo_completed:', updateError)
+        } else {
+          console.log('[FounderVox:Demo] Demo marked complete')
+        }
+      }
+
+      router.push(`/dashboard?template=${templateId}`)
+    } catch (error) {
+      console.error('[FounderVox:Demo] Error handling template click:', error)
+      router.push(`/dashboard?template=${templateId}`)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleSkipTosDashboard = async () => {
-    await markDemoComplete()
-    router.push('/dashboard')
-  }
+    console.log('[FounderVox:Demo] Skip to dashboard clicked')
+    setIsSaving(true)
+    
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError || !user) {
+        console.error('[FounderVox:Demo] Error getting user:', userError)
+        router.push('/dashboard')
+        return
+      }
 
-  const markDemoComplete = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase
+      // Update demo_completed flag
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ demo_completed: true })
         .eq('id', user.id)
-      console.log('[FounderVox:Demo] Demo marked as complete')
+
+      if (updateError) {
+        console.error('[FounderVox:Demo] Error updating demo_completed:', updateError)
+        // Still redirect even if update fails
+      } else {
+        console.log('[FounderVox:Demo] Demo marked as complete successfully')
+      }
+
+      // Redirect to dashboard
+      router.push('/dashboard')
+    } catch (error) {
+      console.error('[FounderVox:Demo] Error skipping to dashboard:', error)
+      // Still redirect on error
+      router.push('/dashboard')
+    } finally {
+      setIsSaving(false)
     }
   }
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent" />
       </div>
     )
   }
@@ -114,7 +187,7 @@ export default function DemoPage() {
       transition={{ duration: 0.5 }}
     >
       {/* Glass card container */}
-      <div className="glass-card p-8 md:p-10">
+      <div className="glass-card-light p-8 md:p-10 shadow-xl">
         <div className="text-center">
           {/* Celebration icon */}
           <motion.div
@@ -127,7 +200,7 @@ export default function DemoPage() {
           </motion.div>
 
           <motion.h1
-            className="text-2xl md:text-3xl font-bold mb-3 text-white"
+            className="text-2xl md:text-3xl font-bold mb-3 text-black"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -136,7 +209,7 @@ export default function DemoPage() {
           </motion.h1>
 
           <motion.p
-            className="text-gray-400 mb-8"
+            className="text-gray-600 mb-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
@@ -152,8 +225,8 @@ export default function DemoPage() {
           >
             <Button
               size="xl"
-              className={`w-full h-16 text-lg bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white shadow-xl shadow-violet-500/30 ${
-                isRecording ? 'animate-pulse' : ''
+              className={`w-full h-16 text-lg bg-black hover:bg-gray-900 text-white shadow-xl ${
+                isRecording ? 'animate-pulse bg-red-600 hover:bg-red-700' : ''
               }`}
               onClick={handleStartRecording}
             >
@@ -181,7 +254,7 @@ export default function DemoPage() {
               <span className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-transparent px-4 text-gray-500">
+              <span className="bg-white px-4 text-gray-500">
                 or try a quick template
               </span>
             </div>
@@ -200,17 +273,17 @@ export default function DemoPage() {
                 <motion.button
                   key={template.id}
                   onClick={() => handleTemplateClick(template.id)}
-                  className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-left group"
+                  className="flex items-center gap-3 p-4 rounded-xl bg-white/60 border border-gray-200 text-black hover:bg-black hover:text-white hover:border-black transition-all text-left group shadow-sm"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 + index * 0.1 }}
                 >
-                  <div className="p-2 rounded-lg bg-white/10 group-hover:bg-violet-500/30 transition-colors">
-                    <Icon className="h-4 w-4 text-gray-400 group-hover:text-violet-300 transition-colors" />
+                  <div className="p-2 rounded-lg bg-black/5 group-hover:bg-white/20 transition-colors">
+                    <Icon className="h-4 w-4 text-black group-hover:text-white transition-colors" />
                   </div>
-                  <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                  <span className="text-sm font-medium group-hover:text-white transition-colors">
                     {template.label}
                   </span>
                 </motion.button>
@@ -221,12 +294,13 @@ export default function DemoPage() {
           {/* Skip link */}
           <motion.button
             onClick={handleSkipTosDashboard}
-            className="mt-8 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+            disabled={isSaving}
+            className="mt-8 text-sm text-gray-600 hover:text-black font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1 }}
           >
-            Skip to dashboard
+            {isSaving ? 'Saving...' : 'Skip to dashboard'}
           </motion.button>
         </div>
       </div>

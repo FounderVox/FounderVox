@@ -26,7 +26,7 @@ export function QuickRecord() {
   }
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4 mb-6">
+    <div className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-4 mb-6 shadow-sm">
       <div className="flex items-center gap-4">
         {/* Record Button */}
         <motion.div
@@ -38,8 +38,8 @@ export function QuickRecord() {
             className={`h-14 px-6 ${
               isRecording
                 ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'
-            } text-white shadow-lg ${isRecording ? 'shadow-red-500/25' : 'shadow-violet-500/25'}`}
+                : 'bg-black hover:bg-gray-900'
+            } text-white shadow-lg`}
           >
             <div className={`p-1.5 rounded-full mr-2 ${isRecording ? 'bg-white/20 animate-pulse' : 'bg-white/20'}`}>
               <Mic className="h-5 w-5" />
@@ -50,22 +50,22 @@ export function QuickRecord() {
 
         {/* Template Selector */}
         <div className="relative">
-          <span className="text-xs text-gray-500 block mb-1">Format as:</span>
+          <span className="text-xs text-black block mb-1">Format as:</span>
           <button
             onClick={() => setIsTemplateOpen(!isTemplateOpen)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition-colors min-w-[160px]"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-black hover:bg-black hover:text-white transition-colors min-w-[160px] shadow-sm"
           >
             <span className="flex-1 text-left text-sm">{selectedTemplate.label}</span>
-            <ChevronDown className="h-4 w-4 text-gray-500" />
+            <ChevronDown className="h-4 w-4" />
           </button>
 
           {isTemplateOpen && (
             <>
               <div
-                className="fixed inset-0 z-40"
+                className="fixed inset-0 z-[100]"
                 onClick={() => setIsTemplateOpen(false)}
               />
-              <div className="absolute left-0 top-full mt-1 w-48 bg-gray-800 rounded-xl border border-white/10 shadow-xl z-50 overflow-hidden">
+              <div className="absolute left-0 top-full mt-1 w-48 bg-white rounded-xl border border-gray-200 shadow-xl z-[101] overflow-hidden">
                 {templates.map((template) => (
                   <button
                     key={template.id}
@@ -75,8 +75,8 @@ export function QuickRecord() {
                     }}
                     className={`w-full px-4 py-2.5 text-sm text-left transition-colors ${
                       selectedTemplate.id === template.id
-                        ? 'bg-violet-500/20 text-violet-300'
-                        : 'text-gray-300 hover:bg-white/5'
+                        ? 'bg-black text-white'
+                        : 'text-black hover:bg-black hover:text-white'
                     }`}
                   >
                     {template.label}
@@ -90,7 +90,7 @@ export function QuickRecord() {
         {/* Recording indicator */}
         {isRecording && (
           <motion.div
-            className="flex items-center gap-2 text-red-400"
+            className="flex items-center gap-2 text-red-600"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >

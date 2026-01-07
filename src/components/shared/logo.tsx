@@ -22,21 +22,19 @@ const textSizes = {
 }
 
 export function Logo({ size = 'md', showText = true, variant = 'dark' }: LogoProps) {
-  const textColor = variant === 'light' ? 'text-white' : ''
-  const accentColor = variant === 'light' ? 'text-violet-300' : 'text-primary'
-
+  // Always use black mic and black/grey text regardless of variant
   return (
     <div className="flex items-center gap-2">
       <motion.div
-        className={`${sizes[size]} rounded-xl bg-primary flex items-center justify-center`}
+        className={`${sizes[size]} flex items-center justify-center`}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
-        <Mic className="h-1/2 w-1/2 text-primary-foreground" />
+        <Mic className="h-1/2 w-1/2 text-black" strokeWidth={2} />
       </motion.div>
       {showText && (
-        <span className={`${textSizes[size]} font-bold tracking-tight ${textColor}`}>
-          Founder<span className={accentColor}>Vox</span>
+        <span className={`${textSizes[size]} font-bold tracking-tight`}>
+          <span className="text-black">Founder</span><span className="text-gray-500">Vox</span>
         </span>
       )}
     </div>

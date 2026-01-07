@@ -30,12 +30,16 @@ export default function UseCasesPage() {
         return
       }
 
-      // Get display name from profile
-      const { data: profile } = await supabase
+      // Get display name from profile - use select('*') to avoid column errors
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('display_name')
+        .select('*')
         .eq('id', user.id)
         .single()
+
+      if (profileError) {
+        console.error('[FounderVox:Onboarding] Error loading profile:', profileError)
+      }
 
       if (profile?.display_name) {
         setDisplayName(profile.display_name)
@@ -122,7 +126,7 @@ export default function UseCasesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent" />
       </div>
     )
   }
@@ -135,22 +139,22 @@ export default function UseCasesPage() {
       transition={{ duration: 0.5 }}
     >
       {/* Glass card container */}
-      <div className="glass-card p-8 md:p-10">
+      <div className="glass-card-light p-8 md:p-10 shadow-xl">
         <div className="text-center mb-8">
           <motion.div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/20 border border-violet-500/30 mb-6"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/5 border border-black/10 mb-6"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
           >
-            <Sparkles className="h-4 w-4 text-violet-400" />
-            <span className="text-sm text-violet-300 font-medium">
+            <Sparkles className="h-4 w-4 text-black" />
+            <span className="text-sm text-black font-medium">
               Personalize your experience
             </span>
           </motion.div>
 
           <motion.h1
-            className="text-2xl md:text-3xl font-bold mb-3 text-white"
+            className="text-2xl md:text-3xl font-bold mb-3 text-black"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
@@ -159,7 +163,7 @@ export default function UseCasesPage() {
           </motion.h1>
 
           <motion.p
-            className="text-gray-400"
+            className="text-gray-600"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -187,7 +191,7 @@ export default function UseCasesPage() {
         >
           <Button
             size="xl"
-            className="w-full max-w-xs bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white shadow-lg shadow-violet-500/25"
+            className="w-full max-w-xs bg-black hover:bg-black text-white shadow-lg"
             onClick={handleContinue}
             disabled={isSaving}
           >
@@ -201,7 +205,7 @@ export default function UseCasesPage() {
           <button
             onClick={handleSkip}
             disabled={isSaving}
-            className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-sm text-gray-600 hover:text-black font-medium transition-colors"
           >
             Skip for now
           </button>
