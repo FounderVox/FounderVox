@@ -140,6 +140,27 @@ src/
 - Founder Mode (pitch notes, investor updates)
 - Learning & Research
 
+### Dashboard & Recording (v0.2.0)
+- **Professional Animated Cloud Background**
+  - Smooth, organic cloud animations across all pages
+  - Clean, minimalistic aesthetic with subtle sky-blue gradients
+  - Consistent design from login to dashboard
+
+- **Three-Button Recording Interface**
+  - **Center:** Main "Tap to record" button with pulsing animation
+  - **Left:** Manual note creation with two modes:
+    - Type text notes directly with optional titles
+    - Upload audio files (MP3, WAV, M4A, OGG) for transcription
+  - **Right:** Template selector for optimized recording
+    - Browse 8 use case categories
+    - Select specific templates within each category
+    - Visual feedback (button turns black) when template active
+
+- **Dialogs & Modals**
+  - Glass morphism design with backdrop blur
+  - Smooth animations and transitions
+  - Accessible keyboard navigation
+
 ## Debugging
 
 All console logs use the `[FounderVox:Component]` prefix for easy filtering:

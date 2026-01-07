@@ -5,6 +5,52 @@ All notable changes to FounderVox will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-01-07
+
+### Added
+
+#### Enhanced Background System
+- Professional animated cloud background component with React/SVG animations
+- Smooth, organic cloud-like floating animations using Framer Motion
+- Consistent background styling across all pages (auth, onboarding, dashboard, demo)
+- Subtle gradient overlays with sky-blue tones for a clean, minimalistic aesthetic
+- Improved visual depth with soft vignettes and grid patterns
+
+#### Dashboard Recording Controls
+- **Manual Note Creation Button** (Left): Create text notes or upload audio files for transcription
+  - Two-tab interface: "Type Note" and "Upload Audio"
+  - Support for manual text input with optional titles
+  - Audio file upload with drag-and-drop support
+  - Accepts MP3, WAV, M4A, and OGG formats
+- **Template Selector Button** (Right): Choose recording templates based on use cases
+  - Browse all 8 use case categories
+  - Select specific templates within each category
+  - Visual feedback when template is selected (button turns black)
+  - Quick access to personalized recording templates
+
+#### UI Components
+- Added Dialog component (shadcn/ui) with backdrop blur and animations
+- Added Textarea component for multi-line text input
+- ManualNoteDialog component with tabbed interface
+- TemplateSelectorDialog component with two-level navigation
+- Enhanced button animations with hover and tap effects
+
+### Changed
+- Upgraded dashboard floating button layout to accommodate three buttons
+- Enhanced recording button positioning to maintain center alignment
+- Improved visual hierarchy with circular icon buttons flanking main record button
+
+### Fixed
+- Fixed Suspense boundary issue in login page (useSearchParams hook)
+- Resolved build errors related to client-side routing
+
+### Technical Details
+- Installed @radix-ui/react-dialog for modal functionality
+- Cloud animations use SVG with Gaussian blur filters for soft edges
+- Multiple animated ellipses with different timing and scales for organic motion
+- Template selection integrates with existing USE_CASES constants
+- All dialogs follow consistent design system with glass morphism effects
+
 ## [0.1.0] - 2026-01-07
 
 ### Added

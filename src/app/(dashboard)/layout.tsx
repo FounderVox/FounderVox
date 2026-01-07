@@ -5,8 +5,12 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Sidebar, useSidebar, SidebarContext } from '@/components/dashboard/sidebar'
 import { motion } from 'framer-motion'
-import { Mic } from 'lucide-react'
+import { Mic, FileText, Wand2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import CloudBackground from '@/components/shared/cloud-background'
+import { ManualNoteDialog } from '@/components/dashboard/manual-note-dialog'
+import { TemplateSelectorDialog } from '@/components/dashboard/template-selector-dialog'
+import { UseCase } from '@/lib/constants/use-cases'
 
 
 export default function DashboardLayout({
@@ -146,12 +150,8 @@ export default function DashboardLayout({
   if (isLoading) {
     console.log('[FounderVox:Dashboard:Layout] Still loading, showing loading screen...')
     return (
-      <div className="dashboard-bg-light flex items-center justify-center min-h-screen">
-        {/* Animated Background Orbs */}
-        <div className="dashboard-orb dashboard-orb-1" aria-hidden="true" />
-        <div className="dashboard-orb dashboard-orb-2" aria-hidden="true" />
-        <div className="dashboard-orb dashboard-orb-3" aria-hidden="true" />
-        <div className="dashboard-orb dashboard-orb-4" aria-hidden="true" />
+      <div className="flex items-center justify-center min-h-screen">
+        <CloudBackground />
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent relative z-10" />
       </div>
     )
@@ -181,15 +181,8 @@ function DashboardContent({
 
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
-      {/* Background - fixed behind everything */}
-      <div className="fixed inset-0 dashboard-bg-light -z-10">
-        {/* Animated Background Orbs */}
-        <div className="dashboard-orb dashboard-orb-1" aria-hidden="true" />
-        <div className="dashboard-orb dashboard-orb-2" aria-hidden="true" />
-        <div className="dashboard-orb dashboard-orb-3" aria-hidden="true" />
-        <div className="dashboard-orb dashboard-orb-4" aria-hidden="true" />
-      </div>
-      
+      <CloudBackground />
+
       {/* Sidebar - fixed on left */}
       <Sidebar />
 
@@ -238,39 +231,91 @@ function SidebarContent({
 
 function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
   const [isRecording, setIsRecording] = useState(false)
+  const [showManualNoteDialog, setShowManualNoteDialog] = useState(false)
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<{ useCase: string; template: string } | null>(null)
 
   const handleRecord = () => {
     setIsRecording(!isRecording)
     console.log('[FounderVox:Dashboard] Recording:', !isRecording)
   }
 
+  const handleTemplateSelect = (useCase: UseCase, template: string) => {
+    setSelectedTemplate({ useCase: useCase.title, template })
+    console.log('[FounderVox:Dashboard] Template selected:', { useCase: useCase.title, template })
+  }
+
   return (
-    <div
-      className="fixed bottom-6 z-50 transition-[left] duration-200 flex justify-center"
-      style={{ 
-        left: sidebarWidth,
-        right: 0
-      }}
-    >
-      <motion.button
-        onClick={handleRecord}
-        animate={isRecording ? { scale: [1, 1.05, 1] } : {}}
-        transition={{ repeat: Infinity, duration: 1.5 }}
-        className={cn(
-          'h-14 px-8 rounded-full shadow-xl flex items-center gap-3 font-medium transition-colors',
-          isRecording
-            ? 'bg-red-500 hover:bg-red-600 text-white'
-            : 'bg-black hover:bg-gray-900 text-white'
-        )}
+    <>
+      <div
+        className="fixed bottom-6 z-50 transition-[left] duration-200 flex justify-center items-center gap-3"
+        style={{
+          left: sidebarWidth,
+          right: 0
+        }}
       >
-        <div className={cn(
-          'p-1.5 rounded-full',
-          isRecording ? 'bg-white/20 animate-pulse' : 'bg-white/20'
-        )}>
-          <Mic className="h-5 w-5" />
-        </div>
-        {isRecording ? 'Stop Recording' : 'Tap to record'}
-      </motion.button>
-    </div>
+        {/* Left Button - Manual Note */}
+        <motion.button
+          onClick={() => setShowManualNoteDialog(true)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="h-14 w-14 rounded-full bg-white shadow-xl flex items-center justify-center border-2 border-gray-200 hover:border-black transition-colors group"
+          title="Create manual note or upload audio"
+        >
+          <FileText className="h-5 w-5 text-gray-700 group-hover:text-black transition-colors" />
+        </motion.button>
+
+        {/* Center Button - Tap to Record */}
+        <motion.button
+          onClick={handleRecord}
+          animate={isRecording ? { scale: [1, 1.05, 1] } : {}}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+          className={cn(
+            'h-14 px-8 rounded-full shadow-xl flex items-center gap-3 font-medium transition-colors',
+            isRecording
+              ? 'bg-red-500 hover:bg-red-600 text-white'
+              : 'bg-black hover:bg-gray-900 text-white'
+          )}
+        >
+          <div className={cn(
+            'p-1.5 rounded-full',
+            isRecording ? 'bg-white/20 animate-pulse' : 'bg-white/20'
+          )}>
+            <Mic className="h-5 w-5" />
+          </div>
+          {isRecording ? 'Stop Recording' : 'Tap to record'}
+        </motion.button>
+
+        {/* Right Button - Template Selector */}
+        <motion.button
+          onClick={() => setShowTemplateDialog(true)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className={cn(
+            'h-14 w-14 rounded-full shadow-xl flex items-center justify-center border-2 transition-colors group',
+            selectedTemplate
+              ? 'bg-black text-white border-black'
+              : 'bg-white text-gray-700 border-gray-200 hover:border-black'
+          )}
+          title={selectedTemplate ? `Template: ${selectedTemplate.template}` : 'Select recording template'}
+        >
+          <Wand2 className={cn(
+            'h-5 w-5 transition-colors',
+            selectedTemplate ? 'text-white' : 'text-gray-700 group-hover:text-black'
+          )} />
+        </motion.button>
+      </div>
+
+      {/* Dialogs */}
+      <ManualNoteDialog
+        open={showManualNoteDialog}
+        onOpenChange={setShowManualNoteDialog}
+      />
+      <TemplateSelectorDialog
+        open={showTemplateDialog}
+        onOpenChange={setShowTemplateDialog}
+        onSelectTemplate={handleTemplateSelect}
+      />
+    </>
   )
 }

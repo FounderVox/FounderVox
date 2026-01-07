@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Logo } from '@/components/shared/logo'
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AlertCircle } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -219,5 +219,17 @@ export default function LoginPage() {
         <a href="/signup" className="text-black hover:underline font-semibold">Sign up</a>
       </p>
     </motion.div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="glass-card-light p-8 md:p-10 shadow-xl w-full">
+        <div className="h-8 w-8 mx-auto animate-spin rounded-full border-4 border-black border-t-transparent" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }

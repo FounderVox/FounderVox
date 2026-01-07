@@ -1,5 +1,5 @@
 import { Logo } from '@/components/shared/logo'
-import { AnimatedBackground } from '@/components/shared/animated-background'
+import CloudBackground from '@/components/shared/cloud-background'
 
 export default function OnboardingLayout({
   children,
@@ -7,13 +7,9 @@ export default function OnboardingLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="dashboard-bg-light">
-      {/* Animated Background Orbs */}
-      <div className="dashboard-orb dashboard-orb-1" aria-hidden="true" />
-      <div className="dashboard-orb dashboard-orb-2" aria-hidden="true" />
-      <div className="dashboard-orb dashboard-orb-3" aria-hidden="true" />
-      <div className="dashboard-orb dashboard-orb-4" aria-hidden="true" />
-      
+    <div className="relative min-h-screen">
+      <CloudBackground />
+
       <header className="p-6 relative z-10">
         <Logo size="md" />
       </header>
