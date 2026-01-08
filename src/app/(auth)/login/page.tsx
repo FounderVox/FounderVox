@@ -40,7 +40,22 @@ function LoginContent() {
 
       if (signInError) {
         console.error('[Login] Error:', signInError)
-        setError('Invalid email or password. Please try again.')
+        console.error('[Login] Error details:', {
+          message: signInError.message,
+          status: signInError.status,
+          name: signInError.name
+        })
+
+        // Check if it's an email not confirmed error
+        if (signInError.message?.toLowerCase().includes('email not confirmed') ||
+            signInError.message?.toLowerCase().includes('email verification')) {
+          setError('Please verify your email before logging in. Check your inbox for the verification link.')
+        } else if (signInError.message?.toLowerCase().includes('invalid login credentials')) {
+          setError('Invalid email or password. Please check your credentials and try again.')
+        } else {
+          setError(signInError.message || 'Invalid email or password. Please try again.')
+        }
+
         setIsLoading(false)
         return
       }

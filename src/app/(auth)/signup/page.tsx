@@ -98,12 +98,13 @@ export default function SignupPage() {
         // The login page will handle profile creation if needed
       }
 
-      console.log('[Signup] Success! Redirecting to login...')
+      console.log('[Signup] Success! Auto-logging in and redirecting to welcome...')
       setSuccess(true)
-      
-      // Redirect to login after 1.5 seconds
+
+      // Auto-login is already done by signUp (user is authenticated)
+      // Redirect to welcome page after 1.5 seconds
       setTimeout(() => {
-        router.push('/login?signup=success')
+        router.push('/welcome')
       }, 1500)
     } catch (err) {
       console.error('[Signup] Unexpected error:', err)
@@ -129,8 +130,8 @@ export default function SignupPage() {
               <CheckCircle2 className="h-10 w-10 text-green-600" />
             </div>
           </motion.div>
-          <h1 className="text-2xl font-bold text-black mb-2">Account created!</h1>
-          <p className="text-gray-600">Redirecting to login...</p>
+          <h1 className="text-2xl font-bold text-black mb-2">Welcome to FounderVox!</h1>
+          <p className="text-gray-600">Taking you to onboarding...</p>
         </div>
       </motion.div>
     )

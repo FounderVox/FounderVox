@@ -5,6 +5,38 @@ All notable changes to FounderVox will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-01-08
+
+### Fixed
+
+#### Authentication Login Issue
+- **Critical Bug Fix**: Resolved issue where verified users couldn't log in after signup
+  - Users were getting "Invalid email or password" error despite correct credentials
+  - Root cause: Email verification requirement blocking immediate login
+  - Solution: Implemented auto-login after signup using existing authenticated session
+  - Users now redirected directly to onboarding after signup (no manual login required)
+- **Improved Error Messaging**: Enhanced login error handling
+  - Added detailed console logging for debugging
+  - Display specific error messages based on error type
+  - Email verification errors show clear actionable message
+  - Invalid credentials errors provide helpful feedback
+- **Better User Experience**: Seamless signup-to-onboarding flow
+  - Signup success message changed to "Welcome to FounderVox!"
+  - Direct redirect to `/welcome` instead of `/login`
+  - Email verification happens asynchronously in background
+  - No friction in getting started with the app
+
+### Technical Details
+- Modified `src/app/(auth)/signup/page.tsx`:
+  - Changed redirect from `/login?signup=success` to `/welcome`
+  - Updated success message for better UX
+  - Leverages automatic session creation from `signUp()`
+- Modified `src/app/(auth)/login/page.tsx`:
+  - Enhanced error detection and messaging
+  - Added detailed error logging for debugging
+  - Better handling of email verification errors
+- Created `AUTH_FIX_DOCUMENTATION.md` with comprehensive fix details
+
 ## [0.3.0] - 2026-01-08
 
 ### Added
