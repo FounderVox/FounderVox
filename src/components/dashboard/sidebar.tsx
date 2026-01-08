@@ -62,9 +62,10 @@ const templates = [
 
 interface SidebarProps {
   notesCount?: number
+  starredCount?: number
 }
 
-export function Sidebar({ notesCount = 0 }: SidebarProps) {
+export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
   const pathname = usePathname()
   const [templatesOpen, setTemplatesOpen] = useState(true)
   const [notesOpen, setNotesOpen] = useState(true)
@@ -111,7 +112,21 @@ export function Sidebar({ notesCount = 0 }: SidebarProps) {
             const Icon = item.icon
             const isActive = pathname === item.href
             return (
-              <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined}>
+              <Link
+                key={item.href}
+                href={item.href}
+                title={isCollapsed ? item.label : undefined}
+                onClick={(e) => {
+                  if (isCollapsed) {
+                    e.preventDefault()
+                    setIsCollapsed(false)
+                    // Navigate after animation completes
+                    setTimeout(() => {
+                      window.location.href = item.href
+                    }, 200)
+                  }
+                }}
+              >
                 <div
                   className={cn(
                     'flex items-center gap-3 rounded-lg text-sm font-medium transition-colors',
@@ -170,9 +185,9 @@ export function Sidebar({ notesCount = 0 }: SidebarProps) {
                               <Icon className="h-4 w-4" />
                               {item.label}
                             </span>
-                            {item.count !== undefined && (
+                            {(item.label === 'All Notes' || item.label === 'Starred') && (
                               <span className="text-xs text-gray-500">
-                                {item.label === 'All Notes' ? notesCount : item.count}
+                                {item.label === 'All Notes' ? notesCount : starredCount}
                               </span>
                             )}
                           </div>

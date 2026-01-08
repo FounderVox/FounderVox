@@ -170,3 +170,4 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 - The trigger might be failing silently
 - Check browser console for detailed logs
 
+

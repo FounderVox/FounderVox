@@ -64,10 +64,15 @@ npm install
 ### 3. Set Up Database
 
 1. Go to your Supabase dashboard **SQL Editor**
-2. Run the migration script from `supabase/migrations/001_initial_schema.sql`
+2. Run these migration scripts in order:
+   - `supabase/migrations/001_initial_schema.sql` - Initial schema
+   - `supabase/migrations/002_add_notes_table.sql` - Notes table
+   - `supabase/migrations/003_add_tags_to_notes.sql` - Tags system
 
 This creates:
 - `profiles` table with user preferences
+- `notes` table for storing voice notes and transcriptions
+- Tags column with GIN index for fast searching
 - Row Level Security (RLS) policies
 - Automatic profile creation on signup
 - Use cases storage
@@ -139,6 +144,30 @@ src/
 - Team Collaboration (NEW)
 - Founder Mode (pitch notes, investor updates)
 - Learning & Research
+
+### Dashboard & Note Management (v0.3.0)
+- **Tag Management System**
+  - Create and assign tags to organize notes
+  - Click-to-toggle interface for quick tag selection
+  - View all available tags with visual selection state
+  - Tags stored in PostgreSQL with GIN index for fast filtering
+- **Golden Star Display**
+  - Starred notes show filled amber star at all times
+  - Quick star/unstar from any note card
+- **Starred Count in Sidebar**
+  - Live count updates when notes are starred
+  - Real-time event-driven updates
+- **List/Tiles View Toggle**
+  - Switch between list and grid views on All Notes page
+  - Both views maintain full functionality
+- **Full-Text Search**
+  - Search across note titles, content, and transcripts
+  - Case-insensitive with instant results
+  - Displays up to 20 most recent matches
+- **Dashboard Improvements**
+  - Collapsible Recent Notes section
+  - Separate All Notes section with date headers
+  - Improved hover effects and animations
 
 ### Dashboard & Recording (v0.2.0)
 - **Professional Animated Cloud Background**

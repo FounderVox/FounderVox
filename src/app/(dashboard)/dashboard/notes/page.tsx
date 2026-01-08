@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
-import { Mic } from 'lucide-react'
+import { Mic, LayoutGrid, List } from 'lucide-react'
 import { NoteCard } from '@/components/dashboard/note-card'
+import { cn } from '@/lib/utils'
+import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +32,9 @@ export default function AllNotesPage() {
   const [notes, setNotes] = useState<Note[]>([])
   const [groupedNotes, setGroupedNotes] = useState<GroupedNotes>({})
   const [isLoading, setIsLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'list' | 'tiles'>('list')
+  const [showTagDialog, setShowTagDialog] = useState(false)
+  const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -134,6 +139,9 @@ export default function AllNotesPage() {
         )
       })
       setGroupedNotes(updatedGrouped)
+
+      // Dispatch event to update sidebar counts
+      window.dispatchEvent(new CustomEvent('starToggled'))
     } catch (error) {
       console.error('[FounderVox:AllNotes] Unexpected error toggling star:', error)
     }
@@ -142,6 +150,53 @@ export default function AllNotesPage() {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  }
+
+  const handleEditNote = (noteId: string) => {
+    console.log('[FounderVox:AllNotes] Edit note:', noteId)
+    // TODO: Implement edit note dialog
+  }
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm('Are you sure you want to delete this note?')) return
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', noteId)
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('[FounderVox:AllNotes] Error deleting note:', error)
+        return
+      }
+
+      console.log('[FounderVox:AllNotes] Note deleted successfully')
+      const updatedNotes = notes.filter(note => note.id !== noteId)
+      setNotes(updatedNotes)
+
+      // Update grouped notes
+      const updatedGrouped: GroupedNotes = {}
+      Object.keys(groupedNotes).forEach(dateKey => {
+        const filtered = groupedNotes[dateKey].filter(note => note.id !== noteId)
+        if (filtered.length > 0) {
+          updatedGrouped[dateKey] = filtered
+        }
+      })
+      setGroupedNotes(updatedGrouped)
+    } catch (error) {
+      console.error('[FounderVox:AllNotes] Unexpected error deleting note:', error)
+    }
+  }
+
+  const handleAddTag = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    setSelectedNoteForTag({ id: noteId, tags: (note as any)?.tags || [] })
+    setShowTagDialog(true)
   }
 
   if (isLoading) {
@@ -166,7 +221,37 @@ export default function AllNotesPage() {
         recordingsCount={profile?.recordings_count || 0}
       />
 
-      {/* Notes List */}
+      {/* View Toggle */}
+      <div className="flex justify-end mb-6">
+        <div className="inline-flex items-center gap-1 bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('list')}
+            className={cn(
+              'p-2 rounded-md transition-colors',
+              viewMode === 'list'
+                ? 'bg-black text-white'
+                : 'text-gray-600 hover:text-black hover:bg-gray-100'
+            )}
+            title="List view"
+          >
+            <List className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('tiles')}
+            className={cn(
+              'p-2 rounded-md transition-colors',
+              viewMode === 'tiles'
+                ? 'bg-black text-white'
+                : 'text-gray-600 hover:text-black hover:bg-gray-100'
+            )}
+            title="Tiles view"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Notes List/Tiles */}
       {Object.keys(groupedNotes).length > 0 ? (
         <div className="space-y-8">
           {Object.keys(groupedNotes).map((dateKey) => (
@@ -184,65 +269,93 @@ export default function AllNotesPage() {
               </h2>
 
               {/* Notes for this date */}
-              <div className="space-y-3">
-                {groupedNotes[dateKey].map((note, index) => (
-                  <motion.div
-                    key={note.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <div className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 hover:bg-black hover:text-white hover:border-black transition-all cursor-pointer group">
-                      {/* Header with time and title */}
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-sm text-gray-500 group-hover:text-white/70">
-                              {formatTime(note.created_at)}
-                            </span>
-                            {note.template_label && (
-                              <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full group-hover:bg-white group-hover:text-black">
-                                {note.template_label}
+              {viewMode === 'list' ? (
+                <div className="space-y-3">
+                  {groupedNotes[dateKey].map((note, index) => (
+                    <motion.div
+                      key={note.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <div className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 hover:bg-black hover:text-white hover:border-black transition-all cursor-pointer group">
+                        {/* Header with time and title */}
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-sm text-gray-500 group-hover:text-white/70">
+                                {formatTime(note.created_at)}
                               </span>
-                            )}
+                              {note.template_label && (
+                                <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full group-hover:bg-white group-hover:text-black">
+                                  {note.template_label}
+                                </span>
+                              )}
+                            </div>
+                            <h3 className="text-lg font-semibold text-black group-hover:text-white">
+                              {note.title || 'Untitled Note'}
+                            </h3>
                           </div>
-                          <h3 className="text-lg font-semibold text-black group-hover:text-white">
-                            {note.title || 'Untitled Note'}
-                          </h3>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleStar(note.id)
-                            }}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              note.is_starred
-                                ? 'text-amber-500 hover:bg-white/20'
-                                : 'text-white hover:bg-white/20'
-                            }`}
-                          >
-                            <svg
-                              className={`h-4 w-4 ${note.is_starred ? 'fill-current' : ''}`}
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleStar(note.id)
+                              }}
+                              className={cn(
+                                'p-1.5 rounded-lg transition-colors',
+                                note.is_starred
+                                  ? 'text-amber-500 hover:bg-white/20'
+                                  : 'text-white hover:bg-white/20'
+                              )}
                             >
-                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                            </svg>
-                          </button>
+                              <svg
+                                className={cn('h-4 w-4', note.is_starred && 'fill-current')}
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Content Preview */}
-                      <p className="text-sm text-gray-600 line-clamp-2 group-hover:text-white/90">
-                        {note.formatted_content?.substring(0, 200) || note.raw_transcript?.substring(0, 200) || 'No content'}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                        {/* Content Preview */}
+                        <p className="text-sm text-gray-600 line-clamp-2 group-hover:text-white/90">
+                          {note.formatted_content?.substring(0, 200) || note.raw_transcript?.substring(0, 200) || 'No content'}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {groupedNotes[dateKey].map((note, index) => (
+                    <motion.div
+                      key={note.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <NoteCard
+                        title={note.title || 'Untitled Note'}
+                        preview={note.formatted_content?.substring(0, 150) || note.raw_transcript?.substring(0, 150) || 'No content'}
+                        createdAt={formatTime(note.created_at)}
+                        duration={note.duration || '0:00'}
+                        template={note.template_label || note.template_type || 'Note'}
+                        isStarred={note.is_starred}
+                        onStar={() => toggleStar(note.id)}
+                        onPlay={() => console.log('[FounderVox:AllNotes] Playing note:', note.id)}
+                        onEdit={() => handleEditNote(note.id)}
+                        onDelete={() => handleDeleteNote(note.id)}
+                        onAddTag={() => handleAddTag(note.id)}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -257,6 +370,16 @@ export default function AllNotesPage() {
             Your thoughts, organized and ready to use.
           </p>
         </div>
+      )}
+
+      {/* Add Tag Dialog */}
+      {selectedNoteForTag && (
+        <AddTagDialog
+          open={showTagDialog}
+          onOpenChange={setShowTagDialog}
+          noteId={selectedNoteForTag.id}
+          existingTags={selectedNoteForTag.tags}
+        />
       )}
     </motion.div>
   )

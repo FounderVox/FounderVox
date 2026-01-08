@@ -178,13 +178,71 @@ function DashboardContent({
   profile: { display_name: string | null; avatar_url: string | null; email: string | null; recordings_count?: number } | null
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [notesCount, setNotesCount] = useState(0)
+  const [starredCount, setStarredCount] = useState(0)
+  const supabase = createClient()
+
+  // Load notes count and starred count for sidebar
+  useEffect(() => {
+    const loadCounts = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Load total notes count
+        const { count, error } = await supabase
+          .from('notes')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+
+        if (!error && count !== null) {
+          setNotesCount(count)
+        }
+
+        // Load starred notes count
+        const { count: starredCountResult, error: starredError } = await supabase
+          .from('notes')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('is_starred', true)
+
+        if (!starredError && starredCountResult !== null) {
+          setStarredCount(starredCountResult)
+        }
+      } catch (error) {
+        console.error('[FounderVox:Dashboard:Layout] Error loading counts:', error)
+      }
+    }
+
+    loadCounts()
+
+    // Listen for note creation, tag update, and star toggle events to refresh counts
+    const handleNoteCreated = () => {
+      loadCounts()
+    }
+    const handleTagsUpdated = () => {
+      loadCounts()
+    }
+    const handleStarToggled = () => {
+      loadCounts()
+    }
+    window.addEventListener('noteCreated', handleNoteCreated)
+    window.addEventListener('tagsUpdated', handleTagsUpdated)
+    window.addEventListener('starToggled', handleStarToggled)
+
+    return () => {
+      window.removeEventListener('noteCreated', handleNoteCreated)
+      window.removeEventListener('tagsUpdated', handleTagsUpdated)
+      window.removeEventListener('starToggled', handleStarToggled)
+    }
+  }, [supabase])
 
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
       <CloudBackground />
 
       {/* Sidebar - fixed on left */}
-      <Sidebar />
+      <Sidebar notesCount={notesCount} starredCount={starredCount} />
 
       {/* Main Content - fixed on right */}
       <SidebarContent profile={profile}>

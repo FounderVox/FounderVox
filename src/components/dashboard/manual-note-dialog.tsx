@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Upload, Type, Save } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 interface ManualNoteDialogProps {
   open: boolean
@@ -18,15 +19,63 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
   const [noteTitle, setNoteTitle] = useState('')
   const [noteContent, setNoteContent] = useState('')
   const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const supabase = createClient()
 
-  const handleSaveTextNote = () => {
-    console.log('[FounderVox:ManualNote] Saving text note:', { noteTitle, noteContent })
-    // TODO: Implement actual save logic to Supabase
-    // Reset form
-    setNoteTitle('')
-    setNoteContent('')
-    onOpenChange(false)
+  const handleSaveTextNote = async () => {
+    if (!noteContent.trim()) return
+
+    try {
+      setIsSaving(true)
+      console.log('[FounderVox:ManualNote] Saving text note:', { noteTitle, noteContent })
+
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        console.error('[FounderVox:ManualNote] Error getting user:', userError)
+        setIsSaving(false)
+        return
+      }
+
+      // Insert note into Supabase
+      const { data, error } = await supabase
+        .from('notes')
+        .insert({
+          user_id: user.id,
+          title: noteTitle || 'Untitled Note',
+          content: noteContent,
+          formatted_content: noteContent,
+          raw_transcript: noteContent,
+          template_type: 'none',
+          duration_seconds: 0,
+        })
+        .select()
+
+      if (error) {
+        console.error('[FounderVox:ManualNote] Error saving note:', error)
+        setIsSaving(false)
+        return
+      }
+
+      console.log('[FounderVox:ManualNote] Note saved successfully:', data)
+
+      // Reset form
+      setNoteTitle('')
+      setNoteContent('')
+      setIsSaving(false)
+      onOpenChange(false)
+
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('noteCreated'))
+
+      // Reload the page to show the new note
+      window.location.reload()
+    } catch (error) {
+      console.error('[FounderVox:ManualNote] Unexpected error:', error)
+      setIsSaving(false)
+    }
   }
 
   const handleAudioFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,12 +86,75 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
     }
   }
 
-  const handleUploadAudio = () => {
-    if (audioFile) {
+  const handleUploadAudio = async () => {
+    if (!audioFile) return
+
+    try {
+      setIsSaving(true)
       console.log('[FounderVox:ManualNote] Uploading audio file:', audioFile.name)
-      // TODO: Implement actual upload logic
+
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        console.error('[FounderVox:ManualNote] Error getting user:', userError)
+        setIsSaving(false)
+        return
+      }
+
+      // Upload audio file to Supabase Storage
+      const fileName = `${user.id}/${Date.now()}-${audioFile.name}`
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('audio-recordings')
+        .upload(fileName, audioFile)
+
+      if (uploadError) {
+        console.error('[FounderVox:ManualNote] Error uploading audio:', uploadError)
+        setIsSaving(false)
+        return
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('audio-recordings')
+        .getPublicUrl(fileName)
+
+      // Create note with audio URL
+      const { data, error } = await supabase
+        .from('notes')
+        .insert({
+          user_id: user.id,
+          title: audioFile.name.replace(/\.[^/.]+$/, ''), // Remove extension
+          content: 'Audio recording - transcription pending',
+          formatted_content: 'Audio recording - transcription pending',
+          raw_transcript: '',
+          audio_url: publicUrl,
+          template_type: 'none',
+          duration_seconds: 0,
+        })
+        .select()
+
+      if (error) {
+        console.error('[FounderVox:ManualNote] Error creating note:', error)
+        setIsSaving(false)
+        return
+      }
+
+      console.log('[FounderVox:ManualNote] Audio note created successfully:', data)
+
+      // Reset form
       setAudioFile(null)
+      setIsSaving(false)
       onOpenChange(false)
+
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('noteCreated'))
+
+      // Reload the page to show the new note
+      window.location.reload()
+    } catch (error) {
+      console.error('[FounderVox:ManualNote] Unexpected error:', error)
+      setIsSaving(false)
     }
   }
 
@@ -112,16 +224,25 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSaveTextNote}
-                  disabled={!noteContent.trim()}
+                  disabled={!noteContent.trim() || isSaving}
                   className="bg-black hover:bg-gray-900 text-white"
                 >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Note
+                  {isSaving ? (
+                    <>
+                      <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Note
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -150,16 +271,25 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
                 </Button>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
                   Cancel
                 </Button>
                 <Button
                   onClick={handleUploadAudio}
-                  disabled={!audioFile}
+                  disabled={!audioFile || isSaving}
                   className="bg-black hover:bg-gray-900 text-white"
                 >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload & Transcribe
+                  {isSaving ? (
+                    <>
+                      <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload & Transcribe
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

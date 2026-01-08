@@ -166,3 +166,4 @@ create trigger update_recordings_count_on_note_change
 -- DONE! Notes table is ready.
 -- ============================================
 
+

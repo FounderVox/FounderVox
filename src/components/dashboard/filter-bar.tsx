@@ -13,14 +13,6 @@ interface FilterPill {
   count: number
 }
 
-const filterPills: FilterPill[] = [
-  { id: 'all', label: 'All', count: 24 },
-  { id: 'investor', label: 'Investor', count: 8 },
-  { id: 'ideas', label: 'Ideas', count: 15 },
-  { id: 'meeting', label: 'Meeting', count: 5 },
-  { id: 'interview', label: 'Interview', count: 3 },
-]
-
 interface FilterBarProps {
   avatarUrl?: string | null
   displayName?: string | null
@@ -28,14 +20,97 @@ interface FilterBarProps {
   recordingsCount?: number
 }
 
+interface SearchResult {
+  id: string
+  title: string
+  formatted_content: string | null
+  raw_transcript: string | null
+  created_at: string
+  template_label: string | null
+}
+
 export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }: FilterBarProps) {
   const [activeFilter, setActiveFilter] = useState('all')
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [filterPills, setFilterPills] = useState<FilterPill[]>([])
   const searchInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  // Load note counts from Supabase
+  useEffect(() => {
+    const loadNoteCounts = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Get all notes
+        const { data: allNotes, error: allError } = await supabase
+          .from('notes')
+          .select('template_type')
+          .eq('user_id', user.id)
+
+        if (allError) {
+          console.error('[FounderVox:FilterBar] Error loading notes:', allError)
+          return
+        }
+
+        // Count notes by template type
+        const counts: Record<string, number> = {}
+        allNotes?.forEach(note => {
+          const type = note.template_type || 'none'
+          counts[type] = (counts[type] || 0) + 1
+        })
+
+        // Build filter pills from actual data
+        const pills: FilterPill[] = [
+          { id: 'all', label: 'All', count: allNotes?.length || 0 }
+        ]
+
+        // Add template-specific filters only if they have notes
+        const templateLabels: Record<string, string> = {
+          'investor': 'Investor',
+          'ideas': 'Ideas',
+          'meeting': 'Meeting',
+          'interview': 'Interview',
+          'pitch': 'Pitch',
+          'braindump': 'Brain Dump',
+          'email': 'Email',
+          'standup': 'Standup'
+        }
+
+        Object.entries(counts).forEach(([type, count]) => {
+          if (type !== 'none' && count > 0) {
+            pills.push({
+              id: type,
+              label: templateLabels[type] || type,
+              count
+            })
+          }
+        })
+
+        setFilterPills(pills)
+      } catch (error) {
+        console.error('[FounderVox:FilterBar] Error loading note counts:', error)
+      }
+    }
+
+    loadNoteCounts()
+
+    // Listen for note creation events to refresh counts
+    const handleNoteCreated = () => {
+      loadNoteCounts()
+    }
+    window.addEventListener('noteCreated', handleNoteCreated)
+
+    return () => {
+      window.removeEventListener('noteCreated', handleNoteCreated)
+    }
+  }, [supabase])
 
   const initials = displayName
     ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -57,18 +132,44 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
     }, 100)
   }
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (searchQuery.trim()) {
-      console.log('[FounderVox:Dashboard:FilterBar] Searching for:', searchQuery)
-      // TODO: Implement search functionality
-      // For now, just log the query
+    if (!searchQuery.trim()) return
+
+    setIsSearching(true)
+    console.log('[FounderVox:Dashboard:FilterBar] Searching for:', searchQuery)
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Search across title, formatted_content, and raw_transcript
+      const { data, error } = await supabase
+        .from('notes')
+        .select('id, title, formatted_content, raw_transcript, created_at, template_label')
+        .eq('user_id', user.id)
+        .or(`title.ilike.%${searchQuery}%,formatted_content.ilike.%${searchQuery}%,raw_transcript.ilike.%${searchQuery}%`)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (error) {
+        console.error('[FounderVox:Dashboard:FilterBar] Search error:', error)
+        setSearchResults([])
+      } else {
+        setSearchResults(data || [])
+      }
+    } catch (error) {
+      console.error('[FounderVox:Dashboard:FilterBar] Unexpected search error:', error)
+      setSearchResults([])
+    } finally {
+      setIsSearching(false)
     }
   }
 
   const handleCloseSearch = () => {
     setIsSearchOpen(false)
     setSearchQuery('')
+    setSearchResults([])
   }
 
   useEffect(() => {
@@ -127,14 +228,61 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
               </form>
               
               {/* Search Results Area */}
-              <div className="mt-6">
-                {searchQuery.trim() ? (
-                  <div className="text-sm text-gray-600">
-                    Search results for &quot;{searchQuery}&quot; will appear here...
+              <div className="mt-6 overflow-y-auto max-h-[calc(100vh-200px)]">
+                {isSearching ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent" />
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="text-sm text-gray-600 mb-4">
+                      Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &quot;{searchQuery}&quot;
+                    </div>
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.id}
+                        onClick={() => {
+                          console.log('[FounderVox:FilterBar] Navigate to note:', result.id)
+                          // TODO: Navigate to note detail page when implemented
+                          handleCloseSearch()
+                        }}
+                        className="p-4 bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl hover:bg-black hover:text-white hover:border-black transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-black group-hover:text-white truncate">
+                              {result.title || 'Untitled Note'}
+                            </h3>
+                            <p className="text-xs text-gray-500 group-hover:text-white/70 mt-1">
+                              {new Date(result.created_at).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                          {result.template_label && (
+                            <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full group-hover:bg-white group-hover:text-black ml-2 flex-shrink-0">
+                              {result.template_label}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-2 group-hover:text-white/90">
+                          {result.formatted_content?.substring(0, 150) || result.raw_transcript?.substring(0, 150) || 'No content'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : searchQuery.trim() ? (
+                  <div className="text-center py-12">
+                    <div className="text-gray-600 mb-2">No results found for &quot;{searchQuery}&quot;</div>
+                    <div className="text-sm text-gray-500">Try searching with different keywords</div>
                   </div>
                 ) : (
                   <div className="text-sm text-gray-500 text-center py-12">
-                    Start typing to search through your note transcripts
+                    Start typing to search through your notes
                   </div>
                 )}
               </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { NoteCard } from '@/components/dashboard/note-card'
+import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
 import { Star, Mic } from 'lucide-react'
 
 interface Note {
@@ -14,11 +15,14 @@ interface Note {
   duration: string
   template: string
   isStarred: boolean
+  tags: string[]
 }
 
 export default function StarredPage() {
   const [notes, setNotes] = useState<Note[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showTagDialog, setShowTagDialog] = useState(false)
+  const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -51,6 +55,7 @@ export default function StarredPage() {
             duration: formatDuration(note.duration_seconds || 0),
             template: note.template_label || note.template_type || 'Note',
             isStarred: true,
+            tags: note.tags || [],
           }))
           setNotes(formattedNotes)
         }
@@ -95,10 +100,48 @@ export default function StarredPage() {
 
       if (!error) {
         setNotes(notes.filter(n => n.id !== noteId))
+        // Dispatch event to update sidebar counts
+        window.dispatchEvent(new CustomEvent('starToggled'))
       }
     } catch (err) {
       console.error('[FounderVox:Starred] Error toggling star:', err)
     }
+  }
+
+  const handleEditNote = (noteId: string) => {
+    console.log('[FounderVox:Starred] Edit note:', noteId)
+    // TODO: Implement edit note dialog
+  }
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm('Are you sure you want to delete this note?')) return
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', noteId)
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('[FounderVox:Starred] Error deleting note:', error)
+        return
+      }
+
+      console.log('[FounderVox:Starred] Note deleted successfully')
+      setNotes(notes.filter(note => note.id !== noteId))
+    } catch (error) {
+      console.error('[FounderVox:Starred] Unexpected error deleting note:', error)
+    }
+  }
+
+  const handleAddTag = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    setSelectedNoteForTag({ id: noteId, tags: note?.tags || [] })
+    setShowTagDialog(true)
   }
 
   if (isLoading) {
@@ -149,6 +192,9 @@ export default function StarredPage() {
                 isStarred={note.isStarred}
                 onStar={() => toggleStar(note.id)}
                 onPlay={() => console.log('[FounderVox:Starred] Playing note:', note.id)}
+                onEdit={() => handleEditNote(note.id)}
+                onDelete={() => handleDeleteNote(note.id)}
+                onAddTag={() => handleAddTag(note.id)}
               />
             </motion.div>
           ))}
@@ -164,7 +210,18 @@ export default function StarredPage() {
           </p>
         </div>
       )}
+
+      {/* Add Tag Dialog */}
+      {selectedNoteForTag && (
+        <AddTagDialog
+          open={showTagDialog}
+          onOpenChange={setShowTagDialog}
+          noteId={selectedNoteForTag.id}
+          existingTags={selectedNoteForTag.tags}
+        />
+      )}
     </motion.div>
   )
 }
+
 
