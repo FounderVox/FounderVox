@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'FounderVox - Voice Notes for Founders',
+  title: 'FounderNote - Voice Notes for Founders',
   description: 'Transform your voice into actionable content. Capture ideas, draft emails, and stay productive with AI-powered voice notes.',
   icons: {
     icon: '/favicon.svg',

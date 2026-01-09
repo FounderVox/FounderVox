@@ -27,7 +27,7 @@ export default function StarredPage() {
 
   useEffect(() => {
     const loadStarredNotes = async () => {
-      console.log('[FounderVox:Starred] Loading starred notes...')
+      console.log('[FounderNote:Starred] Loading starred notes...')
       setIsLoading(true)
 
       try {
@@ -43,7 +43,7 @@ export default function StarredPage() {
           .limit(50)
 
         if (error) {
-          console.error('[FounderVox:Starred] Error loading notes:', error)
+          console.error('[FounderNote:Starred] Error loading notes:', error)
           // Fallback to empty array if table doesn't exist yet
           setNotes([])
         } else {
@@ -60,7 +60,7 @@ export default function StarredPage() {
           setNotes(formattedNotes)
         }
       } catch (err) {
-        console.error('[FounderVox:Starred] Error:', err)
+        console.error('[FounderNote:Starred] Error:', err)
         setNotes([])
       } finally {
         setIsLoading(false)
@@ -104,12 +104,12 @@ export default function StarredPage() {
         window.dispatchEvent(new CustomEvent('starToggled'))
       }
     } catch (err) {
-      console.error('[FounderVox:Starred] Error toggling star:', err)
+      console.error('[FounderNote:Starred] Error toggling star:', err)
     }
   }
 
   const handleEditNote = (noteId: string) => {
-    console.log('[FounderVox:Starred] Edit note:', noteId)
+    console.log('[FounderNote:Starred] Edit note:', noteId)
     // TODO: Implement edit note dialog
   }
 
@@ -127,14 +127,14 @@ export default function StarredPage() {
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderVox:Starred] Error deleting note:', error)
+        console.error('[FounderNote:Starred] Error deleting note:', error)
         return
       }
 
-      console.log('[FounderVox:Starred] Note deleted successfully')
+      console.log('[FounderNote:Starred] Note deleted successfully')
       setNotes(notes.filter(note => note.id !== noteId))
     } catch (error) {
-      console.error('[FounderVox:Starred] Unexpected error deleting note:', error)
+      console.error('[FounderNote:Starred] Unexpected error deleting note:', error)
     }
   }
 
@@ -191,7 +191,7 @@ export default function StarredPage() {
                 template={note.template}
                 isStarred={note.isStarred}
                 onStar={() => toggleStar(note.id)}
-                onPlay={() => console.log('[FounderVox:Starred] Playing note:', note.id)}
+                onPlay={() => console.log('[FounderNote:Starred] Playing note:', note.id)}
                 onEdit={() => handleEditNote(note.id)}
                 onDelete={() => handleDeleteNote(note.id)}
                 onAddTag={() => handleAddTag(note.id)}

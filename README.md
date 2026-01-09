@@ -1,10 +1,10 @@
-# FounderVox
+# FounderNote
 
 **The voice-first operating system for startup builders.**
 
-FounderVox transforms spoken thoughts into structured actions, turning every founder's greatest asset—their voice—into their most powerful productivity tool.
+FounderNote transforms spoken thoughts into structured actions, turning every founder's greatest asset—their voice—into their most powerful productivity tool.
 
-## Why FounderVox?
+## Why FounderNote?
 
 Founders spend **8-15 hours per week** on repetitive communication tasks:
 - Writing investor updates (2-4 hours/month)
@@ -14,7 +14,7 @@ Founders spend **8-15 hours per week** on repetitive communication tasks:
 
 **That's 416-780 hours per year spent on communication instead of building.**
 
-FounderVox gives you that time back.
+FounderNote gives you that time back.
 
 ## Tech Stack
 
@@ -36,8 +36,8 @@ FounderVox gives you that time back.
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/FounderVox/FounderVox.git
-cd FounderVox
+git clone https://github.com/FounderNote/FounderNote.git
+cd FounderNote
 npm install
 ```
 
@@ -192,18 +192,18 @@ src/
 
 ## Debugging
 
-All console logs use the `[FounderVox:Component]` prefix for easy filtering:
+All console logs use the `[FounderNote:Component]` prefix for easy filtering:
 
 ```
-[FounderVox:Middleware] Processing: /login
-[FounderVox:Auth] Google OAuth initiated
-[FounderVox:Onboarding] Saving user name: Sarah
+[FounderNote:Middleware] Processing: /login
+[FounderNote:Auth] Google OAuth initiated
+[FounderNote:Onboarding] Saving user name: Sarah
 ```
 
 Filter in browser console:
 ```javascript
-// Show only FounderVox logs
-console.log = ((log) => (...args) => args[0]?.includes?.('[FounderVox') && log(...args))(console.log)
+// Show only FounderNote logs
+console.log = ((log) => (...args) => args[0]?.includes?.('[FounderNote') && log(...args))(console.log)
 ```
 
 ## Scripts
@@ -269,7 +269,7 @@ See [VISION.md](./VISION.md) for the complete product roadmap.
 ## Contributing
 
 We're building in public. Follow along:
-- Twitter: [@FounderVox](https://twitter.com/FounderVox)
+- Twitter: [@FounderNote](https://twitter.com/FounderNote)
 - GitHub Issues for bugs and feature requests
 
 ## License

@@ -23,7 +23,7 @@ export default function RecentPage() {
 
   useEffect(() => {
     const loadRecentNotes = async () => {
-      console.log('[FounderVox:Recent] Loading recent notes...')
+      console.log('[FounderNote:Recent] Loading recent notes...')
       setIsLoading(true)
 
       try {
@@ -38,7 +38,7 @@ export default function RecentPage() {
           .limit(50)
 
         if (error) {
-          console.error('[FounderVox:Recent] Error loading notes:', error)
+          console.error('[FounderNote:Recent] Error loading notes:', error)
           // Fallback to empty array if table doesn't exist yet
           setNotes([])
         } else {
@@ -54,7 +54,7 @@ export default function RecentPage() {
           setNotes(formattedNotes)
         }
       } catch (err) {
-        console.error('[FounderVox:Recent] Error:', err)
+        console.error('[FounderNote:Recent] Error:', err)
         setNotes([])
       } finally {
         setIsLoading(false)
@@ -101,7 +101,7 @@ export default function RecentPage() {
         ))
       }
     } catch (err) {
-      console.error('[FounderVox:Recent] Error toggling star:', err)
+      console.error('[FounderNote:Recent] Error toggling star:', err)
     }
   }
 
@@ -152,7 +152,7 @@ export default function RecentPage() {
                 template={note.template}
                 isStarred={note.isStarred}
                 onStar={() => toggleStar(note.id)}
-                onPlay={() => console.log('[FounderVox:Recent] Playing note:', note.id)}
+                onPlay={() => console.log('[FounderNote:Recent] Playing note:', note.id)}
               />
             </motion.div>
           ))}

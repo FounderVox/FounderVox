@@ -43,7 +43,7 @@ export default function AllNotesPage() {
         const { data: { user }, error: userError } = await supabase.auth.getUser()
 
         if (userError || !user) {
-          console.error('[FounderVox:AllNotes] Error getting user:', userError)
+          console.error('[FounderNote:AllNotes] Error getting user:', userError)
           setIsLoading(false)
           return
         }
@@ -65,7 +65,7 @@ export default function AllNotesPage() {
           .order('created_at', { ascending: false })
 
         if (notesError) {
-          console.error('[FounderVox:AllNotes] Error loading notes:', notesError)
+          console.error('[FounderNote:AllNotes] Error loading notes:', notesError)
           setIsLoading(false)
           return
         }
@@ -98,7 +98,7 @@ export default function AllNotesPage() {
         setGroupedNotes(grouped)
         setIsLoading(false)
       } catch (error) {
-        console.error('[FounderVox:AllNotes] Unexpected error:', error)
+        console.error('[FounderNote:AllNotes] Unexpected error:', error)
         setIsLoading(false)
       }
     }
@@ -121,7 +121,7 @@ export default function AllNotesPage() {
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderVox:AllNotes] Error toggling star:', error)
+        console.error('[FounderNote:AllNotes] Error toggling star:', error)
         return
       }
 
@@ -143,7 +143,7 @@ export default function AllNotesPage() {
       // Dispatch event to update sidebar counts
       window.dispatchEvent(new CustomEvent('starToggled'))
     } catch (error) {
-      console.error('[FounderVox:AllNotes] Unexpected error toggling star:', error)
+      console.error('[FounderNote:AllNotes] Unexpected error toggling star:', error)
     }
   }
 
@@ -153,7 +153,7 @@ export default function AllNotesPage() {
   }
 
   const handleEditNote = (noteId: string) => {
-    console.log('[FounderVox:AllNotes] Edit note:', noteId)
+    console.log('[FounderNote:AllNotes] Edit note:', noteId)
     // TODO: Implement edit note dialog
   }
 
@@ -171,11 +171,11 @@ export default function AllNotesPage() {
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderVox:AllNotes] Error deleting note:', error)
+        console.error('[FounderNote:AllNotes] Error deleting note:', error)
         return
       }
 
-      console.log('[FounderVox:AllNotes] Note deleted successfully')
+      console.log('[FounderNote:AllNotes] Note deleted successfully')
       const updatedNotes = notes.filter(note => note.id !== noteId)
       setNotes(updatedNotes)
 
@@ -189,7 +189,7 @@ export default function AllNotesPage() {
       })
       setGroupedNotes(updatedGrouped)
     } catch (error) {
-      console.error('[FounderVox:AllNotes] Unexpected error deleting note:', error)
+      console.error('[FounderNote:AllNotes] Unexpected error deleting note:', error)
     }
   }
 
@@ -347,7 +347,7 @@ export default function AllNotesPage() {
                         template={note.template_label || note.template_type || 'Note'}
                         isStarred={note.is_starred}
                         onStar={() => toggleStar(note.id)}
-                        onPlay={() => console.log('[FounderVox:AllNotes] Playing note:', note.id)}
+                        onPlay={() => console.log('[FounderNote:AllNotes] Playing note:', note.id)}
                         onEdit={() => handleEditNote(note.id)}
                         onDelete={() => handleDeleteNote(note.id)}
                         onAddTag={() => handleAddTag(note.id)}

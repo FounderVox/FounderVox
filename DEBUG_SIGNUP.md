@@ -65,7 +65,7 @@ WHERE funcname = 'handle_new_user';
 **Step 1: Check Browser Console**
 - Open browser DevTools (F12)
 - Go to Console tab
-- Look for `[FounderVox:Auth]` logs
+- Look for `[FounderNote:Auth]` logs
 - Check for any errors
 
 **Step 2: Check Supabase Logs**

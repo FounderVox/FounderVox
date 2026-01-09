@@ -210,7 +210,12 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
 
   useEffect(() => {
     const container = ctnDom.current;
-    if (!container) return;
+    if (!container) {
+      console.warn('[FounderNote:VoiceOrb] Container not found')
+      return;
+    }
+
+    console.log('[FounderNote:VoiceOrb] Initializing WebGL renderer...')
 
     let rendererInstance: Renderer | null = null;
     let glContext: WebGLRenderingContext | WebGL2RenderingContext | null = null;
@@ -233,6 +238,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
         container.removeChild(container.firstChild);
       }
       container.appendChild(glContext.canvas);
+      console.log('[FounderNote:VoiceOrb] WebGL canvas added to container');
 
       const geometry = new Triangle(glContext);
       program = new Program(glContext, {
@@ -295,6 +301,11 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
 
         if (enableVoiceControl && externalAnalyser && externalDataArray) {
           voiceLevel = analyzeAudio();
+
+          // Log voice level periodically (every ~5 seconds)
+          if (Math.floor(t / 5000) !== Math.floor((t - 16) / 5000)) {
+            console.log('[FounderNote:VoiceOrb] Voice level:', voiceLevel.toFixed(3))
+          }
 
           if (onVoiceDetected) {
             onVoiceDetected(voiceLevel > 0.1);

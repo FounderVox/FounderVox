@@ -131,7 +131,7 @@ export default function SignupPage() {
               <CheckCircle2 className="h-10 w-10 text-green-600" />
             </div>
           </motion.div>
-          <h1 className="text-2xl font-bold text-black mb-2">Welcome to FounderVox!</h1>
+          <h1 className="text-2xl font-bold text-black mb-2">Welcome to FounderNote!</h1>
           <p className="text-gray-600">Taking you to onboarding...</p>
         </div>
       </motion.div>

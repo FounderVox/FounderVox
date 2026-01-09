@@ -25,21 +25,21 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        console.log('[FounderVox:Dashboard:Page] Loading profile data...')
+        console.log('[FounderNote:Dashboard:Page] Loading profile data...')
         
         const { data: { user }, error: userError } = await supabase.auth.getUser()
 
         if (userError) {
-          console.error('[FounderVox:Dashboard:Page] Error getting user:', userError)
+          console.error('[FounderNote:Dashboard:Page] Error getting user:', userError)
           return
         }
 
         if (!user) {
-          console.warn('[FounderVox:Dashboard:Page] No user found')
+          console.warn('[FounderNote:Dashboard:Page] No user found')
           return
         }
 
-        console.log('[FounderVox:Dashboard:Page] User found:', user.id)
+        console.log('[FounderNote:Dashboard:Page] User found:', user.id)
 
         const { data, error: profileError } = await supabase
           .from('profiles')
@@ -48,8 +48,8 @@ export default function DashboardPage() {
           .single()
 
         if (profileError) {
-          console.error('[FounderVox:Dashboard:Page] Error loading profile:', profileError)
-          console.error('[FounderVox:Dashboard:Page] Error details:', {
+          console.error('[FounderNote:Dashboard:Page] Error loading profile:', profileError)
+          console.error('[FounderNote:Dashboard:Page] Error details:', {
             message: profileError.message,
             details: profileError.details,
             hint: profileError.hint,
@@ -58,14 +58,14 @@ export default function DashboardPage() {
           return
         }
 
-        console.log('[FounderVox:Dashboard:Page] Profile loaded successfully:', {
+        console.log('[FounderNote:Dashboard:Page] Profile loaded successfully:', {
           display_name: data?.display_name,
           email: data?.email,
           use_cases: data?.use_cases
         })
         setProfile(data)
       } catch (error) {
-        console.error('[FounderVox:Dashboard:Page] Unexpected error:', error)
+        console.error('[FounderNote:Dashboard:Page] Unexpected error:', error)
       }
     }
 
@@ -86,13 +86,13 @@ export default function DashboardPage() {
           .limit(6)
 
         if (error) {
-          console.error('[FounderVox:Dashboard:Page] Error loading notes:', error)
+          console.error('[FounderNote:Dashboard:Page] Error loading notes:', error)
           return
         }
 
         setNotes(data || [])
       } catch (error) {
-        console.error('[FounderVox:Dashboard:Page] Unexpected error loading notes:', error)
+        console.error('[FounderNote:Dashboard:Page] Unexpected error loading notes:', error)
       }
     }
 
@@ -114,7 +114,7 @@ export default function DashboardPage() {
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderVox:Dashboard:Page] Error toggling star:', error)
+        console.error('[FounderNote:Dashboard:Page] Error toggling star:', error)
         return
       }
 
@@ -125,12 +125,12 @@ export default function DashboardPage() {
       // Dispatch event to update sidebar counts
       window.dispatchEvent(new CustomEvent('starToggled'))
     } catch (error) {
-      console.error('[FounderVox:Dashboard:Page] Unexpected error toggling star:', error)
+      console.error('[FounderNote:Dashboard:Page] Unexpected error toggling star:', error)
     }
   }
 
   const handleEditNote = (noteId: string) => {
-    console.log('[FounderVox:Dashboard] Edit note:', noteId)
+    console.log('[FounderNote:Dashboard] Edit note:', noteId)
     // TODO: Implement edit note dialog
   }
 
@@ -148,14 +148,14 @@ export default function DashboardPage() {
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderVox:Dashboard:Page] Error deleting note:', error)
+        console.error('[FounderNote:Dashboard:Page] Error deleting note:', error)
         return
       }
 
-      console.log('[FounderVox:Dashboard] Note deleted successfully')
+      console.log('[FounderNote:Dashboard] Note deleted successfully')
       setNotes(notes.filter(note => note.id !== noteId))
     } catch (error) {
-      console.error('[FounderVox:Dashboard:Page] Unexpected error deleting note:', error)
+      console.error('[FounderNote:Dashboard:Page] Unexpected error deleting note:', error)
     }
   }
 
@@ -274,7 +274,7 @@ export default function DashboardPage() {
                               template={note.template_label || note.template_type || 'Note'}
                               isStarred={note.is_starred || false}
                               onStar={() => toggleStar(note.id)}
-                              onPlay={() => console.log('[FounderVox:Dashboard] Playing note:', note.id)}
+                              onPlay={() => console.log('[FounderNote:Dashboard] Playing note:', note.id)}
                               onEdit={() => handleEditNote(note.id)}
                               onDelete={() => handleDeleteNote(note.id)}
                               onAddTag={() => handleAddTag(note.id)}
@@ -330,7 +330,7 @@ export default function DashboardPage() {
                         template={note.template_label || note.template_type || 'Note'}
                         isStarred={note.is_starred || false}
                         onStar={() => toggleStar(note.id)}
-                        onPlay={() => console.log('[FounderVox:Dashboard] Playing note:', note.id)}
+                        onPlay={() => console.log('[FounderNote:Dashboard] Playing note:', note.id)}
                         onEdit={() => handleEditNote(note.id)}
                         onDelete={() => handleDeleteNote(note.id)}
                         onAddTag={() => handleAddTag(note.id)}

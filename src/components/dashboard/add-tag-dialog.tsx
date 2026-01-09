@@ -36,7 +36,7 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
           .eq('user_id', user.id)
 
         if (error) {
-          console.error('[FounderVox:AddTag] Error loading tags:', error)
+          console.error('[FounderNote:AddTag] Error loading tags:', error)
           return
         }
 
@@ -48,7 +48,7 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
 
         setAllTags(Array.from(uniqueTags).sort())
       } catch (error) {
-        console.error('[FounderVox:AddTag] Unexpected error loading tags:', error)
+        console.error('[FounderNote:AddTag] Unexpected error loading tags:', error)
       }
     }
 
@@ -91,12 +91,12 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
   const handleDone = async () => {
     try {
       setIsSaving(true)
-      console.log('[FounderVox:AddTag] Saving tags:', { noteId, tags: selectedTags })
+      console.log('[FounderNote:AddTag] Saving tags:', { noteId, tags: selectedTags })
 
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        console.error('[FounderVox:AddTag] Error getting user:', userError)
+        console.error('[FounderNote:AddTag] Error getting user:', userError)
         setIsSaving(false)
         return
       }
@@ -109,12 +109,12 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderVox:AddTag] Error saving tags:', error)
+        console.error('[FounderNote:AddTag] Error saving tags:', error)
         setIsSaving(false)
         return
       }
 
-      console.log('[FounderVox:AddTag] Tags saved successfully')
+      console.log('[FounderNote:AddTag] Tags saved successfully')
 
       // Dispatch event to notify other components
       window.dispatchEvent(new CustomEvent('tagsUpdated'))
@@ -125,7 +125,7 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
       // Reload to reflect changes
       window.location.reload()
     } catch (error) {
-      console.error('[FounderVox:AddTag] Unexpected error:', error)
+      console.error('[FounderNote:AddTag] Unexpected error:', error)
       setIsSaving(false)
     }
   }

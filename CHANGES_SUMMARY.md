@@ -8,7 +8,7 @@ This document summarizes all the changes made to implement the requested feature
 
 - ✅ Email sign-in form is now displayed first (primary action)
 - ✅ Social auth buttons (Google/Apple) moved to bottom with "or continue with" divider
-- ✅ Text remains "Sign in to FounderVox" (appropriate for both new and returning users)
+- ✅ Text remains "Sign in to FounderNote" (appropriate for both new and returning users)
 
 ## 2. Sign Up Page Updates
 
@@ -23,7 +23,7 @@ This document summarizes all the changes made to implement the requested feature
 **File:** `src/components/dashboard/sidebar.tsx`
 
 - ✅ Sidebar is now fully collapsible
-- ✅ When expanded: Shows FounderVox logo with left arrow button on top right to collapse
+- ✅ When expanded: Shows FounderNote logo with left arrow button on top right to collapse
 - ✅ When collapsed: Shows only the microphone logo icon, clicking it expands the sidebar
 - ✅ Smooth transitions between collapsed/expanded states
 - ✅ Updated to light theme styling to match dashboard background

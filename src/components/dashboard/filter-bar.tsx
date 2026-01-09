@@ -55,7 +55,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
           .eq('user_id', user.id)
 
         if (allError) {
-          console.error('[FounderVox:FilterBar] Error loading notes:', allError)
+          console.error('[FounderNote:FilterBar] Error loading notes:', allError)
           return
         }
 
@@ -95,7 +95,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
 
         setFilterPills(pills)
       } catch (error) {
-        console.error('[FounderVox:FilterBar] Error loading note counts:', error)
+        console.error('[FounderNote:FilterBar] Error loading note counts:', error)
       }
     }
 
@@ -120,7 +120,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
   const progressPercentage = Math.min(((recordingsCount || 0) / maxNotes) * 100, 100)
 
   const handleSignOut = async () => {
-    console.log('[FounderVox:Dashboard:FilterBar] Signing out...')
+    console.log('[FounderNote:Dashboard:FilterBar] Signing out...')
     await supabase.auth.signOut()
     // Redirect to landing page after sign out
     window.location.href = '/'
@@ -138,7 +138,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
     if (!searchQuery.trim()) return
 
     setIsSearching(true)
-    console.log('[FounderVox:Dashboard:FilterBar] Searching for:', searchQuery)
+    console.log('[FounderNote:Dashboard:FilterBar] Searching for:', searchQuery)
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -154,13 +154,13 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
         .limit(20)
 
       if (error) {
-        console.error('[FounderVox:Dashboard:FilterBar] Search error:', error)
+        console.error('[FounderNote:Dashboard:FilterBar] Search error:', error)
         setSearchResults([])
       } else {
         setSearchResults(data || [])
       }
     } catch (error) {
-      console.error('[FounderVox:Dashboard:FilterBar] Unexpected search error:', error)
+      console.error('[FounderNote:Dashboard:FilterBar] Unexpected search error:', error)
       setSearchResults([])
     } finally {
       setIsSearching(false)
@@ -243,7 +243,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                       <div
                         key={result.id}
                         onClick={() => {
-                          console.log('[FounderVox:FilterBar] Navigate to note:', result.id)
+                          console.log('[FounderNote:FilterBar] Navigate to note:', result.id)
                           // TODO: Navigate to note detail page when implemented
                           handleCloseSearch()
                         }}

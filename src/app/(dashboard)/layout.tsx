@@ -31,24 +31,24 @@ export default function DashboardLayout({
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        console.log('[FounderVox:Dashboard:Layout] Starting profile load...')
+        console.log('[FounderNote:Dashboard:Layout] Starting profile load...')
         
         // Get user
         const { data: { user }, error: userError } = await supabase.auth.getUser()
         
         if (userError) {
-          console.error('[FounderVox:Dashboard:Layout] Error getting user:', userError)
+          console.error('[FounderNote:Dashboard:Layout] Error getting user:', userError)
           router.push('/login')
           return
         }
 
         if (!user) {
-          console.warn('[FounderVox:Dashboard:Layout] No user found, redirecting to login')
+          console.warn('[FounderNote:Dashboard:Layout] No user found, redirecting to login')
           router.push('/login')
           return
         }
 
-        console.log('[FounderVox:Dashboard:Layout] User found:', user.id)
+        console.log('[FounderNote:Dashboard:Layout] User found:', user.id)
 
         // Try to get profile - use select * first to see what columns exist
         const { data, error: profileError } = await supabase
@@ -58,8 +58,8 @@ export default function DashboardLayout({
           .single()
 
         if (profileError) {
-          console.error('[FounderVox:Dashboard:Layout] Error loading profile:', profileError)
-          console.error('[FounderVox:Dashboard:Layout] Error details:', {
+          console.error('[FounderNote:Dashboard:Layout] Error loading profile:', profileError)
+          console.error('[FounderNote:Dashboard:Layout] Error details:', {
             message: profileError.message,
             details: profileError.details,
             hint: profileError.hint,
@@ -68,7 +68,7 @@ export default function DashboardLayout({
           
           // If profile doesn't exist, create a default one
           if (profileError.code === 'PGRST116') {
-            console.log('[FounderVox:Dashboard:Layout] Profile not found, creating default profile...')
+            console.log('[FounderNote:Dashboard:Layout] Profile not found, creating default profile...')
             const { data: newProfile, error: insertError } = await supabase
               .from('profiles')
               .insert({
@@ -83,12 +83,12 @@ export default function DashboardLayout({
               .single()
 
             if (insertError) {
-              console.error('[FounderVox:Dashboard:Layout] Error creating profile:', insertError)
+              console.error('[FounderNote:Dashboard:Layout] Error creating profile:', insertError)
               setIsLoading(false)
               return
             }
 
-            console.log('[FounderVox:Dashboard:Layout] Default profile created:', newProfile)
+            console.log('[FounderNote:Dashboard:Layout] Default profile created:', newProfile)
             setProfile({
               display_name: newProfile?.display_name || null,
               avatar_url: newProfile?.avatar_url || null,
@@ -103,7 +103,7 @@ export default function DashboardLayout({
           return
         }
 
-        console.log('[FounderVox:Dashboard:Layout] Profile loaded successfully:', {
+        console.log('[FounderNote:Dashboard:Layout] Profile loaded successfully:', {
           display_name: data?.display_name,
           email: data?.email,
           recordings_count: data?.recordings_count,
@@ -112,7 +112,7 @@ export default function DashboardLayout({
         })
 
         if (data && !data.onboarding_completed) {
-          console.log('[FounderVox:Dashboard:Layout] Onboarding not completed, redirecting to welcome')
+          console.log('[FounderNote:Dashboard:Layout] Onboarding not completed, redirecting to welcome')
           router.push('/welcome')
           return
         }
@@ -127,9 +127,9 @@ export default function DashboardLayout({
           recordings_count: data?.recordings_count ?? 0
         })
         setIsLoading(false)
-        console.log('[FounderVox:Dashboard:Layout] Profile state set successfully, dashboard ready')
+        console.log('[FounderNote:Dashboard:Layout] Profile state set successfully, dashboard ready')
       } catch (error) {
-        console.error('[FounderVox:Dashboard:Layout] Unexpected error:', error)
+        console.error('[FounderNote:Dashboard:Layout] Unexpected error:', error)
         // Set default profile even on error so dashboard can render
         const { data: { user: errorUser } } = await supabase.auth.getUser()
         if (errorUser) {
@@ -148,7 +148,7 @@ export default function DashboardLayout({
   }, [router, supabase])
 
   if (isLoading) {
-    console.log('[FounderVox:Dashboard:Layout] Still loading, showing loading screen...')
+    console.log('[FounderNote:Dashboard:Layout] Still loading, showing loading screen...')
     return (
       <div className="flex items-center justify-center min-h-screen">
         <CloudBackground />
@@ -157,7 +157,7 @@ export default function DashboardLayout({
     )
   }
 
-  console.log('[FounderVox:Dashboard:Layout] Rendering dashboard, profile:', {
+  console.log('[FounderNote:Dashboard:Layout] Rendering dashboard, profile:', {
     display_name: profile?.display_name,
     email: profile?.email,
     recordings_count: profile?.recordings_count
@@ -210,7 +210,7 @@ function DashboardContent({
           setStarredCount(starredCountResult)
         }
       } catch (error) {
-        console.error('[FounderVox:Dashboard:Layout] Error loading counts:', error)
+        console.error('[FounderNote:Dashboard:Layout] Error loading counts:', error)
       }
     }
 
@@ -261,7 +261,7 @@ function SidebarContent({
 }) {
   const { isCollapsed } = useSidebar()
 
-  console.log('[FounderVox:Dashboard:SidebarContent] Rendering with profile:', {
+  console.log('[FounderNote:Dashboard:SidebarContent] Rendering with profile:', {
     display_name: profile?.display_name,
     email: profile?.email,
     recordings_count: profile?.recordings_count
@@ -295,12 +295,12 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
 
   const handleRecord = () => {
     setIsRecording(!isRecording)
-    console.log('[FounderVox:Dashboard] Recording:', !isRecording)
+    console.log('[FounderNote:Dashboard] Recording:', !isRecording)
   }
 
   const handleTemplateSelect = (useCase: UseCase, template: string) => {
     setSelectedTemplate({ useCase: useCase.title, template })
-    console.log('[FounderVox:Dashboard] Template selected:', { useCase: useCase.title, template })
+    console.log('[FounderNote:Dashboard] Template selected:', { useCase: useCase.title, template })
   }
 
   return (

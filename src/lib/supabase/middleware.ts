@@ -11,7 +11,7 @@ export async function updateSession(request: NextRequest) {
 
   // Skip auth if Supabase not configured
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('[FounderVox:Middleware] Supabase credentials not configured')
+    console.warn('[FounderNote:Middleware] Supabase credentials not configured')
     return { user: null, supabaseResponse, supabase: null }
   }
 
@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  console.log('[FounderVox:Middleware] User:', user ? user.email : 'Not authenticated')
+  console.log('[FounderNote:Middleware] User:', user ? user.email : 'Not authenticated')
 
   return { user, supabaseResponse, supabase }
 }

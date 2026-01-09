@@ -5,13 +5,13 @@
 
 ## **OUR VISION**
 
-**FounderVox exists to give founders their time back.**
+**FounderNote exists to give founders their time back.**
 
 Every founder faces the same problem: drowning in communication overhead while the real work—building, shipping, learning—gets pushed aside. Investor updates take 3 hours. User interviews go undocumented. Meeting notes are lost in Slack threads. Product ideas live in scattered voice memos.
 
 We believe founders shouldn't have to choose between documenting their journey and living it.
 
-**FounderVox is the voice-first operating system for startup builders.** We transform spoken thoughts into structured actions, turning every founder's greatest asset—their voice—into their most powerful productivity tool.
+**FounderNote is the voice-first operating system for startup builders.** We transform spoken thoughts into structured actions, turning every founder's greatest asset—their voice—into their most powerful productivity tool.
 
 ---
 
@@ -57,9 +57,9 @@ Founders spend **8-15 hours per week** on repetitive communication tasks:
 
 ## **OUR SOLUTION**
 
-### **FounderVox: Voice Notes That Understand Your Startup**
+### **FounderNote: Voice Notes That Understand Your Startup**
 
-FounderVox is not another transcription tool. It's an **intelligent workflow automation platform** that speaks founder.
+FounderNote is not another transcription tool. It's an **intelligent workflow automation platform** that speaks founder.
 
 **Core Principles:**
 
@@ -180,7 +180,7 @@ FounderVox is not another transcription tool. It's an **intelligent workflow aut
 
 ### **Year 3: Industry Standard**
 
-**Mission:** "The Loom of voice notes." Every startup uses FounderVox by default.
+**Mission:** "The Loom of voice notes." Every startup uses FounderNote by default.
 
 **Vision:**
 - 500,000 total users
@@ -195,14 +195,14 @@ FounderVox is not another transcription tool. It's an **intelligent workflow aut
 
 ### **For Founders:**
 
-**Before FounderVox:**
+**Before FounderNote:**
 - Sarah spends 3 hours every Sunday writing investor updates
 - She skips documenting 70% of user interviews (too time-consuming)
 - Her co-founder Mike doesn't know what she learned from customer calls
 - Product ideas are scattered across Apple Notes, Slack DMs, paper napkins
 - She practices her pitch alone with no feedback
 
-**After FounderVox:**
+**After FounderNote:**
 - Sarah records a 10-minute voice note every Sunday → professional investor update ready to send
 - Every user interview is automatically documented with pain points tagged
 - Mike can search "pricing objections" and see themes across all interviews
@@ -211,7 +211,7 @@ FounderVox is not another transcription tool. It's an **intelligent workflow aut
 
 **Result:** Sarah saves 10 hours/week. She raises her Series A 3 months faster because her pitch is tighter and she has clear customer insights.
 
-**FounderVox isn't just a tool. It's her competitive advantage.**
+**FounderNote isn't just a tool. It's her competitive advantage.**
 
 ---
 
@@ -244,7 +244,7 @@ FounderVox is not another transcription tool. It's an **intelligent workflow aut
 
 ### **vs. Letterly (Generic Voice Notes)**
 
-| Feature | Letterly | FounderVox |
+| Feature | Letterly | FounderNote |
 |---------|----------|------------|
 | Templates | 25+ generic formats | 8 founder-specific workflows |
 | Collaboration | None | Built for co-founder teams |
@@ -259,7 +259,7 @@ FounderVox is not another transcription tool. It's an **intelligent workflow aut
 
 ### **vs. Otter.ai (Meeting Transcription)**
 
-| Feature | Otter.ai | FounderVox |
+| Feature | Otter.ai | FounderNote |
 |---------|----------|------------|
 | Focus | Meetings only | Full founder workflow |
 | Voice Commands | No | Yes (hands-free) |
@@ -495,11 +495,11 @@ We will stay focused. We will say no to feature bloat. We will prioritize founde
 
 ## **THE ENDGAME**
 
-**5 years from now, FounderVox is the default tool in every founder's workflow.**
+**5 years from now, FounderNote is the default tool in every founder's workflow.**
 
-- "Did you send the investor update?" → "Yeah, recorded it on FounderVox"
-- "How'd the user interview go?" → "Check the FounderVox doc, I tagged the pain points"
-- "Can you send meeting notes?" → "Already posted to Slack via FounderVox"
+- "Did you send the investor update?" → "Yeah, recorded it on FounderNote"
+- "How'd the user interview go?" → "Check the FounderNote doc, I tagged the pain points"
+- "Can you send meeting notes?" → "Already posted to Slack via FounderNote"
 
 **We're not building a transcription tool. We're building the voice-first operating system for the next generation of builders.**
 
@@ -512,5 +512,5 @@ Let's go. 🚀
 **Document Version:** 1.0  
 **Created:** January 7, 2026  
 **Co-Founders:** [Names]  
-**Company:** FounderVox, Inc.  
+**Company:** FounderNote, Inc.  
 **Mission:** Give founders their time back.

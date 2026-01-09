@@ -1,4 +1,4 @@
-# FounderVox Database Migrations
+# FounderNote Database Migrations
 
 ## 🚀 RECOMMENDED: Use Complete Setup (Single File)
 

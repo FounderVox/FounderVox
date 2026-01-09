@@ -33,7 +33,7 @@ export function Logo({ size = 'md', showText = true, variant = 'dark' }: LogoPro
       </motion.div>
       {showText && (
         <span className={`${textSizes[size]} font-bold tracking-tight`}>
-          <span className="text-black">Founder</span><span className="text-gray-500">Vox</span>
+          <span className="text-black">Founder</span><span className="text-gray-500">Note</span>
         </span>
       )}
     </div>

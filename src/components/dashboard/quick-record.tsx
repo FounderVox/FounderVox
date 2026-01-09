@@ -21,7 +21,7 @@ export function QuickRecord() {
 
   const handleRecord = () => {
     setShowRecordingModal(true)
-    console.log('[FounderVox:Dashboard] Opening recording modal with template:', selectedTemplate.id)
+    console.log('[FounderNote:Dashboard] Opening recording modal with template:', selectedTemplate.id)
   }
 
   return (

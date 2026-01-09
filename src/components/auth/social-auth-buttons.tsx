@@ -15,11 +15,11 @@ export function SocialAuthButtons({ mode }: SocialAuthButtonsProps) {
   const supabase = createClient()
 
   const handleGoogleAuth = async () => {
-    console.log('[FounderVox:Auth] Initiating Google OAuth...')
+    console.log('[FounderNote:Auth] Initiating Google OAuth...')
     setIsGoogleLoading(true)
     try {
       const redirectTo = `${window.location.origin}/auth/callback`
-      console.log('[FounderVox:Auth] Redirect URL:', redirectTo)
+      console.log('[FounderNote:Auth] Redirect URL:', redirectTo)
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -33,19 +33,19 @@ export function SocialAuthButtons({ mode }: SocialAuthButtonsProps) {
       })
 
       if (error) {
-        console.error('[FounderVox:Auth] Google OAuth error:', error.message)
+        console.error('[FounderNote:Auth] Google OAuth error:', error.message)
         throw error
       }
 
-      console.log('[FounderVox:Auth] Google OAuth initiated, redirecting...')
+      console.log('[FounderNote:Auth] Google OAuth initiated, redirecting...')
     } catch (error) {
-      console.error('[FounderVox:Auth] Google auth failed:', error)
+      console.error('[FounderNote:Auth] Google auth failed:', error)
       setIsGoogleLoading(false)
     }
   }
 
   const handleAppleAuth = async () => {
-    console.log('[FounderVox:Auth] Initiating Apple OAuth...')
+    console.log('[FounderNote:Auth] Initiating Apple OAuth...')
     setIsAppleLoading(true)
     try {
       const redirectTo = `${window.location.origin}/auth/callback`
@@ -58,13 +58,13 @@ export function SocialAuthButtons({ mode }: SocialAuthButtonsProps) {
       })
 
       if (error) {
-        console.error('[FounderVox:Auth] Apple OAuth error:', error.message)
+        console.error('[FounderNote:Auth] Apple OAuth error:', error.message)
         throw error
       }
 
-      console.log('[FounderVox:Auth] Apple OAuth initiated, redirecting...')
+      console.log('[FounderNote:Auth] Apple OAuth initiated, redirecting...')
     } catch (error) {
-      console.error('[FounderVox:Auth] Apple auth failed:', error)
+      console.error('[FounderNote:Auth] Apple auth failed:', error)
       setIsAppleLoading(false)
     }
   }

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to FounderVox will be documented in this file.
+All notable changes to FounderNote will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Email verification errors show clear actionable message
   - Invalid credentials errors provide helpful feedback
 - **Better User Experience**: Seamless signup-to-onboarding flow
-  - Signup success message changed to "Welcome to FounderVox!"
+  - Signup success message changed to "Welcome to FounderNote!"
   - Direct redirect to `/welcome` instead of `/login`
   - Email verification happens asynchronously in background
   - No friction in getting started with the app
@@ -238,7 +238,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Database schema with RLS policies
 
 #### Developer Experience
-- Comprehensive debug logging with `[FounderVox:Component]` prefix
+- Comprehensive debug logging with `[FounderNote:Component]` prefix
 - Clear console output for debugging
 - Proper error handling and user feedback
 - Environment variable validation

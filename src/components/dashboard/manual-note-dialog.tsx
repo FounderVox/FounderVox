@@ -28,13 +28,13 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
 
     try {
       setIsSaving(true)
-      console.log('[FounderVox:ManualNote] Saving text note:', { noteTitle, noteContent })
+      console.log('[FounderNote:ManualNote] Saving text note:', { noteTitle, noteContent })
 
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        console.error('[FounderVox:ManualNote] Error getting user:', userError)
+        console.error('[FounderNote:ManualNote] Error getting user:', userError)
         setIsSaving(false)
         return
       }
@@ -54,12 +54,12 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
         .select()
 
       if (error) {
-        console.error('[FounderVox:ManualNote] Error saving note:', error)
+        console.error('[FounderNote:ManualNote] Error saving note:', error)
         setIsSaving(false)
         return
       }
 
-      console.log('[FounderVox:ManualNote] Note saved successfully:', data)
+      console.log('[FounderNote:ManualNote] Note saved successfully:', data)
 
       // Reset form
       setNoteTitle('')
@@ -73,7 +73,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
       // Reload the page to show the new note
       window.location.reload()
     } catch (error) {
-      console.error('[FounderVox:ManualNote] Unexpected error:', error)
+      console.error('[FounderNote:ManualNote] Unexpected error:', error)
       setIsSaving(false)
     }
   }
@@ -81,7 +81,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
   const handleAudioFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      console.log('[FounderVox:ManualNote] Audio file selected:', file.name)
+      console.log('[FounderNote:ManualNote] Audio file selected:', file.name)
       setAudioFile(file)
     }
   }
@@ -91,13 +91,13 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
 
     try {
       setIsSaving(true)
-      console.log('[FounderVox:ManualNote] Uploading audio file:', audioFile.name)
+      console.log('[FounderNote:ManualNote] Uploading audio file:', audioFile.name)
 
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        console.error('[FounderVox:ManualNote] Error getting user:', userError)
+        console.error('[FounderNote:ManualNote] Error getting user:', userError)
         setIsSaving(false)
         return
       }
@@ -109,7 +109,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
         .upload(fileName, audioFile)
 
       if (uploadError) {
-        console.error('[FounderVox:ManualNote] Error uploading audio:', uploadError)
+        console.error('[FounderNote:ManualNote] Error uploading audio:', uploadError)
         setIsSaving(false)
         return
       }
@@ -135,12 +135,12 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
         .select()
 
       if (error) {
-        console.error('[FounderVox:ManualNote] Error creating note:', error)
+        console.error('[FounderNote:ManualNote] Error creating note:', error)
         setIsSaving(false)
         return
       }
 
-      console.log('[FounderVox:ManualNote] Audio note created successfully:', data)
+      console.log('[FounderNote:ManualNote] Audio note created successfully:', data)
 
       // Reset form
       setAudioFile(null)
@@ -153,7 +153,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
       // Reload the page to show the new note
       window.location.reload()
     } catch (error) {
-      console.error('[FounderVox:ManualNote] Unexpected error:', error)
+      console.error('[FounderNote:ManualNote] Unexpected error:', error)
       setIsSaving(false)
     }
   }

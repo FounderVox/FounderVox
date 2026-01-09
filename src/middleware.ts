@@ -10,7 +10,7 @@ const protectedRoutes = ['/dashboard', '/welcome', '/use-cases', '/demo']
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  console.log('[FounderVox:Middleware] Processing:', pathname)
+  console.log('[FounderNote:Middleware] Processing:', pathname)
 
   // Skip middleware for static files and API routes
   if (
@@ -25,13 +25,13 @@ export async function middleware(request: NextRequest) {
 
   // If Supabase is not configured, allow access to public routes only
   if (!supabase) {
-    console.warn('[FounderVox:Middleware] Supabase not configured, allowing public access')
+    console.warn('[FounderNote:Middleware] Supabase not configured, allowing public access')
     return supabaseResponse
   }
 
   // Allow landing page at root - no redirect needed
   if (pathname === '/') {
-    console.log('[FounderVox:Middleware] Landing page at root, allowing access')
+    console.log('[FounderNote:Middleware] Landing page at root, allowing access')
     return supabaseResponse
   }
 
@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
   )
 
   if (isProtectedRoute && !user) {
-    console.log('[FounderVox:Middleware] Protected route without auth, redirecting to login')
+    console.log('[FounderNote:Middleware] Protected route without auth, redirecting to login')
     // Only redirect if not already on login page to prevent loops
     if (pathname !== '/login') {
       const redirectUrl = new URL('/login', request.url)
@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
   )
 
   if (isAuthRoute && user) {
-    console.log('[FounderVox:Middleware] Authenticated user on auth page, redirecting')
+    console.log('[FounderNote:Middleware] Authenticated user on auth page, redirecting')
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarding_completed, demo_completed')
@@ -82,7 +82,7 @@ export async function middleware(request: NextRequest) {
       .single()
 
     if (profile?.onboarding_completed) {
-      console.log('[FounderVox:Middleware] Onboarding completed, redirecting to demo or dashboard')
+      console.log('[FounderNote:Middleware] Onboarding completed, redirecting to demo or dashboard')
       // Check if demo is completed
       const { data: demoProfile } = await supabase
         .from('profiles')
@@ -107,12 +107,12 @@ export async function middleware(request: NextRequest) {
       .single()
 
     if (!profile?.onboarding_completed) {
-      console.log('[FounderVox:Middleware] Onboarding not completed, redirecting to welcome')
+      console.log('[FounderNote:Middleware] Onboarding not completed, redirecting to welcome')
       return NextResponse.redirect(new URL('/welcome', request.url))
     }
 
     if (profile?.demo_completed) {
-      console.log('[FounderVox:Middleware] Demo already completed, redirecting to dashboard')
+      console.log('[FounderNote:Middleware] Demo already completed, redirecting to dashboard')
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }

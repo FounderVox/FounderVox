@@ -68,6 +68,8 @@ export function useRecording() {
 
   const startRecording = useCallback(async () => {
     try {
+      console.log('[FounderNote:Recording] Requesting microphone access...')
+
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -76,9 +78,11 @@ export function useRecording() {
           sampleRate: 44100
         }
       })
+      console.log('[FounderNote:Recording] Microphone access granted')
       streamRef.current = stream
 
       // Set up Web Audio API for waveform visualization
+      console.log('[FounderNote:Recording] Setting up Web Audio API...')
       audioContextRef.current = new AudioContext()
       const source = audioContextRef.current.createMediaStreamSource(stream)
       analyserRef.current = audioContextRef.current.createAnalyser()
@@ -86,6 +90,7 @@ export function useRecording() {
       const bufferLength = analyserRef.current.frequencyBinCount
       dataArrayRef.current = new Uint8Array(bufferLength)
       source.connect(analyserRef.current)
+      console.log('[FounderNote:Recording] Web Audio API ready, analyser connected')
 
       // Set up MediaRecorder
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -112,6 +117,7 @@ export function useRecording() {
       }
 
       mediaRecorder.start(1000) // Collect data every second
+      console.log('[FounderNote:Recording] Recording started')
 
       setState(prev => ({
         ...prev,
@@ -190,14 +196,20 @@ export function useRecording() {
 
   const uploadAndProcess = useCallback(async () => {
     if (!state.audioBlob) {
+      console.error('[FounderNote:Recording] No audio blob to upload')
       setState(prev => ({ ...prev, error: 'No audio to upload' }))
       return
     }
 
+    console.log('[FounderNote:Recording] Starting upload and processing...')
     setState(prev => ({ ...prev, isProcessing: true, error: null }))
 
     try {
       // Step 1: Upload audio
+      console.log('[FounderNote:Recording] Uploading audio...', {
+        size: state.audioBlob.size,
+        type: state.audioBlob.type
+      })
       const formData = new FormData()
       formData.append('audio', state.audioBlob, `recording-${Date.now()}.webm`)
 
@@ -206,6 +218,8 @@ export function useRecording() {
         body: formData
       })
 
+      console.log('[FounderNote:Recording] Upload response status:', uploadResponse.status)
+
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json()
         throw new Error(errorData.error || 'Upload failed')
@@ -213,15 +227,19 @@ export function useRecording() {
 
       const uploadData = await uploadResponse.json()
       const recordingId = uploadData.recording.id
+      console.log('[FounderNote:Recording] Upload successful, recording ID:', recordingId)
 
       setState(prev => ({ ...prev, recordingId }))
 
       // Step 2: Process recording
+      console.log('[FounderNote:Recording] Starting AI processing...')
       const processResponse = await fetch('/api/recordings/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recordingId })
       })
+
+      console.log('[FounderNote:Recording] Process response status:', processResponse.status)
 
       if (!processResponse.ok) {
         const errorData = await processResponse.json()
@@ -229,6 +247,7 @@ export function useRecording() {
       }
 
       const processData = await processResponse.json()
+      console.log('[FounderNote:Recording] Processing complete:', processData.extracted)
 
       setState(prev => ({
         ...prev,

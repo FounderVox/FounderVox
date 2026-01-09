@@ -27,22 +27,22 @@ export default function DemoPage() {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        console.log('[FounderVox:Demo] Loading user for demo page...')
+        console.log('[FounderNote:Demo] Loading user for demo page...')
         const { data: { user }, error: userError } = await supabase.auth.getUser()
 
         if (userError) {
-          console.error('[FounderVox:Demo] Error getting user:', userError)
+          console.error('[FounderNote:Demo] Error getting user:', userError)
           router.push('/login')
           return
         }
 
         if (!user) {
-          console.log('[FounderVox:Demo] No user found, redirecting to login')
+          console.log('[FounderNote:Demo] No user found, redirecting to login')
           router.push('/login')
           return
         }
 
-        console.log('[FounderVox:Demo] User found:', user.id)
+        console.log('[FounderNote:Demo] User found:', user.id)
 
         // Get display name from profile - use select('*') to avoid column errors
         const { data: profile, error: profileError } = await supabase
@@ -52,8 +52,8 @@ export default function DemoPage() {
           .single()
 
         if (profileError) {
-          console.error('[FounderVox:Demo] Error loading profile:', profileError)
-          console.error('[FounderVox:Demo] Error details:', {
+          console.error('[FounderNote:Demo] Error loading profile:', profileError)
+          console.error('[FounderNote:Demo] Error details:', {
             message: profileError.message,
             details: profileError.details,
             hint: profileError.hint,
@@ -64,7 +64,7 @@ export default function DemoPage() {
 
         // If demo already completed, go to dashboard
         if (profile?.demo_completed) {
-          console.log('[FounderVox:Demo] Demo already completed, redirecting to dashboard')
+          console.log('[FounderNote:Demo] Demo already completed, redirecting to dashboard')
           router.push('/dashboard')
           return
         }
@@ -81,13 +81,13 @@ export default function DemoPage() {
           .is('first_login_at', null)
 
         if (updateError) {
-          console.warn('[FounderVox:Demo] Could not update first_login_at (column may not exist):', updateError.message)
+          console.warn('[FounderNote:Demo] Could not update first_login_at (column may not exist):', updateError.message)
         }
 
-        console.log('[FounderVox:Demo] User ready for demo:', user.email)
+        console.log('[FounderNote:Demo] User ready for demo:', user.email)
         setIsLoading(false)
       } catch (error) {
-        console.error('[FounderVox:Demo] Unexpected error:', error)
+        console.error('[FounderNote:Demo] Unexpected error:', error)
         setIsLoading(false)
       }
     }
@@ -96,7 +96,7 @@ export default function DemoPage() {
   }, [router, supabase])
 
   const handleStartRecording = async () => {
-    console.log('[FounderVox:Demo] Starting first recording...')
+    console.log('[FounderNote:Demo] Starting first recording...')
     setIsRecording(true)
     // TODO: Implement actual recording
     setTimeout(async () => {
@@ -106,7 +106,7 @@ export default function DemoPage() {
   }
 
   const handleTemplateClick = async (templateId: string) => {
-    console.log('[FounderVox:Demo] Template selected:', templateId)
+    console.log('[FounderNote:Demo] Template selected:', templateId)
     setIsSaving(true)
     
     try {
@@ -119,15 +119,15 @@ export default function DemoPage() {
           .eq('id', user.id)
 
         if (updateError) {
-          console.error('[FounderVox:Demo] Error updating demo_completed:', updateError)
+          console.error('[FounderNote:Demo] Error updating demo_completed:', updateError)
         } else {
-          console.log('[FounderVox:Demo] Demo marked complete')
+          console.log('[FounderNote:Demo] Demo marked complete')
         }
       }
 
       router.push(`/dashboard?template=${templateId}`)
     } catch (error) {
-      console.error('[FounderVox:Demo] Error handling template click:', error)
+      console.error('[FounderNote:Demo] Error handling template click:', error)
       router.push(`/dashboard?template=${templateId}`)
     } finally {
       setIsSaving(false)
@@ -135,14 +135,14 @@ export default function DemoPage() {
   }
 
   const handleSkipTosDashboard = async () => {
-    console.log('[FounderVox:Demo] Skip to dashboard clicked')
+    console.log('[FounderNote:Demo] Skip to dashboard clicked')
     setIsSaving(true)
     
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
       if (userError || !user) {
-        console.error('[FounderVox:Demo] Error getting user:', userError)
+        console.error('[FounderNote:Demo] Error getting user:', userError)
         router.push('/dashboard')
         return
       }
@@ -154,16 +154,16 @@ export default function DemoPage() {
         .eq('id', user.id)
 
       if (updateError) {
-        console.error('[FounderVox:Demo] Error updating demo_completed:', updateError)
+        console.error('[FounderNote:Demo] Error updating demo_completed:', updateError)
         // Still redirect even if update fails
       } else {
-        console.log('[FounderVox:Demo] Demo marked as complete successfully')
+        console.log('[FounderNote:Demo] Demo marked as complete successfully')
       }
 
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (error) {
-      console.error('[FounderVox:Demo] Error skipping to dashboard:', error)
+      console.error('[FounderNote:Demo] Error skipping to dashboard:', error)
       // Still redirect on error
       router.push('/dashboard')
     } finally {
