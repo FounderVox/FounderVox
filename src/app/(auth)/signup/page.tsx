@@ -103,8 +103,9 @@ export default function SignupPage() {
 
       // Auto-login is already done by signUp (user is authenticated)
       // Redirect to welcome page after 1.5 seconds
+      // Use window.location.href to ensure cookies are set before redirect
       setTimeout(() => {
-        router.push('/welcome')
+        window.location.href = '/welcome'
       }, 1500)
     } catch (err) {
       console.error('[Signup] Unexpected error:', err)

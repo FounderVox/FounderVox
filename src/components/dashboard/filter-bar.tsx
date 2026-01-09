@@ -122,7 +122,8 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
   const handleSignOut = async () => {
     console.log('[FounderVox:Dashboard:FilterBar] Signing out...')
     await supabase.auth.signOut()
-    router.push('/login')
+    // Redirect to landing page after sign out
+    window.location.href = '/'
   }
 
   const handleSearchClick = () => {

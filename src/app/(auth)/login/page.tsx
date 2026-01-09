@@ -116,18 +116,37 @@ function LoginContent() {
         demo_completed: profile?.demo_completed
       })
 
+      // Refresh session to ensure cookies are set
+      const { error: refreshError } = await supabase.auth.refreshSession()
+      if (refreshError) {
+        console.error('[Login] Error refreshing session:', refreshError)
+      }
+      
+      // Wait for cookies to be set in the response
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      // Use window.location for full page reload to ensure cookies are read by middleware
+      // But first verify the session is set
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        console.error('[Login] No session after login, this should not happen')
+        setError('Session not created. Please try again.')
+        setIsLoading(false)
+        return
+      }
+      
       // Redirect based on onboarding status
       if (profile?.onboarding_completed) {
         if (profile.demo_completed) {
           console.log('[Login] Redirecting to dashboard')
-          router.push('/dashboard')
+          window.location.href = '/dashboard'
         } else {
           console.log('[Login] Redirecting to demo')
-          router.push('/demo')
+          window.location.href = '/demo'
         }
       } else {
         console.log('[Login] Redirecting to welcome (onboarding)')
-        router.push('/welcome')
+        window.location.href = '/welcome'
       }
     } catch (err) {
       console.error('[Login] Unexpected error:', err)

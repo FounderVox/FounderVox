@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 // Routes that don't require authentication
-const publicRoutes = ['/login', '/signup', '/auth/callback']
+const publicRoutes = ['/', '/login', '/signup', '/auth/callback', '/pricing', '/download']
 
 // Routes that require authentication
 const protectedRoutes = ['/dashboard', '/welcome', '/use-cases', '/demo']
@@ -29,30 +29,10 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Handle root redirect
+  // Allow landing page at root - no redirect needed
   if (pathname === '/') {
-    if (user) {
-      console.log('[FounderVox:Middleware] Authenticated user at root, checking onboarding')
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('onboarding_completed, demo_completed')
-        .eq('id', user.id)
-        .single()
-
-      if (profile?.onboarding_completed) {
-        if (profile.demo_completed) {
-          console.log('[FounderVox:Middleware] Redirecting to dashboard')
-          return NextResponse.redirect(new URL('/dashboard', request.url))
-        } else {
-          console.log('[FounderVox:Middleware] Redirecting to demo')
-          return NextResponse.redirect(new URL('/demo', request.url))
-        }
-      }
-      console.log('[FounderVox:Middleware] Redirecting to welcome (onboarding)')
-      return NextResponse.redirect(new URL('/welcome', request.url))
-    }
-    console.log('[FounderVox:Middleware] Unauthenticated, redirecting to login')
-    return NextResponse.redirect(new URL('/login', request.url))
+    console.log('[FounderVox:Middleware] Landing page at root, allowing access')
+    return supabaseResponse
   }
 
   // Check if trying to access protected route without auth
@@ -62,26 +42,33 @@ export async function middleware(request: NextRequest) {
 
   if (isProtectedRoute && !user) {
     console.log('[FounderVox:Middleware] Protected route without auth, redirecting to login')
-    const redirectUrl = new URL('/login', request.url)
-    redirectUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(redirectUrl)
+    // Only redirect if not already on login page to prevent loops
+    if (pathname !== '/login') {
+      const redirectUrl = new URL('/login', request.url)
+      redirectUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(redirectUrl)
+    }
   }
 
-  // Check if authenticated user is trying to access auth pages
-  const isPublicRoute = publicRoutes.some((route) =>
+  // Check if authenticated user is trying to access auth pages (but not landing/pricing/download)
+  const isAuthRoute = ['/login', '/signup'].some((route) =>
     pathname.startsWith(route)
   )
 
-  if (isPublicRoute && user) {
+  if (isAuthRoute && user) {
     console.log('[FounderVox:Middleware] Authenticated user on auth page, redirecting')
     const { data: profile } = await supabase
       .from('profiles')
-      .select('onboarding_completed')
+      .select('onboarding_completed, demo_completed')
       .eq('id', user.id)
       .single()
 
     if (profile?.onboarding_completed) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      if (profile.demo_completed) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      } else {
+        return NextResponse.redirect(new URL('/demo', request.url))
+      }
     }
     return NextResponse.redirect(new URL('/welcome', request.url))
   }
