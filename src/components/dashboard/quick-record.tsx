@@ -4,25 +4,24 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Mic, ChevronDown } from 'lucide-react'
+import { RecordingModal } from '@/components/recording/recording-modal'
 
 const templates = [
-  { id: 'none', label: 'No template' },
-  { id: 'investor', label: 'Investor Update' },
-  { id: 'interview', label: 'User Interview' },
-  { id: 'pitch', label: 'Pitch Practice' },
-  { id: 'meeting', label: 'Meeting Notes' },
-  { id: 'ideas', label: 'Product Ideas' },
-  { id: 'braindump', label: 'Brain Dump' },
+  { id: 'action_items', label: '📋 Action Items', description: 'Extract tasks and todos' },
+  { id: 'investor_update', label: '📧 Investor Update', description: 'Draft update emails' },
+  { id: 'progress_log', label: '📈 Progress Log', description: 'Track weekly progress' },
+  { id: 'product_ideas', label: '💡 Product Ideas', description: 'Capture feature ideas' },
+  { id: 'brain_dump', label: '🧠 Brain Dump', description: 'Meeting notes & thoughts' },
 ]
 
 export function QuickRecord() {
-  const [isRecording, setIsRecording] = useState(false)
+  const [showRecordingModal, setShowRecordingModal] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(templates[0])
   const [isTemplateOpen, setIsTemplateOpen] = useState(false)
 
   const handleRecord = () => {
-    setIsRecording(!isRecording)
-    console.log('[FounderVox:Dashboard] Recording:', !isRecording)
+    setShowRecordingModal(true)
+    console.log('[FounderVox:Dashboard] Opening recording modal with template:', selectedTemplate.id)
   }
 
   return (
@@ -35,16 +34,12 @@ export function QuickRecord() {
         >
           <Button
             onClick={handleRecord}
-            className={`h-14 px-6 ${
-              isRecording
-                ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-black hover:bg-gray-900'
-            } text-white shadow-lg`}
+            className="h-14 px-6 bg-black hover:bg-gray-900 text-white shadow-lg"
           >
-            <div className={`p-1.5 rounded-full mr-2 ${isRecording ? 'bg-white/20 animate-pulse' : 'bg-white/20'}`}>
+            <div className="p-1.5 rounded-full mr-2 bg-white/20">
               <Mic className="h-5 w-5" />
             </div>
-            {isRecording ? 'Stop Recording' : 'Tap to record'}
+            Tap to record
           </Button>
         </motion.div>
 
@@ -87,18 +82,13 @@ export function QuickRecord() {
           )}
         </div>
 
-        {/* Recording indicator */}
-        {isRecording && (
-          <motion.div
-            className="flex items-center gap-2 text-red-600"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-sm font-medium">Recording...</span>
-          </motion.div>
-        )}
       </div>
+
+      {/* Recording Modal */}
+      <RecordingModal
+        isOpen={showRecordingModal}
+        onClose={() => setShowRecordingModal(false)}
+      />
     </div>
   )
 }

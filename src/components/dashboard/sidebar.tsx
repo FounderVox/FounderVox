@@ -20,12 +20,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Mail,
-  MessageSquare,
-  Target,
-  Users,
   Lightbulb,
   Zap,
-  FileEdit,
+  CheckSquare,
+  TrendingUp,
 } from 'lucide-react'
 
 // Create context to share collapsed state
@@ -50,14 +48,11 @@ const noteCategories = [
 ]
 
 const templates = [
-  { label: 'Investor Update', icon: Mail, id: 'investor' },
-  { label: 'User Interview', icon: MessageSquare, id: 'interview' },
-  { label: 'Pitch Practice', icon: Target, id: 'pitch' },
-  { label: 'Meeting Notes', icon: Users, id: 'meeting' },
-  { label: 'Product Ideas', icon: Lightbulb, id: 'ideas' },
-  { label: 'Brain Dump', icon: Zap, id: 'braindump' },
-  { label: 'Email Draft', icon: FileEdit, id: 'email' },
-  { label: 'Team Standup', icon: Users, id: 'standup' },
+  { label: 'Action Items', icon: CheckSquare, id: 'action_items' },
+  { label: 'Investor Update', icon: Mail, id: 'investor_update' },
+  { label: 'Progress Log', icon: TrendingUp, id: 'progress_log' },
+  { label: 'Product Ideas', icon: Lightbulb, id: 'product_ideas' },
+  { label: 'Brain Dump', icon: Zap, id: 'brain_dump' },
 ]
 
 interface SidebarProps {
