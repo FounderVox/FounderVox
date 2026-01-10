@@ -5,7 +5,6 @@ import { Sidebar, useSidebar, SidebarContext } from '@/components/dashboard/side
 import { motion } from 'framer-motion'
 import { Mic, FileText, Wand2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import CloudBackground from '@/components/shared/cloud-background'
 import { ManualNoteDialog } from '@/components/dashboard/manual-note-dialog'
 import { TemplateSelectorDialog } from '@/components/dashboard/template-selector-dialog'
 import { RecordingModal } from '@/components/recording/recording-modal'
@@ -49,7 +48,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <CloudBackground />
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent relative z-10" />
       </div>
     )
@@ -129,8 +127,6 @@ function DashboardContent({
     <ErrorBoundary>
       <RecordingProvider>
         <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
-          <CloudBackground />
-
           {/* Sidebar - fixed on left */}
           <Sidebar notesCount={notesCount} starredCount={starredCount} />
 

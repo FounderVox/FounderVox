@@ -79,7 +79,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
         initial={false}
         animate={{ width: currentWidth }}
         transition={{ duration: 0.2, ease: 'easeInOut' }}
-        className="fixed left-0 top-0 bottom-0 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 flex flex-col z-[200] shadow-sm overflow-hidden"
+        className="fixed left-0 top-0 bottom-0 bg-white/95 border-r border-gray-200/50 flex flex-col z-[200] shadow-sm overflow-hidden"
         style={{ height: '100vh' }}
       >
         {/* Logo & Collapse Toggle */}
