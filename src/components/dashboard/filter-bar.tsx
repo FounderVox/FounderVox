@@ -509,7 +509,8 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                         <Settings className="h-4 w-4" />
                         Settings
                       </button>
-                      <button
+                      {/* Temporarily disabled - routes not yet implemented */}
+                      {/* <button
                         onClick={() => {
                           setIsProfileOpen(false)
                           router.push('/dashboard/analytics')
@@ -538,7 +539,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                       >
                         <HelpCircle className="h-4 w-4" />
                         Help
-                      </button>
+                      </button> */}
                     </div>
 
                     {/* Sign Out */}

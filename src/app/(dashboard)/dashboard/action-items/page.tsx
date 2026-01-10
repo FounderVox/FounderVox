@@ -30,9 +30,13 @@ export default function ActionItemsPage() {
   const [filterPriority, setFilterPriority] = useState<'all' | 'high' | 'medium' | 'low'>('all')
   const [draggedItem, setDraggedItem] = useState<{ itemId: string; status: StatusColumn; index: number } | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<StatusColumn | null>(null)
-  const supabase = createClient()
 
   const loadData = async () => {
+    // Only run on client side
+    if (typeof window === 'undefined') return
+    
+    const supabase = createClient()
+    
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
@@ -86,9 +90,16 @@ export default function ActionItemsPage() {
     }
   }
 
+  // Get supabase client for drag handlers
+  const getSupabase = () => {
+    if (typeof window === 'undefined') return null
+    return createClient()
+  }
+
   useEffect(() => {
     loadData()
-  }, [supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleDragStart = (e: React.DragEvent, itemId: string, status: StatusColumn, index: number) => {
     setDraggedItem({ itemId, status, index })
@@ -133,6 +144,9 @@ export default function ActionItemsPage() {
 
     // Update database
     try {
+      const supabase = getSupabase()
+      if (!supabase) return
+      
       const { error } = await supabase
         .from('action_items')
         .update({
@@ -158,6 +172,9 @@ export default function ActionItemsPage() {
     if (!confirm('Are you sure you want to delete this action item?')) return
 
     try {
+      const supabase = getSupabase()
+      if (!supabase) return
+      
       const { error } = await supabase
         .from('action_items')
         .delete()
@@ -354,7 +371,7 @@ export default function ActionItemsPage() {
                       <div
                         key={item.id}
                         draggable
-                        onDragStart={(e: React.DragEvent) => handleDragStart(e, item.id, status, index)}
+                        onDragStart={(e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, item.id, status, index)}
                         className={cn(
                           "bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 cursor-move transition-all duration-200 group",
                           draggedItem?.itemId === item.id && draggedItem?.status === status

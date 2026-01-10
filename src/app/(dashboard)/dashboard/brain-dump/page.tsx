@@ -82,9 +82,16 @@ export default function BrainDumpPage() {
     }
   }
 
+  // Get supabase client for drag handlers
+  const getSupabase = () => {
+    if (typeof window === 'undefined') return null
+    return createClient()
+  }
+
   useEffect(() => {
     loadData()
-  }, [supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleDragStart = (e: React.DragEvent, itemId: string, category: CategoryColumn, index: number) => {
     setDraggedItem({ itemId, category, index })
@@ -128,6 +135,9 @@ export default function BrainDumpPage() {
 
     // Update database
     try {
+      const supabase = getSupabase()
+      if (!supabase) return
+      
       const { error } = await supabase
         .from('brain_dump')
         .update({ category: targetCategory })
@@ -150,6 +160,9 @@ export default function BrainDumpPage() {
     if (!confirm('Are you sure you want to delete this item?')) return
 
     try {
+      const supabase = getSupabase()
+      if (!supabase) return
+      
       const { error } = await supabase
         .from('brain_dump')
         .delete()

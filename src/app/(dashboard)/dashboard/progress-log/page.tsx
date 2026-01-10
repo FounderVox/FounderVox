@@ -27,16 +27,77 @@ export default function ProgressLogPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [draggedItem, setDraggedItem] = useState<{ logId: string; status: StatusColumn; index: number; text: string } | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<{ logId: string; status: StatusColumn } | null>(null)
-  const supabase = createClient()
+
+  const loadData = async () => {
+    // Only run on client side
+    if (typeof window === 'undefined') return
+    
+    const supabase = createClient()
+    
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        console.error('[ProgressLog] Error getting user:', userError)
+        setIsLoading(false)
+        return
+      }
+
+      // Load profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      setProfile(profileData)
+
+      // Load progress logs via recordings
+      const { data: recordings } = await supabase
+        .from('recordings')
+        .select('id')
+        .eq('user_id', user.id)
+
+      if (recordings && recordings.length > 0) {
+        const recordingIds = recordings.map(r => r.id)
+        const { data: logData, error: logError } = await supabase
+          .from('progress_logs')
+          .select('*')
+          .in('recording_id', recordingIds)
+          .order('week_of', { ascending: false })
+
+        if (logError) {
+          console.error('[ProgressLog] Error loading logs:', logError)
+        } else {
+          setLogs(logData || [])
+        }
+      }
+
+      setIsLoading(false)
+    } catch (error) {
+      console.error('[ProgressLog] Unexpected error:', error)
+      setIsLoading(false)
+    }
+  }
+
+  // Get supabase client for drag handlers
+  const getSupabase = () => {
+    if (typeof window === 'undefined') return null
+    return createClient()
+  }
 
   useEffect(() => {
     loadData()
-  }, [supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const deleteLog = async (logId: string) => {
     if (!confirm('Are you sure you want to delete this progress log?')) return
 
     try {
+      const supabase = getSupabase()
+      if (!supabase) return
+      
       const { error } = await supabase
         .from('progress_logs')
         .delete()
@@ -110,6 +171,9 @@ export default function ProgressLogPage() {
 
     // Update database
     try {
+      const supabase = getSupabase()
+      if (!supabase) return
+      
       const updateData: any = {
         [draggedItem.status]: sourceArray.length > 0 ? sourceArray : null,
         [targetStatus]: targetArray
@@ -132,53 +196,6 @@ export default function ProgressLogPage() {
     }
 
     setDraggedItem(null)
-  }
-
-  const loadData = async () => {
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-
-      if (userError || !user) {
-        console.error('[ProgressLog] Error getting user:', userError)
-        setIsLoading(false)
-        return
-      }
-
-      // Load profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      setProfile(profileData)
-
-      // Load progress logs via recordings
-      const { data: recordings } = await supabase
-        .from('recordings')
-        .select('id')
-        .eq('user_id', user.id)
-
-      if (recordings && recordings.length > 0) {
-        const recordingIds = recordings.map(r => r.id)
-        const { data: logData, error: logError } = await supabase
-          .from('progress_logs')
-          .select('*')
-          .in('recording_id', recordingIds)
-          .order('week_of', { ascending: false })
-
-        if (logError) {
-          console.error('[ProgressLog] Error loading logs:', logError)
-        } else {
-          setLogs(logData || [])
-        }
-      }
-
-      setIsLoading(false)
-    } catch (error) {
-      console.error('[ProgressLog] Unexpected error:', error)
-      setIsLoading(false)
-    }
   }
 
   const formatWeek = (weekOf: string) => {
