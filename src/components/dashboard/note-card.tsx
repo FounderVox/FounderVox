@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Clock, MoreVertical, Play, Edit, Trash2, Tag, Sparkles } from 'lucide-react'
+import { Star, Clock, MoreVertical, Play, Edit, Trash2, Tag, Sparkles, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getTagColor } from '@/lib/tag-colors'
 
 interface NoteCardProps {
   title: string
@@ -61,11 +62,6 @@ export function NoteCard({
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
-          {template && (
-            <span className="inline-block px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-black text-white rounded-full mb-2">
-              {template}
-            </span>
-          )}
           <h3 className="text-black font-semibold truncate">{title}</h3>
         </div>
         <div className="flex items-center gap-1 transition-opacity relative">
@@ -129,7 +125,7 @@ export function NoteCard({
                         setIsMenuOpen(false)
                         onEdit?.()
                       }}
-                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-50 transition-all duration-200"
+                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-200 transition-all duration-200"
                     >
                       <Edit className="h-4 w-4" />
                       Edit Note
@@ -140,7 +136,7 @@ export function NoteCard({
                         setIsMenuOpen(false)
                         onAddTag?.()
                       }}
-                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-50 transition-all duration-200"
+                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-200 transition-all duration-200"
                     >
                       <Tag className="h-4 w-4" />
                       Add Tag
@@ -158,15 +154,17 @@ export function NoteCard({
                         className={cn(
                           "flex items-center gap-2 w-full px-4 py-2.5 text-sm transition-all duration-200",
                           canSmartify
-                            ? "text-purple-600 hover:bg-purple-50 hover:shadow-sm"
+                            ? "text-black hover:bg-gray-200 hover:shadow-sm"
                             : "text-gray-400 cursor-not-allowed"
                         )}
                         title={!canSmartify && isSmartified ? "Note already smartified. Edit to smartify again." : "Extract structured data from this note"}
                       >
-                        <Sparkles className="h-4 w-4" />
-                        {isSmartified ? "Smartify Again" : "Smartify"}
+                        <Sparkles className={cn("h-4 w-4", isSmartified && "text-gray-500")} />
+                        <span className="flex-1 text-left">
+                          {isSmartified ? "Re-smartify" : "Smartify"}
+                        </span>
                         {isSmartified && (
-                          <span className="ml-auto text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded">Done</span>
+                          <CheckCircle className="h-4 w-4 text-gray-500" />
                         )}
                       </button>
                     )}
@@ -176,7 +174,7 @@ export function NoteCard({
                         setIsMenuOpen(false)
                         onDelete?.()
                       }}
-                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:shadow-sm transition-all duration-200"
+                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-100 hover:shadow-sm transition-all duration-200"
                     >
                       <Trash2 className="h-4 w-4" />
                       Delete Note
@@ -196,19 +194,23 @@ export function NoteCard({
       {/* Tags */}
       {tags && tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-4">
-          {tags.slice(0, 3).map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-full border border-gray-200"
-            >
-              {tag}
-            </span>
-          ))}
-          {tags.length > 3 && (
-            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-gray-500">
-              +{tags.length - 3} more
-            </span>
-          )}
+          {tags.map((tag) => {
+            const color = getTagColor(tag)
+            
+            return (
+              <span
+                key={tag}
+                className={cn(
+                  "inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border",
+                  color.bg,
+                  color.text,
+                  color.border
+                )}
+              >
+                {tag}
+              </span>
+            )
+          })}
         </div>
       )}
 

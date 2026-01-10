@@ -14,6 +14,7 @@ import { RecordingProvider } from '@/contexts/recording-context'
 import { AuthProvider, useAuth } from '@/contexts/auth-context'
 import { UseCase } from '@/lib/constants/use-cases'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { usePathname } from 'next/navigation'
 
 export default function DashboardLayout({
   children,
@@ -151,7 +152,29 @@ function SidebarContent({
   profile: { display_name: string | null; avatar_url: string | null; email: string | null; recordings_count?: number } | null
 }) {
   const { isCollapsed } = useSidebar()
-  const sidebarWidth = isCollapsed ? 72 : 256
+  const pathname = usePathname()
+  // Updated sidebar widths: 20% reduction from original, collapsed gets additional 15% reduction
+  const sidebarWidth = isCollapsed ? 61 : 205
+
+  // Pages where recording buttons should be shown (only dashboard and all notes, not individual note view)
+  const isNoteDetailPage = pathname?.match(/^\/dashboard\/notes\/[^/]+$/)
+  const showRecordingButtons = (pathname === '/dashboard' || pathname === '/dashboard/notes') && !isNoteDetailPage
+
+  // For note detail page, render with sidebar offset but full width content
+  if (isNoteDetailPage) {
+    return (
+      <>
+        <div
+          className="fixed top-0 bottom-0 right-0 transition-[left] duration-200 z-10"
+          style={{ left: sidebarWidth }}
+        >
+          {children}
+        </div>
+        {/* Floating Record Button - visible on note detail page */}
+        <FloatingRecordButton sidebarWidth={sidebarWidth} />
+      </>
+    )
+  }
 
   return (
     <>
@@ -165,8 +188,8 @@ function SidebarContent({
         </main>
       </div>
 
-      {/* Floating Record Button - Bottom Center */}
-      <FloatingRecordButton sidebarWidth={sidebarWidth} />
+      {/* Floating Record Button - Bottom Center (only on dashboard and all notes pages) */}
+      {showRecordingButtons && <FloatingRecordButton sidebarWidth={sidebarWidth} />}
     </>
   )
 }

@@ -148,8 +148,7 @@ export default function StarredPage() {
   }
 
   const handleViewNote = (noteId: string) => {
-    setSelectedNoteForDetail(noteId)
-    setShowDetailModal(true)
+    window.location.href = `/dashboard/notes/${noteId}`
   }
 
   const handleDeleteNote = async (noteId: string) => {
@@ -204,7 +203,7 @@ export default function StarredPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center">
             <Star className="h-5 w-5 text-violet-600 fill-violet-600" />
           </div>
           <div>
@@ -250,8 +249,8 @@ export default function StarredPage() {
         </div>
       ) : (
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-violet-500/10 mb-4">
-            <Star className="h-8 w-8 text-violet-600" />
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/60 backdrop-blur-sm border-2 border-gray-200/50 mb-4">
+            <Star className="h-8 w-8 text-black" />
           </div>
           <h3 className="text-gray-900 font-semibold mb-2">No starred notes</h3>
           <p className="text-gray-500 text-sm max-w-sm mx-auto">

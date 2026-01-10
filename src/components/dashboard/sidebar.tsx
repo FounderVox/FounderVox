@@ -68,12 +68,18 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
 
   const toggleCollapse = () => setIsCollapsed(!isCollapsed)
 
+  // Calculate widths: 20% reduction from original, collapsed gets additional 15% reduction
+  const expandedWidth = 256 * 0.8 // 204.8px, rounded to 205px
+  const collapsedWidth = 72 * 0.85 // 61.2px, rounded to 61px
+  
+  const currentWidth = isCollapsed ? collapsedWidth : expandedWidth
+
   return (
       <motion.aside
         initial={false}
-        animate={{ width: isCollapsed ? 72 : 256 }}
+        animate={{ width: currentWidth }}
         transition={{ duration: 0.2, ease: 'easeInOut' }}
-        className="fixed left-0 top-0 bottom-0 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 flex flex-col z-[100] shadow-sm overflow-hidden"
+        className="fixed left-0 top-0 bottom-0 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 flex flex-col z-[200] shadow-sm overflow-hidden"
         style={{ height: '100vh' }}
       >
         {/* Logo & Collapse Toggle */}
@@ -111,7 +117,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                title={isCollapsed ? item.label : undefined}
+                className={isCollapsed ? "relative group" : ""}
                 onClick={(e) => {
                   if (isCollapsed) {
                     e.preventDefault()
@@ -129,12 +135,19 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                     isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5',
                     isActive
                       ? 'bg-black text-white shadow-sm'
-                      : 'text-black hover:bg-gray-100/80 hover:shadow-sm'
+                      : 'text-black hover:bg-gray-200 hover:shadow-sm'
                   )}
                 >
                   <Icon className="h-4 w-4 flex-shrink-0" />
                   {!isCollapsed && item.label}
                 </div>
+                {/* Hover tooltip for collapsed state */}
+                {isCollapsed && (
+                  <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity duration-200">
+                    {item.label}
+                    <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-r-4 border-r-black border-b-4 border-b-transparent"></div>
+                  </div>
+                )}
               </Link>
             )
           })}
@@ -147,7 +160,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
             <>
               <button
                 onClick={() => setNotesOpen(!notesOpen)}
-                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-black hover:bg-gray-100/60 rounded-lg transition-all duration-200"
+                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
               >
                 <span className="flex items-center gap-2">
                   <FolderOpen className="h-3.5 w-3.5" />
@@ -174,7 +187,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                               'flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all duration-200',
                               isActive
                                 ? 'bg-black text-white shadow-sm'
-                                : 'text-black hover:bg-gray-100/80 hover:shadow-sm'
+                                : 'text-black hover:bg-gray-200 hover:shadow-sm'
                             )}
                           >
                             <span className="flex items-center gap-3">
@@ -195,22 +208,27 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
               </AnimatePresence>
             </>
           ) : (
-            // Collapsed version - just icons
+            // Collapsed version - just icons with tooltips
             <div className="space-y-1">
               {noteCategories.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
                 return (
-                  <Link key={item.href} href={item.href} title={item.label}>
+                  <Link key={item.href} href={item.href} className="relative group">
                     <div
                       className={cn(
                         'flex items-center justify-center p-2.5 rounded-lg text-sm transition-all duration-200',
                         isActive
                           ? 'bg-black text-white shadow-sm'
-                          : 'text-black hover:bg-gray-100/80 hover:shadow-sm'
+                          : 'text-black hover:bg-gray-200 hover:shadow-sm'
                       )}
                     >
                       <Icon className="h-4 w-4" />
+                    </div>
+                    {/* Hover tooltip */}
+                    <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity duration-200">
+                      {item.label}
+                      <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-r-4 border-r-black border-b-4 border-b-transparent"></div>
                     </div>
                   </Link>
                 )
@@ -226,7 +244,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
             <>
               <button
                 onClick={() => setTemplatesOpen(!templatesOpen)}
-                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-black hover:bg-gray-100/60 rounded-lg transition-all duration-200"
+                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
               >
                 <span className="flex items-center gap-2">
                   <FileText className="h-3.5 w-3.5" />
@@ -256,7 +274,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                               'flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-all duration-200',
                               isActive
                                 ? 'bg-black text-white shadow-sm'
-                                : 'text-black hover:bg-gray-100/80 hover:shadow-sm'
+                                : 'text-black hover:bg-gray-200 hover:shadow-sm'
                             )}
                           >
                             <Icon className="h-4 w-4" />
@@ -270,14 +288,36 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
               </AnimatePresence>
             </>
           ) : (
-            // Collapsed version - just template icon
-            <div className="flex justify-center">
-              <button
-                className="p-2.5 rounded-lg text-black hover:bg-gray-100/80 hover:shadow-sm transition-all duration-200"
-                title="Templates"
-              >
-                <FileText className="h-4 w-4" />
-              </button>
+            // Collapsed version - show all template icons
+            <div className="space-y-1">
+              {templates.map((template) => {
+                const Icon = template.icon
+                const isActive = pathname === template.href
+                return (
+                  <Link
+                    key={template.id}
+                    href={template.href}
+                    className="relative group"
+                  >
+                    <div
+                      className={cn(
+                        'flex items-center justify-center p-2.5 rounded-lg transition-all duration-200',
+                        isActive
+                          ? 'bg-black text-white shadow-sm'
+                          : 'text-black hover:bg-gray-200 hover:shadow-sm'
+                      )}
+                      title={template.label}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    {/* Hover tooltip */}
+                    <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity duration-200">
+                      {template.label}
+                      <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-r-4 border-r-black border-b-4 border-b-transparent"></div>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           )}
         </nav>
@@ -286,7 +326,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
         <div className={cn('border-t border-gray-200/50 space-y-1', isCollapsed ? 'p-2' : 'p-3')}>
           <Link href="/dashboard/settings" title={isCollapsed ? 'Settings' : undefined}>
             <div className={cn(
-              'flex items-center gap-3 rounded-lg text-sm text-black hover:bg-gray-100/80 hover:shadow-sm transition-all duration-200',
+              'flex items-center gap-3 rounded-lg text-sm text-black hover:bg-gray-200 hover:shadow-sm transition-all duration-200',
               isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'
             )}>
               <Settings className="h-4 w-4" />
@@ -295,7 +335,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
           </Link>
           <button
             className={cn(
-              'flex items-center gap-3 w-full rounded-lg text-sm text-black hover:bg-gray-100/80 hover:shadow-sm transition-all duration-200',
+              'flex items-center gap-3 w-full rounded-lg text-sm text-black hover:bg-gray-200 hover:shadow-sm transition-all duration-200',
               isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'
             )}
             title={isCollapsed ? 'Upgrade to Pro' : undefined}

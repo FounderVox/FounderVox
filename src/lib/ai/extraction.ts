@@ -60,26 +60,28 @@ For each action item, identify:
    - MEDIUM: Contains "important", "should", "need to"
    - LOW: Contains "maybe", "consider", "when possible", "eventually"
 
-Return a JSON array of action items. If no action items found, return empty array.
+Return a JSON object with an "action_items" array. If no action items found, return empty array.
 
 Transcript:
 ${transcript}
 
-Return format:
-[
-  {
-    "task": "Complete the quarterly report",
-    "assignee": "Sarah",
-    "deadline": "Friday",
-    "priority": "high"
-  }
-]`
+Return format (must be valid JSON object):
+{
+  "action_items": [
+    {
+      "task": "Complete the quarterly report",
+      "assignee": "Sarah",
+      "deadline": "Friday",
+      "priority": "high"
+    }
+  ]
+}`
 
   try {
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'You are an expert at extracting action items from meeting transcripts. Return only valid JSON.' },
+        { role: 'system', content: 'You are an expert at extracting action items from meeting transcripts. Return only valid JSON in the exact format specified.' },
         { role: 'user', content: prompt }
       ],
       temperature: 0.3,
@@ -87,32 +89,46 @@ Return format:
     })
 
     const content = response.choices[0]?.message?.content
-    if (!content) return
+    if (!content) {
+      console.log('[Extraction] No content in response for action items')
+      return
+    }
+
+    console.log('[Extraction] Raw action items response:', content)
 
     const parsed = JSON.parse(content)
-    const actionItems: ActionItem[] = Array.isArray(parsed.action_items) ? parsed.action_items : (Array.isArray(parsed) ? parsed : [])
+    const actionItems: ActionItem[] = parsed.action_items || []
 
-    if (actionItems.length === 0) return
+    console.log('[Extraction] Parsed action items:', actionItems.length)
+
+    if (actionItems.length === 0) {
+      console.log('[Extraction] No action items found in transcript')
+      return
+    }
 
     // Save to database
     const supabase = await createClient()
     const itemsToInsert = actionItems.map(item => ({
       recording_id: recordingId,
-      task: item.task,
-      assignee: item.assignee,
-      deadline: item.deadline ? new Date(item.deadline).toISOString() : null,
-      priority: item.priority,
+      task: item.task || 'Untitled task',
+      assignee: item.assignee || null,
+      deadline: item.deadline ? (isNaN(Date.parse(item.deadline)) ? null : new Date(item.deadline).toISOString()) : null,
+      priority: (item.priority || 'medium').toLowerCase() as 'high' | 'medium' | 'low',
       status: 'open' as const
     }))
+
+    console.log('[Extraction] Inserting action items:', itemsToInsert.length)
 
     const { data, error } = await supabase.from('action_items').insert(itemsToInsert).select()
     if (error) {
       console.error('[Extraction] Error saving action items:', error)
+      throw error
     } else {
-      console.log(`[Extraction] Saved ${actionItems.length} action items to database:`, data?.map(i => i.id))
+      console.log(`[Extraction] Successfully saved ${actionItems.length} action items to database:`, data?.map(i => i.id))
     }
   } catch (error) {
     console.error('[Extraction] Action items error:', error)
+    throw error
   }
 }
 

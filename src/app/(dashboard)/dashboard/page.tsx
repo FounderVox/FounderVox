@@ -11,6 +11,7 @@ import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
 import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
 import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
+import { DeleteNoteDialog } from '@/components/dashboard/delete-note-dialog'
 import { FileText, Mic, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -19,6 +20,8 @@ import { useAuth } from '@/contexts/auth-context'
 export default function DashboardPage() {
   const { user, profile, supabase } = useAuth()
   const [notes, setNotes] = useState<any[]>([])
+  const [filteredNotes, setFilteredNotes] = useState<any[]>([])
+  const [activeFilter, setActiveFilter] = useState('all')
   const [isRecentNotesExpanded, setIsRecentNotesExpanded] = useState(false)
   const [showTagDialog, setShowTagDialog] = useState(false)
   const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
@@ -28,6 +31,8 @@ export default function DashboardPage() {
   const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<string | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [selectedNoteForDelete, setSelectedNoteForDelete] = useState<{id: string, title: string} | null>(null)
 
   const loadNotes = useCallback(async () => {
     if (!user) return
@@ -45,26 +50,71 @@ export default function DashboardPage() {
         return
       }
 
-      setNotes(data || [])
+      const notesData = data || []
+      setNotes(notesData)
+      applyFilter(notesData, activeFilter)
     } catch (error) {
       console.error('[FounderNote:Dashboard:Page] Unexpected error loading notes:', error)
     }
-  }, [user, supabase])
+  }, [user, supabase, activeFilter])
+
+  const applyFilter = useCallback((notesData: any[], filter: string) => {
+    let filtered = notesData
+
+    if (filter === 'all') {
+      filtered = notesData
+    } else if (filter.startsWith('tag:')) {
+      const tagName = filter.replace('tag:', '')
+      filtered = notesData.filter(note => 
+        note.tags && Array.isArray(note.tags) && note.tags.includes(tagName)
+      )
+    } else {
+      filtered = notesData.filter(note => note.template_type === filter)
+    }
+
+    setFilteredNotes(filtered)
+  }, [])
+
+  // Listen for filter changes
+  useEffect(() => {
+    const handleFilterChange = (event: CustomEvent) => {
+      setActiveFilter(event.detail.filter)
+      applyFilter(notes, event.detail.filter)
+    }
+
+    window.addEventListener('filterChanged' as any, handleFilterChange as EventListener)
+    return () => {
+      window.removeEventListener('filterChanged' as any, handleFilterChange as EventListener)
+    }
+  }, [notes, applyFilter])
+
+  // Apply filter when notes or activeFilter changes
+  useEffect(() => {
+    if (notes.length > 0) {
+      applyFilter(notes, activeFilter)
+    }
+  }, [notes, activeFilter, applyFilter])
 
   useEffect(() => {
     loadNotes()
 
     // Listen for note events to refresh
-    const handleNoteEvent = () => loadNotes()
+    const handleNoteEvent = (event?: CustomEvent) => {
+      console.log('[FounderNote:Dashboard] Note event received:', event?.detail)
+      loadNotes()
+    }
+    const handleTagsUpdated = () => loadNotes()
 
-    window.addEventListener('noteCreated', handleNoteEvent)
-    window.addEventListener('noteUpdated', handleNoteEvent)
-    window.addEventListener('noteDeleted', handleNoteEvent)
+    window.addEventListener('noteCreated', handleNoteEvent as EventListener)
+    window.addEventListener('noteUpdated', handleNoteEvent as EventListener)
+    window.addEventListener('noteDeleted', handleNoteEvent as EventListener)
+    window.addEventListener('tagsUpdated', handleTagsUpdated)
 
     return () => {
-      window.removeEventListener('noteCreated', handleNoteEvent)
-      window.removeEventListener('noteUpdated', handleNoteEvent)
-      window.removeEventListener('noteDeleted', handleNoteEvent)
+      window.removeEventListener('noteCreated', handleNoteEvent as EventListener)
+      window.removeEventListener('noteUpdated', handleNoteEvent as EventListener)
+      window.removeEventListener('noteDeleted', handleNoteEvent as EventListener)
+      window.removeEventListener('tagsUpdated', handleTagsUpdated)
     }
   }, [loadNotes])
 
@@ -104,12 +154,19 @@ export default function DashboardPage() {
     }
   }
 
-  const handleDeleteNote = async (noteId: string) => {
-    if (!user) return
-    if (!confirm('Are you sure you want to delete this note?')) return
+  const handleDeleteNote = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    setSelectedNoteForDelete({ id: noteId, title: note?.title || 'Untitled Note' })
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDeleteNote = async () => {
+    if (!user || !selectedNoteForDelete) return
+
+    const noteId = selectedNoteForDelete.id
+    const originalNotes = notes
 
     // Optimistic update
-    const originalNotes = notes
     setNotes(notes.filter(note => note.id !== noteId))
 
     try {
@@ -153,8 +210,7 @@ export default function DashboardPage() {
   }
 
   const handleViewNote = (noteId: string) => {
-    setSelectedNoteForDetail(noteId)
-    setShowDetailModal(true)
+    window.location.href = `/dashboard/notes/${noteId}`
   }
 
   // Helper function to get full date label
@@ -167,8 +223,9 @@ export default function DashboardPage() {
     })
   }
 
-  // Group notes by date
-  const groupedNotes = notes.reduce((groups, note) => {
+  // Group notes by date (use filtered notes when filter is active)
+  const displayNotes = activeFilter === 'all' ? notes : filteredNotes
+  const groupedNotes = displayNotes.reduce((groups, note) => {
     const dateLabel = getDateLabel(note.created_at)
     if (!groups[dateLabel]) {
       groups[dateLabel] = []
@@ -239,7 +296,7 @@ export default function DashboardPage() {
               transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="overflow-hidden"
             >
-              {notes.length > 0 ? (
+              {displayNotes.length > 0 ? (
                 <div className="space-y-6">
                   {sortedDateLabels.map((dateLabel, groupIndex) => (
                     <div key={dateLabel}>
@@ -247,7 +304,7 @@ export default function DashboardPage() {
                         {dateLabel}
                       </h3>
                       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {groupedNotes[dateLabel].map((note: any, index: number) => (
+                        {groupedNotes[dateLabel]?.map((note: any, index: number) => (
                           <motion.div
                             key={note.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -281,8 +338,8 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">
-                  <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-violet-500/10 mb-4">
-                    <Mic className="h-8 w-8 text-violet-600" />
+                  <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/60 backdrop-blur-sm border-2 border-gray-200/50 mb-4">
+                    <Mic className="h-8 w-8 text-black" />
                   </div>
                   <h3 className="text-black font-semibold mb-2">No notes yet</h3>
                   <p className="text-gray-600 text-sm max-w-sm mx-auto">
@@ -339,8 +396,8 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-violet-500/10 mb-4">
-              <Mic className="h-8 w-8 text-violet-600" />
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/60 backdrop-blur-sm border-2 border-gray-200/50 mb-4">
+              <Mic className="h-8 w-8 text-black" />
             </div>
             <h3 className="text-black font-semibold mb-2">No notes yet</h3>
             <p className="text-gray-600 text-sm max-w-sm mx-auto">
@@ -376,10 +433,18 @@ export default function DashboardPage() {
       {selectedNoteForTag && (
         <AddTagDialog
           open={showTagDialog}
-          onOpenChange={(open) => {
+          onOpenChange={async (open) => {
             setShowTagDialog(open)
             if (!open) {
-              loadNotes() // Refresh notes when dialog closes
+              // Reload notes to get updated tags
+              await loadNotes()
+              // Also reload the specific note to update existingTags
+              if (selectedNoteForTag) {
+                const note = notes.find(n => n.id === selectedNoteForTag.id)
+                if (note) {
+                  setSelectedNoteForTag({ id: note.id, tags: note.tags || [] })
+                }
+              }
             }
           }}
           noteId={selectedNoteForTag.id}
@@ -424,6 +489,19 @@ export default function DashboardPage() {
           }
         }}
         noteId={selectedNoteForDetail}
+      />
+
+      {/* Delete Note Dialog */}
+      <DeleteNoteDialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => {
+          setShowDeleteDialog(open)
+          if (!open) {
+            setSelectedNoteForDelete(null)
+          }
+        }}
+        onConfirm={confirmDeleteNote}
+        noteTitle={selectedNoteForDelete?.title}
       />
     </motion.div>
   )

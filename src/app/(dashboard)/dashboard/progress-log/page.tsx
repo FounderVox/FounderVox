@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
-import { TrendingUp, CheckCircle2, Clock, AlertTriangle, Calendar, X, ArrowRight } from 'lucide-react'
+import { BarChart3, CheckCircle2, Clock, AlertTriangle, Calendar, X, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -19,60 +19,17 @@ interface ProgressLog {
   created_at: string
 }
 
+type StatusColumn = 'completed' | 'in_progress' | 'blocked'
+
 export default function ProgressLogPage() {
   const [profile, setProfile] = useState<any>(null)
   const [logs, setLogs] = useState<ProgressLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [draggedItem, setDraggedItem] = useState<{ logId: string; status: StatusColumn; index: number; text: string } | null>(null)
+  const [dragOverColumn, setDragOverColumn] = useState<{ logId: string; status: StatusColumn } | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
-
-        if (userError || !user) {
-          console.error('[ProgressLog] Error getting user:', userError)
-          setIsLoading(false)
-          return
-        }
-
-        // Load profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-
-        setProfile(profileData)
-
-        // Load progress logs via recordings
-        const { data: recordings } = await supabase
-          .from('recordings')
-          .select('id')
-          .eq('user_id', user.id)
-
-        if (recordings && recordings.length > 0) {
-          const recordingIds = recordings.map(r => r.id)
-          const { data: logData, error: logError } = await supabase
-            .from('progress_logs')
-            .select('*')
-            .in('recording_id', recordingIds)
-            .order('week_of', { ascending: false })
-
-          if (logError) {
-            console.error('[ProgressLog] Error loading logs:', logError)
-          } else {
-            setLogs(logData || [])
-          }
-        }
-
-        setIsLoading(false)
-      } catch (error) {
-        console.error('[ProgressLog] Unexpected error:', error)
-        setIsLoading(false)
-      }
-    }
-
     loadData()
   }, [supabase])
 
@@ -93,6 +50,134 @@ export default function ProgressLogPage() {
       setLogs(items => items.filter(item => item.id !== logId))
     } catch (error) {
       console.error('[ProgressLog] Unexpected error:', error)
+    }
+  }
+
+  const handleDragStart = (e: React.DragEvent, logId: string, status: StatusColumn, index: number, text: string) => {
+    setDraggedItem({ logId, status, index, text })
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', '') // Required for Firefox
+  }
+
+  const handleDragOver = (e: React.DragEvent, logId: string, status: StatusColumn) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverColumn({ logId, status })
+  }
+
+  const handleDragLeave = () => {
+    setDragOverColumn(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, logId: string, targetStatus: StatusColumn) => {
+    e.preventDefault()
+    setDragOverColumn(null)
+
+    if (!draggedItem || draggedItem.logId !== logId || draggedItem.status === targetStatus) {
+      setDraggedItem(null)
+      return
+    }
+
+    const log = logs.find(l => l.id === logId)
+    if (!log) {
+      setDraggedItem(null)
+      return
+    }
+
+    // Get current arrays
+    const sourceArray = [...(log[draggedItem.status] || [])]
+    const targetArray = [...(log[targetStatus] || [])]
+
+    // Remove from source
+    sourceArray.splice(draggedItem.index, 1)
+
+    // Add to target
+    targetArray.push(draggedItem.text)
+
+    // Update state optimistically
+    setLogs(prevLogs =>
+      prevLogs.map(l => {
+        if (l.id === logId) {
+          return {
+            ...l,
+            [draggedItem.status]: sourceArray.length > 0 ? sourceArray : null,
+            [targetStatus]: targetArray
+          }
+        }
+        return l
+      })
+    )
+
+    // Update database
+    try {
+      const updateData: any = {
+        [draggedItem.status]: sourceArray.length > 0 ? sourceArray : null,
+        [targetStatus]: targetArray
+      }
+
+      const { error } = await supabase
+        .from('progress_logs')
+        .update(updateData)
+        .eq('id', logId)
+
+      if (error) {
+        console.error('[ProgressLog] Error updating log:', error)
+        // Revert optimistic update on error
+        loadData()
+      }
+    } catch (error) {
+      console.error('[ProgressLog] Unexpected error updating log:', error)
+      // Revert optimistic update on error
+      loadData()
+    }
+
+    setDraggedItem(null)
+  }
+
+  const loadData = async () => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        console.error('[ProgressLog] Error getting user:', userError)
+        setIsLoading(false)
+        return
+      }
+
+      // Load profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      setProfile(profileData)
+
+      // Load progress logs via recordings
+      const { data: recordings } = await supabase
+        .from('recordings')
+        .select('id')
+        .eq('user_id', user.id)
+
+      if (recordings && recordings.length > 0) {
+        const recordingIds = recordings.map(r => r.id)
+        const { data: logData, error: logError } = await supabase
+          .from('progress_logs')
+          .select('*')
+          .in('recording_id', recordingIds)
+          .order('week_of', { ascending: false })
+
+        if (logError) {
+          console.error('[ProgressLog] Error loading logs:', logError)
+        } else {
+          setLogs(logData || [])
+        }
+      }
+
+      setIsLoading(false)
+    } catch (error) {
+      console.error('[ProgressLog] Unexpected error:', error)
+      setIsLoading(false)
     }
   }
 
@@ -132,8 +217,8 @@ export default function ProgressLogPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 rounded-xl bg-green-100">
-            <TrendingUp className="h-6 w-6 text-green-600" />
+          <div className="p-3 rounded-xl bg-gray-100">
+            <BarChart3 className="h-6 w-6 text-black" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-black">Progress Logs</h1>
@@ -157,8 +242,8 @@ export default function ProgressLogPage() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-100">
-                    <Calendar className="h-5 w-5 text-green-600" />
+                  <div className="p-2 rounded-lg bg-gray-100">
+                    <Calendar className="h-5 w-5 text-black" />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold">Week of {formatWeek(log.week_of)}</h2>
@@ -177,7 +262,15 @@ export default function ProgressLogPage() {
 
               <div className="grid md:grid-cols-3 gap-4">
                 {/* Completed */}
-                <div className="flex-1">
+                <div
+                  className={cn(
+                    "flex-1 min-h-[200px] rounded-lg transition-all duration-200",
+                    dragOverColumn?.logId === log.id && dragOverColumn?.status === 'completed' && "bg-green-50/50 border-2 border-green-300 border-dashed"
+                  )}
+                  onDragOver={(e) => handleDragOver(e, log.id, 'completed')}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, log.id, 'completed')}
+                >
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
                     <h3 className="font-semibold">
@@ -187,19 +280,39 @@ export default function ProgressLogPage() {
                   {log.completed && log.completed.length > 0 ? (
                     <ul className="space-y-2">
                       {log.completed.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-lg p-3">
+                        <li
+                          key={idx}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, log.id, 'completed', idx, item)}
+                          className={cn(
+                            "flex items-start gap-2 bg-green-50 border border-green-200 rounded-lg p-3 cursor-move transition-all duration-200",
+                            draggedItem?.logId === log.id && draggedItem?.status === 'completed' && draggedItem?.index === idx
+                              ? "opacity-50 scale-95"
+                              : "hover:bg-green-100 hover:border-green-300 hover:shadow-sm"
+                          )}
+                        >
                           <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-700">{item}</span>
+                          <span className="text-sm text-gray-700 flex-1">{item}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-gray-400 italic">No completed items</p>
+                    <div className="text-sm text-gray-400 italic py-8 text-center border-2 border-dashed border-gray-200 rounded-lg">
+                      Drop items here
+                    </div>
                   )}
                 </div>
 
                 {/* In Progress */}
-                <div className="flex-1">
+                <div
+                  className={cn(
+                    "flex-1 min-h-[200px] rounded-lg transition-all duration-200",
+                    dragOverColumn?.logId === log.id && dragOverColumn?.status === 'in_progress' && "bg-blue-50/50 border-2 border-blue-300 border-dashed"
+                  )}
+                  onDragOver={(e) => handleDragOver(e, log.id, 'in_progress')}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, log.id, 'in_progress')}
+                >
                   <div className="flex items-center gap-2 mb-3">
                     <Clock className="h-5 w-5 text-blue-600" />
                     <h3 className="font-semibold">
@@ -209,19 +322,39 @@ export default function ProgressLogPage() {
                   {log.in_progress && log.in_progress.length > 0 ? (
                     <ul className="space-y-2">
                       {log.in_progress.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <li
+                          key={idx}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, log.id, 'in_progress', idx, item)}
+                          className={cn(
+                            "flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3 cursor-move transition-all duration-200",
+                            draggedItem?.logId === log.id && draggedItem?.status === 'in_progress' && draggedItem?.index === idx
+                              ? "opacity-50 scale-95"
+                              : "hover:bg-blue-100 hover:border-blue-300 hover:shadow-sm"
+                          )}
+                        >
                           <Clock className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-700">{item}</span>
+                          <span className="text-sm text-gray-700 flex-1">{item}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-gray-400 italic">No items in progress</p>
+                    <div className="text-sm text-gray-400 italic py-8 text-center border-2 border-dashed border-gray-200 rounded-lg">
+                      Drop items here
+                    </div>
                   )}
                 </div>
 
                 {/* Blocked */}
-                <div className="flex-1">
+                <div
+                  className={cn(
+                    "flex-1 min-h-[200px] rounded-lg transition-all duration-200",
+                    dragOverColumn?.logId === log.id && dragOverColumn?.status === 'blocked' && "bg-yellow-50/50 border-2 border-yellow-300 border-dashed"
+                  )}
+                  onDragOver={(e) => handleDragOver(e, log.id, 'blocked')}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, log.id, 'blocked')}
+                >
                   <div className="flex items-center gap-2 mb-3">
                     <AlertTriangle className="h-5 w-5 text-yellow-600" />
                     <h3 className="font-semibold">
@@ -231,14 +364,26 @@ export default function ProgressLogPage() {
                   {log.blocked && log.blocked.length > 0 ? (
                     <ul className="space-y-2">
                       {log.blocked.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <li
+                          key={idx}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, log.id, 'blocked', idx, item)}
+                          className={cn(
+                            "flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3 cursor-move transition-all duration-200",
+                            draggedItem?.logId === log.id && draggedItem?.status === 'blocked' && draggedItem?.index === idx
+                              ? "opacity-50 scale-95"
+                              : "hover:bg-yellow-100 hover:border-yellow-300 hover:shadow-sm"
+                          )}
+                        >
                           <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-700">{item}</span>
+                          <span className="text-sm text-gray-700 flex-1">{item}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-gray-400 italic">No blocked items</p>
+                    <div className="text-sm text-gray-400 italic py-8 text-center border-2 border-dashed border-gray-200 rounded-lg">
+                      Drop items here
+                    </div>
                   )}
                 </div>
               </div>
@@ -251,8 +396,8 @@ export default function ProgressLogPage() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50"
         >
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-green-100 mb-4">
-            <TrendingUp className="h-8 w-8 text-green-600" />
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/60 backdrop-blur-sm border-2 border-gray-200/50 mb-4">
+            <BarChart3 className="h-8 w-8 text-black" />
           </div>
           <h3 className="text-black font-semibold mb-2">No progress logs yet</h3>
           <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">

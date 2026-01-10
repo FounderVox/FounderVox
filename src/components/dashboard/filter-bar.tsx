@@ -395,7 +395,13 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
             {filterPills.map((pill) => (
               <button
                 key={pill.id}
-                onClick={() => setActiveFilter(pill.id)}
+                onClick={() => {
+                  setActiveFilter(pill.id)
+                  // Dispatch event to notify other components
+                  window.dispatchEvent(new CustomEvent('filterChanged', { 
+                    detail: { filter: pill.id } 
+                  }))
+                }}
                 className={cn(
                   'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
                   activeFilter === pill.id
@@ -498,7 +504,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           setIsProfileOpen(false)
                           router.push('/dashboard/settings')
                         }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-50 rounded-lg transition-all duration-200"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
                       >
                         <Settings className="h-4 w-4" />
                         Settings
@@ -508,7 +514,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           setIsProfileOpen(false)
                           router.push('/dashboard/analytics')
                         }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-50 rounded-lg transition-all duration-200"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
                       >
                         <BarChart3 className="h-4 w-4" />
                         Analytics
@@ -518,7 +524,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           setIsProfileOpen(false)
                           router.push('/dashboard/integrations')
                         }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-50 rounded-lg transition-all duration-200"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
                       >
                         <Plug className="h-4 w-4" />
                         Integrations
@@ -528,7 +534,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           setIsProfileOpen(false)
                           router.push('/dashboard/help')
                         }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-50 rounded-lg transition-all duration-200"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
                       >
                         <HelpCircle className="h-4 w-4" />
                         Help

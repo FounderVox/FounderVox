@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
-import { CheckSquare, Calendar, User, AlertCircle, CheckCircle2, Clock, X, ArrowRight } from 'lucide-react'
+import { ClipboardList, Calendar, User, CheckCircle2, Clock, X, ArrowRight, Circle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -21,118 +21,137 @@ interface ActionItem {
   completed_at: string | null
 }
 
+type StatusColumn = 'open' | 'in_progress' | 'done'
+
 export default function ActionItemsPage() {
   const [profile, setProfile] = useState<any>(null)
   const [actionItems, setActionItems] = useState<ActionItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'in_progress' | 'done'>('all')
   const [filterPriority, setFilterPriority] = useState<'all' | 'high' | 'medium' | 'low'>('all')
+  const [draggedItem, setDraggedItem] = useState<{ itemId: string; status: StatusColumn; index: number } | null>(null)
+  const [dragOverColumn, setDragOverColumn] = useState<StatusColumn | null>(null)
   const supabase = createClient()
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
-
-        if (userError || !user) {
-          console.error('[ActionItems] Error getting user:', userError)
-          setIsLoading(false)
-          return
-        }
-
-        // Load profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-
-        setProfile(profileData)
-
-        // Load action items via recordings
-        const { data: recordings, error: recordingsError } = await supabase
-          .from('recordings')
-          .select('id')
-          .eq('user_id', user.id)
-
-        if (recordingsError) {
-          console.error('[ActionItems] Error loading recordings:', recordingsError)
-        }
-
-        console.log('[ActionItems] Found recordings:', recordings?.length || 0)
-
-        if (recordings && recordings.length > 0) {
-          const recordingIds = recordings.map(r => r.id)
-          console.log('[ActionItems] Querying action_items for recording IDs:', recordingIds)
-          
-          const { data: items, error: itemsError } = await supabase
-            .from('action_items')
-            .select('*')
-            .in('recording_id', recordingIds)
-            .order('created_at', { ascending: false })
-
-          if (itemsError) {
-            console.error('[ActionItems] Error loading items:', itemsError)
-          } else {
-            console.log('[ActionItems] Loaded action items:', items?.length || 0)
-            setActionItems(items || [])
-          }
-        } else {
-          console.log('[ActionItems] No recordings found, setting empty array')
-          setActionItems([])
-        }
-
-        setIsLoading(false)
-      } catch (error) {
-        console.error('[ActionItems] Unexpected error:', error)
-        setIsLoading(false)
-      }
-    }
-
-    loadData()
-  }, [supabase])
-
-  const toggleStatus = async (itemId: string, currentStatus: string) => {
+  const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      let newStatus: 'open' | 'in_progress' | 'done'
-      let completedAt: string | null = null
-
-      if (currentStatus === 'open') {
-        newStatus = 'in_progress'
-      } else if (currentStatus === 'in_progress') {
-        newStatus = 'done'
-        completedAt = new Date().toISOString()
-      } else {
-        newStatus = 'open'
-        completedAt = null
-      }
-
-      const { error } = await supabase
-        .from('action_items')
-        .update({ 
-          status: newStatus,
-          completed_at: completedAt
-        })
-        .eq('id', itemId)
-
-      if (error) {
-        console.error('[ActionItems] Error updating status:', error)
+      if (userError || !user) {
+        console.error('[ActionItems] Error getting user:', userError)
+        setIsLoading(false)
         return
       }
 
-      setActionItems(items =>
-        items.map(item =>
-          item.id === itemId
-            ? { ...item, status: newStatus, completed_at: completedAt }
-            : item
-        )
-      )
+      // Load profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      setProfile(profileData)
+
+      // Load action items via recordings
+      const { data: recordings, error: recordingsError } = await supabase
+        .from('recordings')
+        .select('id')
+        .eq('user_id', user.id)
+
+      if (recordingsError) {
+        console.error('[ActionItems] Error loading recordings:', recordingsError)
+      }
+
+      if (recordings && recordings.length > 0) {
+        const recordingIds = recordings.map(r => r.id)
+        
+        const { data: items, error: itemsError } = await supabase
+          .from('action_items')
+          .select('*')
+          .in('recording_id', recordingIds)
+          .order('created_at', { ascending: false })
+
+        if (itemsError) {
+          console.error('[ActionItems] Error loading items:', itemsError)
+        } else {
+          setActionItems(items || [])
+        }
+      } else {
+        setActionItems([])
+      }
+
+      setIsLoading(false)
     } catch (error) {
       console.error('[ActionItems] Unexpected error:', error)
+      setIsLoading(false)
     }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [supabase])
+
+  const handleDragStart = (e: React.DragEvent, itemId: string, status: StatusColumn, index: number) => {
+    setDraggedItem({ itemId, status, index })
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', '')
+  }
+
+  const handleDragOver = (e: React.DragEvent, status: StatusColumn) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverColumn(status)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverColumn(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetStatus: StatusColumn) => {
+    e.preventDefault()
+    setDragOverColumn(null)
+
+    if (!draggedItem || draggedItem.status === targetStatus) {
+      setDraggedItem(null)
+      return
+    }
+
+    const item = actionItems.find(i => i.id === draggedItem.itemId)
+    if (!item) {
+      setDraggedItem(null)
+      return
+    }
+
+    // Update state optimistically
+    const completedAt = targetStatus === 'done' ? new Date().toISOString() : null
+    setActionItems(prevItems =>
+      prevItems.map(i =>
+        i.id === draggedItem.itemId
+          ? { ...i, status: targetStatus, completed_at: completedAt }
+          : i
+      )
+    )
+
+    // Update database
+    try {
+      const { error } = await supabase
+        .from('action_items')
+        .update({
+          status: targetStatus,
+          completed_at: completedAt
+        })
+        .eq('id', draggedItem.itemId)
+
+      if (error) {
+        console.error('[ActionItems] Error updating status:', error)
+        // Revert optimistic update on error
+        loadData()
+      }
+    } catch (error) {
+      console.error('[ActionItems] Unexpected error updating status:', error)
+      loadData()
+    }
+
+    setDraggedItem(null)
   }
 
   const deleteItem = async (itemId: string) => {
@@ -156,9 +175,19 @@ export default function ActionItemsPage() {
   }
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'No deadline'
+    if (!dateString) return null
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today'
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return 'Tomorrow'
+    } else {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
   }
 
   const getPriorityColor = (priority: string) => {
@@ -174,34 +203,48 @@ export default function ActionItemsPage() {
     }
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: StatusColumn) => {
     switch (status) {
-      case 'done':
-        return 'bg-green-100 text-green-700 border-green-200'
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-700 border-blue-200'
       case 'open':
-        return 'bg-gray-100 text-gray-700 border-gray-200'
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200'
+        return {
+          label: 'To Do',
+          icon: Circle,
+          bg: 'bg-gray-50',
+          border: 'border-gray-200',
+          text: 'text-gray-700',
+          iconColor: 'text-gray-500'
+        }
+      case 'in_progress':
+        return {
+          label: 'In Progress',
+          icon: Clock,
+          bg: 'bg-blue-50',
+          border: 'border-blue-200',
+          text: 'text-blue-700',
+          iconColor: 'text-blue-500'
+        }
+      case 'done':
+        return {
+          label: 'Done',
+          icon: CheckCircle2,
+          bg: 'bg-green-50',
+          border: 'border-green-200',
+          text: 'text-green-700',
+          iconColor: 'text-green-500'
+        }
     }
   }
 
   const filteredItems = actionItems.filter(item => {
-    if (filterStatus !== 'all' && item.status !== filterStatus) return false
     if (filterPriority !== 'all' && item.priority !== filterPriority) return false
     return true
   })
 
-  const groupedByDate = filteredItems.reduce((groups, item) => {
-    const date = new Date(item.created_at)
-    const dateKey = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-    if (!groups[dateKey]) {
-      groups[dateKey] = []
-    }
-    groups[dateKey].push(item)
-    return groups
-  }, {} as Record<string, ActionItem[]>)
+  const itemsByStatus = {
+    open: filteredItems.filter(i => i.status === 'open'),
+    in_progress: filteredItems.filter(i => i.status === 'in_progress'),
+    done: filteredItems.filter(i => i.status === 'done')
+  }
 
   if (isLoading) {
     return (
@@ -228,37 +271,19 @@ export default function ActionItemsPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 rounded-xl bg-blue-100">
-            <CheckSquare className="h-6 w-6 text-blue-600" />
+          <div className="p-3 rounded-xl bg-gray-100">
+            <ClipboardList className="h-6 w-6 text-black" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-black">Action Items</h1>
             <p className="text-gray-600 text-sm mt-1">
-              {actionItems.length} total • {actionItems.filter(i => i.status === 'open').length} open • {actionItems.filter(i => i.status === 'done').length} completed
+              {actionItems.length} total • {itemsByStatus.open.length} to do • {itemsByStatus.in_progress.length} in progress • {itemsByStatus.done.length} done
             </p>
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Priority Filter */}
         <div className="flex flex-wrap gap-3">
-          <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-lg p-2">
-            <span className="text-sm text-gray-600">Status:</span>
-            {(['all', 'open', 'in_progress', 'done'] as const).map(status => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={cn(
-                  'px-3 py-1 rounded-md text-sm font-medium transition-colors',
-                  filterStatus === status
-                    ? 'bg-black text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                )}
-              >
-                {status === 'all' ? 'All' : status === 'in_progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
-
           <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-lg p-2">
             <span className="text-sm text-gray-600">Priority:</span>
             {(['all', 'high', 'medium', 'low'] as const).map(priority => (
@@ -279,99 +304,131 @@ export default function ActionItemsPage() {
         </div>
       </div>
 
-      {/* Action Items List */}
-      {Object.keys(groupedByDate).length > 0 ? (
-        <div className="space-y-8">
-          {Object.keys(groupedByDate).sort((a, b) => new Date(b).getTime() - new Date(a).getTime()).map((dateKey) => (
-            <div key={dateKey}>
-              <h2 className="text-2xl font-semibold text-black mb-4">{dateKey}</h2>
-              <div className="space-y-3">
-                {groupedByDate[dateKey].map((item, index) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={cn(
-                      'bg-white/60 backdrop-blur-sm border rounded-xl p-5 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 group',
-                      item.status === 'done' && 'opacity-60'
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-3">
-                          <button
-                            onClick={() => toggleStatus(item.id, item.status)}
-                            className={cn(
-                              'p-1.5 rounded-lg transition-colors',
-                              item.status === 'done'
-                                ? 'text-green-600 group-hover:text-green-400'
-                                : 'text-gray-400 group-hover:text-white'
-                            )}
-                          >
-                            {item.status === 'done' ? (
-                              <CheckCircle2 className="h-5 w-5" fill="currentColor" />
-                            ) : (
-                              <div className="h-5 w-5 border-2 border-current rounded-full" />
-                            )}
-                          </button>
+      {/* Kanban Board */}
+      {filteredItems.length > 0 ? (
+        <div className="grid md:grid-cols-3 gap-6">
+          {(['open', 'in_progress', 'done'] as StatusColumn[]).map((status) => {
+            const config = getStatusConfig(status)
+            const Icon = config.icon
+            const items = itemsByStatus[status]
 
+            return (
+              <div
+                key={status}
+                className={cn(
+                  "flex-1 min-h-[400px] rounded-xl transition-all duration-200",
+                  dragOverColumn === status && "ring-2 ring-gray-300 ring-offset-2"
+                )}
+                onDragOver={(e) => handleDragOver(e, status)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, status)}
+              >
+                {/* Column Header */}
+                <div className={cn(
+                  "flex items-center justify-between mb-4 p-3 rounded-lg",
+                  config.bg,
+                  config.border,
+                  "border"
+                )}>
+                  <div className="flex items-center gap-2">
+                    <Icon className={cn("h-5 w-5", config.iconColor)} />
+                    <h3 className={cn("font-semibold", config.text)}>
+                      {config.label}
+                    </h3>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-xs font-medium",
+                      config.bg,
+                      config.text,
+                      "border",
+                      config.border
+                    )}>
+                      {items.length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Items List */}
+                <div className="space-y-3 min-h-[300px]">
+                  {items.length > 0 ? (
+                    items.map((item, index) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, item.id, status, index)}
+                        className={cn(
+                          "bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 cursor-move transition-all duration-200 group",
+                          draggedItem?.itemId === item.id && draggedItem?.status === status
+                            ? "opacity-50 scale-95"
+                            : "hover:bg-white/90 hover:border-gray-300 hover:shadow-lg",
+                          item.status === 'done' && "opacity-75"
+                        )}
+                      >
+                        <div className="flex items-start gap-3 mb-3">
+                          {status === 'done' ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" />
+                          ) : status === 'in_progress' ? (
+                            <Clock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className={cn(
+                              "text-sm font-semibold mb-2",
+                              item.status === 'done' && "line-through text-gray-500"
+                            )}>
+                              {item.task}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                              {item.assignee && (
+                                <div className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  <span>{item.assignee}</span>
+                                </div>
+                              )}
+                              {item.deadline && (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{formatDate(item.deadline)}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-3">
                           <span className={cn(
-                            'px-2 py-0.5 rounded-full text-xs font-medium border',
+                            "px-2 py-0.5 rounded-full text-xs font-medium border",
                             getPriorityColor(item.priority)
                           )}>
                             {item.priority.toUpperCase()}
                           </span>
-
-                          <span className={cn(
-                            'px-2 py-0.5 rounded-full text-xs font-medium border',
-                            getStatusColor(item.status)
-                          )}>
-                            {item.status === 'in_progress' ? 'IN PROGRESS' : item.status.toUpperCase()}
-                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteItem(item.id)
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-all"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
                         </div>
-
-                        <h3 className={cn(
-                          'text-lg font-semibold mb-2',
-                          item.status === 'done' && 'line-through'
-                        )}>
-                          {item.task}
-                        </h3>
-
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 group-hover:text-white/70">
-                          {item.assignee && (
-                            <div className="flex items-center gap-1.5">
-                              <User className="h-4 w-4" />
-                              <span>{item.assignee}</span>
-                            </div>
-                          )}
-                          {item.deadline && (
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="h-4 w-4" />
-                              <span>{formatDate(item.deadline)}</span>
-                            </div>
-                          )}
-                          {item.completed_at && (
-                            <div className="flex items-center gap-1.5">
-                              <CheckCircle2 className="h-4 w-4" />
-                              <span>Completed {formatDate(item.completed_at)}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => deleteItem(item.id)}
-                        className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-red-600 hover:bg-red-50 group-hover:bg-red-500 group-hover:text-white transition-all"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className={cn(
+                      "text-sm text-gray-400 italic py-8 text-center border-2 border-dashed rounded-lg",
+                      config.border
+                    )}>
+                      Drop items here
                     </div>
-                  </motion.div>
-                ))}
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         <motion.div
@@ -379,8 +436,8 @@ export default function ActionItemsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50"
         >
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-blue-100 mb-4">
-            <CheckSquare className="h-8 w-8 text-blue-600" />
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/60 backdrop-blur-sm border-2 border-gray-200/50 mb-4">
+            <ClipboardList className="h-8 w-8 text-black" />
           </div>
           <h3 className="text-black font-semibold mb-2">No action items yet</h3>
           <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
@@ -398,4 +455,3 @@ export default function ActionItemsPage() {
     </motion.div>
   )
 }
-

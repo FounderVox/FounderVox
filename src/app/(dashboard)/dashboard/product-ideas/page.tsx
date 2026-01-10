@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
-import { Lightbulb, Tag, AlertCircle, X, ThumbsUp, ArrowRight } from 'lucide-react'
+import { Rocket, Tag, AlertCircle, X, ThumbsUp, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -210,8 +210,8 @@ export default function ProductIdeasPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 rounded-xl bg-amber-100">
-            <Lightbulb className="h-6 w-6 text-amber-600" />
+          <div className="p-3 rounded-xl bg-gray-100">
+            <Rocket className="h-6 w-6 text-black" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-black">Product Ideas</h1>
@@ -343,8 +343,8 @@ export default function ProductIdeasPage() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50"
         >
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-amber-100 mb-4">
-            <Lightbulb className="h-8 w-8 text-amber-600" />
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/60 backdrop-blur-sm border-2 border-gray-200/50 mb-4">
+            <Rocket className="h-8 w-8 text-black" />
           </div>
           <h3 className="text-black font-semibold mb-2">No product ideas yet</h3>
           <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">

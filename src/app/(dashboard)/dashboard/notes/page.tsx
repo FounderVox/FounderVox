@@ -10,6 +10,7 @@ import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
 import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
 import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
+import { DeleteNoteDialog } from '@/components/dashboard/delete-note-dialog'
 import { useAuth } from '@/contexts/auth-context'
 
 export const dynamic = 'force-dynamic'
@@ -36,9 +37,11 @@ interface GroupedNotes {
 export default function AllNotesPage() {
   const { user, profile, supabase } = useAuth()
   const [notes, setNotes] = useState<Note[]>([])
+  const [filteredNotes, setFilteredNotes] = useState<Note[]>([])
   const [groupedNotes, setGroupedNotes] = useState<GroupedNotes>({})
   const [isLoading, setIsLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'list' | 'tiles'>('list')
+  const [activeFilter, setActiveFilter] = useState('all')
   const [showTagDialog, setShowTagDialog] = useState(false)
   const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -47,6 +50,8 @@ export default function AllNotesPage() {
   const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<string | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [selectedNoteForDelete, setSelectedNoteForDelete] = useState<{id: string, title: string} | null>(null)
 
   const groupNotesByDate = useCallback((notesData: Note[]) => {
     const grouped: GroupedNotes = {}
@@ -89,28 +94,73 @@ export default function AllNotesPage() {
       }
 
       setNotes(notesData || [])
-      setGroupedNotes(groupNotesByDate(notesData || []))
+      applyFilter(notesData || [], activeFilter)
     } catch (error) {
       console.error('[FounderNote:AllNotes] Unexpected error:', error)
     } finally {
       setIsLoading(false)
     }
-  }, [user, supabase, groupNotesByDate])
+  }, [user, supabase])
+
+  const applyFilter = useCallback((notesData: Note[], filter: string) => {
+    let filtered = notesData
+
+    if (filter === 'all') {
+      filtered = notesData
+    } else if (filter.startsWith('tag:')) {
+      const tagName = filter.replace('tag:', '')
+      filtered = notesData.filter(note => 
+        note.tags && Array.isArray(note.tags) && note.tags.includes(tagName)
+      )
+    } else {
+      // Filter by template type
+      filtered = notesData.filter(note => note.template_type === filter)
+    }
+
+    setFilteredNotes(filtered)
+    setGroupedNotes(groupNotesByDate(filtered))
+  }, [groupNotesByDate])
+
+  // Listen for filter changes
+  useEffect(() => {
+    const handleFilterChange = (event: CustomEvent) => {
+      setActiveFilter(event.detail.filter)
+      applyFilter(notes, event.detail.filter)
+    }
+
+    window.addEventListener('filterChanged' as any, handleFilterChange as EventListener)
+    return () => {
+      window.removeEventListener('filterChanged' as any, handleFilterChange as EventListener)
+    }
+  }, [notes, applyFilter])
+
+  // Apply filter when notes or activeFilter changes
+  useEffect(() => {
+    if (notes.length > 0) {
+      applyFilter(notes, activeFilter)
+    }
+  }, [notes, activeFilter, applyFilter])
 
   useEffect(() => {
     loadNotes()
 
     // Listen for note events to refresh
-    const handleNoteEvent = () => loadNotes()
+    const handleNoteEvent = (event?: CustomEvent) => {
+      console.log('[FounderNote:AllNotes] Note event received:', event?.detail)
+      loadNotes()
+    }
+    const handleTagsUpdated = () => loadNotes()
 
-    window.addEventListener('noteCreated', handleNoteEvent)
-    window.addEventListener('noteUpdated', handleNoteEvent)
-    window.addEventListener('noteDeleted', handleNoteEvent)
+    window.addEventListener('noteCreated', handleNoteEvent as EventListener)
+    window.addEventListener('noteUpdated', handleNoteEvent as EventListener)
+    window.addEventListener('noteDeleted', handleNoteEvent as EventListener)
+    window.addEventListener('tagsUpdated', handleTagsUpdated)
 
     return () => {
-      window.removeEventListener('noteCreated', handleNoteEvent)
-      window.removeEventListener('noteUpdated', handleNoteEvent)
-      window.removeEventListener('noteDeleted', handleNoteEvent)
+      window.removeEventListener('noteCreated', handleNoteEvent as EventListener)
+      window.removeEventListener('noteUpdated', handleNoteEvent as EventListener)
+      window.removeEventListener('noteDeleted', handleNoteEvent as EventListener)
+      window.removeEventListener('tagsUpdated', handleTagsUpdated)
     }
   }, [loadNotes])
 
@@ -164,9 +214,17 @@ export default function AllNotesPage() {
     setShowEditDialog(true)
   }
 
-  const handleDeleteNote = async (noteId: string) => {
-    if (!user) return
-    if (!confirm('Are you sure you want to delete this note?')) return
+  const handleDeleteNote = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    setSelectedNoteForDelete({ id: noteId, title: note?.title || 'Untitled Note' })
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDeleteNote = async () => {
+    if (!user || !selectedNoteForDelete) return
+
+    const noteId = selectedNoteForDelete.id
+    const originalNotes = notes
 
     // Optimistic update
     const updatedNotes = notes.filter(note => note.id !== noteId)
@@ -183,16 +241,16 @@ export default function AllNotesPage() {
       if (error) {
         console.error('[FounderNote:AllNotes] Error deleting note:', error)
         // Revert on error
-        setNotes(notes)
-        setGroupedNotes(groupNotesByDate(notes))
+        setNotes(originalNotes)
+        setGroupedNotes(groupNotesByDate(originalNotes))
         return
       }
 
       window.dispatchEvent(new CustomEvent('noteDeleted', { detail: { noteId } }))
     } catch (error) {
       console.error('[FounderNote:AllNotes] Unexpected error deleting note:', error)
-      setNotes(notes)
-      setGroupedNotes(groupNotesByDate(notes))
+      setNotes(originalNotes)
+      setGroupedNotes(groupNotesByDate(originalNotes))
     }
   }
 
@@ -212,8 +270,7 @@ export default function AllNotesPage() {
   }
 
   const handleViewNote = (noteId: string) => {
-    setSelectedNoteForDetail(noteId)
-    setShowDetailModal(true)
+    window.location.href = `/dashboard/notes/${noteId}`
   }
 
   if (isLoading) {
@@ -322,8 +379,8 @@ export default function AllNotesPage() {
                               className={cn(
                                 'p-1.5 rounded-lg transition-colors',
                                 note.is_starred
-                                  ? 'text-amber-500 hover:bg-white/20'
-                                  : 'text-white hover:bg-white/20'
+                                  ? 'text-amber-500 hover:bg-amber-50'
+                                  : 'text-gray-400 hover:bg-gray-100'
                               )}
                             >
                               <svg
@@ -340,7 +397,7 @@ export default function AllNotesPage() {
                         </div>
 
                         {/* Content Preview */}
-                        <p className="text-sm text-gray-600 line-clamp-2 group-hover:text-white/90">
+                        <p className="text-sm text-gray-600 line-clamp-2">
                           {note.formatted_content?.substring(0, 200) || note.raw_transcript?.substring(0, 200) || 'No content'}
                         </p>
                       </div>
@@ -399,10 +456,18 @@ export default function AllNotesPage() {
       {selectedNoteForTag && (
         <AddTagDialog
           open={showTagDialog}
-          onOpenChange={(open) => {
+          onOpenChange={async (open) => {
             setShowTagDialog(open)
             if (!open) {
-              loadNotes() // Refresh notes when dialog closes
+              // Reload notes to get updated tags
+              await loadNotes()
+              // Also reload the specific note to update existingTags
+              if (selectedNoteForTag) {
+                const note = notes.find(n => n.id === selectedNoteForTag.id)
+                if (note) {
+                  setSelectedNoteForTag({ id: note.id, tags: note.tags || [] })
+                }
+              }
             }
           }}
           noteId={selectedNoteForTag.id}
@@ -447,6 +512,19 @@ export default function AllNotesPage() {
           }
         }}
         noteId={selectedNoteForDetail}
+      />
+
+      {/* Delete Note Dialog */}
+      <DeleteNoteDialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => {
+          setShowDeleteDialog(open)
+          if (!open) {
+            setSelectedNoteForDelete(null)
+          }
+        }}
+        onConfirm={confirmDeleteNote}
+        noteTitle={selectedNoteForDelete?.title}
       />
     </motion.div>
   )

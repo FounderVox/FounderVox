@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, CheckCircle2, XCircle, Loader2, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react'
+import { Sparkles, CheckCircle2, XCircle, Loader2, ArrowRight, CheckCircle, AlertCircle, ClipboardList, Briefcase, BarChart3, Rocket, Brain } from 'lucide-react'
 import Link from 'next/link'
 
 interface SmartifyModalProps {
@@ -131,12 +131,12 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
         >
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Sparkles className="h-6 w-6 text-purple-600" />
+            <div className="p-2.5 bg-gray-100 rounded-lg">
+              <Sparkles className="h-6 w-6 text-black" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Smartify Note</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="text-2xl font-bold text-black">Smartify Note</h2>
+              <p className="text-sm text-gray-600">
                 {noteTitle || 'Extracting structured insights from your note...'}
               </p>
             </div>
@@ -150,7 +150,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
                 transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
                 className="inline-flex items-center justify-center w-16 h-16 mb-4"
               >
-                <Loader2 className="h-16 w-16 text-purple-600" />
+                <Loader2 className="h-16 w-16 text-black" />
               </motion.div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Analyzing your note...
@@ -184,66 +184,101 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
           {preview && showPreview && !isSaving && (
             <div>
               <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                  <Sparkles className="h-8 w-8 text-blue-600" />
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full border-2 border-gray-200 mb-4">
+                  <Sparkles className="h-8 w-8 text-black" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-black mb-2">
                   Preview Extraction
                 </h3>
                 <p className="text-gray-600">
-                  We found <span className="font-semibold text-purple-600">{totalExtracted}</span> items that can be extracted. Review and confirm to create them.
+                  We found <span className="font-semibold text-black">{totalExtracted}</span> items that can be extracted. Review and confirm to create them.
                 </p>
               </div>
 
               {/* Preview Grid */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 {preview.actionItems > 0 && (
-                  <div className="p-4 bg-purple-50 rounded-xl border-2 border-purple-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-purple-900">Action Items</span>
-                      <span className="text-lg font-bold text-purple-600">{preview.actionItems}</span>
+                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-gray-100">
+                        <ClipboardList className="h-4 w-4 text-black" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-black">Action Items</span>
+                          <span className="text-lg font-bold text-black">{preview.actionItems}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">Tasks and todos</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-purple-600">Tasks and todos</p>
                   </div>
                 )}
 
                 {preview.investorUpdates > 0 && (
-                  <div className="p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-blue-900">Investor Updates</span>
-                      <span className="text-lg font-bold text-blue-600">{preview.investorUpdates}</span>
+                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-gray-100">
+                        <Briefcase className="h-4 w-4 text-black" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-black">Investor Updates</span>
+                          <span className="text-lg font-bold text-black">{preview.investorUpdates}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">Update drafts</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-blue-600">Update drafts</p>
                   </div>
                 )}
 
                 {preview.progressLogs > 0 && (
-                  <div className="p-4 bg-green-50 rounded-xl border-2 border-green-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-green-900">Progress Logs</span>
-                      <span className="text-lg font-bold text-green-600">{preview.progressLogs}</span>
+                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-gray-100">
+                        <BarChart3 className="h-4 w-4 text-black" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-black">Progress Logs</span>
+                          <span className="text-lg font-bold text-black">{preview.progressLogs}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">Weekly progress</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-green-600">Weekly progress</p>
                   </div>
                 )}
 
                 {preview.productIdeas > 0 && (
-                  <div className="p-4 bg-orange-50 rounded-xl border-2 border-orange-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-orange-900">Product Ideas</span>
-                      <span className="text-lg font-bold text-orange-600">{preview.productIdeas}</span>
+                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-gray-100">
+                        <Rocket className="h-4 w-4 text-black" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-black">Product Ideas</span>
+                          <span className="text-lg font-bold text-black">{preview.productIdeas}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">Feature ideas</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-orange-600">Feature ideas</p>
                   </div>
                 )}
 
                 {preview.brainDump > 0 && (
-                  <div className="p-4 bg-pink-50 rounded-xl border-2 border-pink-200 col-span-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-pink-900">Brain Dump Notes</span>
-                      <span className="text-lg font-bold text-pink-600">{preview.brainDump}</span>
+                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200 col-span-2">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-gray-100">
+                        <Brain className="h-4 w-4 text-black" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-black">Brain Dump Notes</span>
+                          <span className="text-lg font-bold text-black">{preview.brainDump}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">Thoughts and insights</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-pink-600">Thoughts and insights</p>
                   </div>
                 )}
               </div>
@@ -268,7 +303,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
                 {totalExtracted > 0 && (
                   <button
                     onClick={handleConfirm}
-                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                    className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2"
                   >
                     <CheckCircle className="h-4 w-4" />
                     Create {totalExtracted} Item{totalExtracted !== 1 ? 's' : ''}
@@ -286,7 +321,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
                 transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
                 className="inline-flex items-center justify-center w-16 h-16 mb-4"
               >
-                <Loader2 className="h-16 w-16 text-purple-600" />
+                <Loader2 className="h-16 w-16 text-black" />
               </motion.div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Creating items...

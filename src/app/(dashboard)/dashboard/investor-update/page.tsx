@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
-import { Mail, TrendingUp, AlertCircle, CheckCircle2, Send, Edit, Trash2, Copy, ArrowRight } from 'lucide-react'
+import { FileText, TrendingUp, AlertCircle, CheckCircle2, Send, Edit, Trash2, Copy, ArrowRight, Briefcase, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -67,7 +67,18 @@ export default function InvestorUpdatePage() {
           if (updateError) {
             console.error('[InvestorUpdate] Error loading updates:', updateError)
           } else {
-            setUpdates(updateData || [])
+            // Filter out empty updates (no subject, no body, no wins, no metrics, no challenges, no asks)
+            const filteredUpdates = (updateData || []).filter(update => {
+              const hasContent = 
+                (update.draft_subject && update.draft_subject.trim()) ||
+                (update.draft_body && update.draft_body.trim()) ||
+                (update.wins && Array.isArray(update.wins) && update.wins.length > 0) ||
+                (update.metrics && typeof update.metrics === 'object' && Object.keys(update.metrics).length > 0) ||
+                (update.challenges && Array.isArray(update.challenges) && update.challenges.length > 0) ||
+                (update.asks && Array.isArray(update.asks) && update.asks.length > 0)
+              return hasContent
+            })
+            setUpdates(filteredUpdates)
           }
         }
 
@@ -176,8 +187,8 @@ export default function InvestorUpdatePage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 rounded-xl bg-purple-100">
-            <Mail className="h-6 w-6 text-purple-600" />
+          <div className="p-3 rounded-xl bg-gray-100">
+            <Briefcase className="h-6 w-6 text-black" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-black">Investor Updates</h1>
@@ -206,25 +217,35 @@ export default function InvestorUpdatePage() {
                         onClick={() => setSelectedUpdate(update)}
                         className={cn(
                           'bg-white/60 backdrop-blur-sm border rounded-xl p-5 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 cursor-pointer group',
-                          selectedUpdate?.id === update.id && 'bg-black text-white border-black shadow-md'
+                          selectedUpdate?.id === update.id && 'bg-gray-50 border-gray-300 shadow-md ring-2 ring-gray-200'
                         )}
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold mb-2">
+                            <h3 className={cn(
+                              "text-lg font-semibold mb-2",
+                              selectedUpdate?.id === update.id ? "text-gray-900" : "text-black"
+                            )}>
                               {update.draft_subject || 'Untitled Update'}
                             </h3>
                             <div className="flex items-center gap-2 mb-2">
                               <span className={cn(
                                 'px-2 py-0.5 rounded-full text-xs font-medium',
                                 update.status === 'sent'
-                                  ? 'bg-green-100 text-green-700 group-hover:bg-green-500 group-hover:text-white'
-                                  : 'bg-yellow-100 text-yellow-700 group-hover:bg-yellow-500 group-hover:text-white'
+                                  ? selectedUpdate?.id === update.id 
+                                    ? 'bg-green-100 text-green-700 border border-green-200'
+                                    : 'bg-green-100 text-green-700'
+                                  : selectedUpdate?.id === update.id
+                                    ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                                    : 'bg-yellow-100 text-yellow-700'
                               )}>
                                 {update.status.toUpperCase()}
                               </span>
                               {update.sent_at && (
-                                <span className="text-xs text-gray-500 group-hover:text-white/70">
+                                <span className={cn(
+                                  "text-xs",
+                                  selectedUpdate?.id === update.id ? "text-gray-600" : "text-gray-500"
+                                )}>
                                   Sent {formatDate(update.sent_at)}
                                 </span>
                               )}
@@ -233,12 +254,18 @@ export default function InvestorUpdatePage() {
                         </div>
 
                         {update.draft_body && (
-                          <p className="text-sm text-gray-600 group-hover:text-white/90 line-clamp-2">
+                          <p className={cn(
+                            "text-sm line-clamp-2",
+                            selectedUpdate?.id === update.id ? "text-gray-700" : "text-gray-600"
+                          )}>
                             {update.draft_body.substring(0, 150)}...
                           </p>
                         )}
 
-                        <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 group-hover:text-white/70">
+                        <div className={cn(
+                          "flex items-center gap-4 mt-3 text-xs",
+                          selectedUpdate?.id === update.id ? "text-gray-600" : "text-gray-500"
+                        )}>
                           {update.wins && update.wins.length > 0 && (
                             <span>{update.wins.length} wins</span>
                           )}
@@ -261,8 +288,8 @@ export default function InvestorUpdatePage() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50"
             >
-              <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-purple-100 mb-4">
-                <Mail className="h-8 w-8 text-purple-600" />
+              <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/60 backdrop-blur-sm border-2 border-gray-200/50 mb-4">
+                <Briefcase className="h-8 w-8 text-black" />
               </div>
               <h3 className="text-black font-semibold mb-2">No investor updates yet</h3>
               <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
