@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
-import { Mail, TrendingUp, AlertCircle, CheckCircle2, Send, Edit, Trash2, Copy } from 'lucide-react'
+import { Mail, TrendingUp, AlertCircle, CheckCircle2, Send, Edit, Trash2, Copy, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -255,15 +256,26 @@ export default function InvestorUpdatePage() {
               ))}
             </div>
           ) : (
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50"
+            >
               <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-purple-100 mb-4">
                 <Mail className="h-8 w-8 text-purple-600" />
               </div>
               <h3 className="text-black font-semibold mb-2">No investor updates yet</h3>
-              <p className="text-gray-600 text-sm max-w-sm mx-auto">
+              <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
                 Use Smartify on a note to generate investor update drafts automatically.
               </p>
-            </div>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm"
+              >
+                Go to Notes
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </motion.div>
           )}
         </div>
 

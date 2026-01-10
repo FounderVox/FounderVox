@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { NoteCard } from '@/components/dashboard/note-card'
 import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
+import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
 import { Star, Mic } from 'lucide-react'
 
 interface Note {
@@ -16,6 +17,8 @@ interface Note {
   template: string
   isStarred: boolean
   tags: string[]
+  smartified_at?: string | null
+  updated_at?: string
 }
 
 export default function StarredPage() {
@@ -23,6 +26,8 @@ export default function StarredPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showTagDialog, setShowTagDialog] = useState(false)
   const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [selectedNoteForEdit, setSelectedNoteForEdit] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -56,6 +61,8 @@ export default function StarredPage() {
             template: note.template_label || note.template_type || 'Note',
             isStarred: true,
             tags: note.tags || [],
+            smartified_at: note.smartified_at,
+            updated_at: note.updated_at,
           }))
           setNotes(formattedNotes)
         }
@@ -121,7 +128,8 @@ export default function StarredPage() {
 
   const handleEditNote = (noteId: string) => {
     console.log('[FounderNote:Starred] Edit note:', noteId)
-    // TODO: Implement edit note dialog
+    setSelectedNoteForEdit(noteId)
+    setShowEditDialog(true)
   }
 
   const handleDeleteNote = async (noteId: string) => {
@@ -211,6 +219,10 @@ export default function StarredPage() {
                 onEdit={() => handleEditNote(note.id)}
                 onDelete={() => handleDeleteNote(note.id)}
                 onAddTag={() => handleAddTag(note.id)}
+                onSmartify={() => handleSmartify(note.id)}
+                noteId={note.id}
+                isSmartified={!!note.smartified_at}
+                canSmartify={!note.smartified_at || (note.updated_at && new Date(note.updated_at) > new Date(note.smartified_at))}
               />
             </motion.div>
           ))}
@@ -273,6 +285,18 @@ export default function StarredPage() {
           existingTags={selectedNoteForTag.tags}
         />
       )}
+
+      {/* Edit Note Dialog */}
+      <EditNoteDialog
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open)
+          if (!open) {
+            setSelectedNoteForEdit(null)
+          }
+        }}
+        noteId={selectedNoteForEdit}
+      />
     </motion.div>
   )
 }

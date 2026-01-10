@@ -20,6 +20,8 @@ interface NoteCardProps {
   onAddTag?: () => void
   onSmartify?: () => void
   noteId?: string
+  canSmartify?: boolean
+  isSmartified?: boolean
 }
 
 export function NoteCard({
@@ -37,6 +39,8 @@ export function NoteCard({
   onAddTag,
   onSmartify,
   noteId,
+  canSmartify = true,
+  isSmartified = false,
 }: NoteCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   return (
@@ -136,12 +140,24 @@ export function NoteCard({
                         onClick={(e) => {
                           e.stopPropagation()
                           setIsMenuOpen(false)
-                          onSmartify?.()
+                          if (canSmartify) {
+                            onSmartify?.()
+                          }
                         }}
-                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 transition-colors"
+                        disabled={!canSmartify}
+                        className={cn(
+                          "flex items-center gap-2 w-full px-4 py-2.5 text-sm transition-colors",
+                          canSmartify
+                            ? "text-purple-600 hover:bg-purple-50"
+                            : "text-gray-400 cursor-not-allowed"
+                        )}
+                        title={!canSmartify && isSmartified ? "Note already smartified. Edit to smartify again." : "Extract structured data from this note"}
                       >
                         <Sparkles className="h-4 w-4" />
-                        Smartify
+                        {isSmartified ? "Smartify Again" : "Smartify"}
+                        {isSmartified && (
+                          <span className="ml-auto text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded">Done</span>
+                        )}
                       </button>
                     )}
                     <button

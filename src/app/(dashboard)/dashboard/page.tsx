@@ -9,6 +9,8 @@ import { QuickRecord } from '@/components/dashboard/quick-record'
 import { NoteCard } from '@/components/dashboard/note-card'
 import { FilterBar } from '@/components/dashboard/filter-bar'
 import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
+import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
+import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { FileText, Mic, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -20,6 +22,10 @@ export default function DashboardPage() {
   const [isRecentNotesExpanded, setIsRecentNotesExpanded] = useState(false)
   const [showTagDialog, setShowTagDialog] = useState(false)
   const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [selectedNoteForEdit, setSelectedNoteForEdit] = useState<string | null>(null)
+  const [showSmartifyModal, setShowSmartifyModal] = useState(false)
+  const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -179,11 +185,6 @@ export default function DashboardPage() {
     }
   }
 
-  const handleEditNote = (noteId: string) => {
-    console.log('[FounderNote:Dashboard] Edit note:', noteId)
-    // TODO: Implement edit note dialog
-  }
-
   const handleDeleteNote = async (noteId: string) => {
     if (!confirm('Are you sure you want to delete this note?')) return
 
@@ -215,34 +216,18 @@ export default function DashboardPage() {
     setShowTagDialog(true)
   }
 
-  const handleSmartify = async (noteId: string) => {
-    try {
-      console.log('[FounderNote:Dashboard] Smartifying note:', noteId)
-      
-      // Show loading state (you could add a toast or loading indicator here)
-      const response = await fetch('/api/notes/smartify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ noteId })
-      })
+  const handleEditNote = (noteId: string) => {
+    setSelectedNoteForEdit(noteId)
+    setShowEditDialog(true)
+  }
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Smartify failed')
-      }
-
-      const data = await response.json()
-      console.log('[FounderNote:Dashboard] Smartify complete:', data.extracted)
-      
-      const message = `Smartify complete! Extracted:\n- ${data.extracted.actionItems} action items\n- ${data.extracted.investorUpdates} investor updates\n- ${data.extracted.progressLogs} progress logs\n- ${data.extracted.productIdeas} product ideas\n- ${data.extracted.brainDump} brain dump notes\n\nVisit the template pages in the sidebar to view them.`
-      alert(message)
-      
-      // Refresh the page to show updated data
-      window.location.reload()
-    } catch (error) {
-      console.error('[FounderNote:Dashboard] Error smartifying note:', error)
-      alert(`Error: ${error instanceof Error ? error.message : 'Failed to smartify note'}`)
-    }
+  const handleSmartify = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    setSelectedNoteForSmartify({ 
+      id: noteId, 
+      title: note?.title || 'Untitled Note' 
+    })
+    setShowSmartifyModal(true)
   }
 
   // Helper function to get full date label (e.g., "January 8, 2026")
@@ -361,6 +346,8 @@ export default function DashboardPage() {
                               onAddTag={() => handleAddTag(note.id)}
                               onSmartify={() => handleSmartify(note.id)}
                               noteId={note.id}
+                              isSmartified={!!note.smartified_at}
+                              canSmartify={!note.smartified_at || new Date(note.updated_at) > new Date(note.smartified_at)}
                             />
                           </motion.div>
                         ))}
@@ -420,6 +407,8 @@ export default function DashboardPage() {
                         onAddTag={() => handleAddTag(note.id)}
                         onSmartify={() => handleSmartify(note.id)}
                         noteId={note.id}
+                        isSmartified={!!note.smartified_at}
+                        canSmartify={!note.smartified_at || new Date(note.updated_at) > new Date(note.smartified_at)}
                       />
                     </motion.div>
                   ))}
@@ -496,6 +485,33 @@ export default function DashboardPage() {
           }}
           noteId={selectedNoteForTag.id}
           existingTags={selectedNoteForTag.tags}
+        />
+      )}
+
+      {/* Edit Note Dialog */}
+      <EditNoteDialog
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open)
+          if (!open) {
+            setSelectedNoteForEdit(null)
+          }
+        }}
+        noteId={selectedNoteForEdit}
+      />
+
+      {/* Smartify Modal */}
+      {selectedNoteForSmartify && (
+        <SmartifyModal
+          open={showSmartifyModal}
+          onOpenChange={(open) => {
+            setShowSmartifyModal(open)
+            if (!open) {
+              setSelectedNoteForSmartify(null)
+            }
+          }}
+          noteId={selectedNoteForSmartify.id}
+          noteTitle={selectedNoteForSmartify.title}
         />
       )}
     </motion.div>

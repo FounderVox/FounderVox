@@ -8,6 +8,8 @@ import { Mic, LayoutGrid, List } from 'lucide-react'
 import { NoteCard } from '@/components/dashboard/note-card'
 import { cn } from '@/lib/utils'
 import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
+import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
+import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +37,10 @@ export default function AllNotesPage() {
   const [viewMode, setViewMode] = useState<'list' | 'tiles'>('list')
   const [showTagDialog, setShowTagDialog] = useState(false)
   const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [selectedNoteForEdit, setSelectedNoteForEdit] = useState<string | null>(null)
+  const [showSmartifyModal, setShowSmartifyModal] = useState(false)
+  const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -162,7 +168,8 @@ export default function AllNotesPage() {
 
   const handleEditNote = (noteId: string) => {
     console.log('[FounderNote:AllNotes] Edit note:', noteId)
-    // TODO: Implement edit note dialog
+    setSelectedNoteForEdit(noteId)
+    setShowEditDialog(true)
   }
 
   const handleDeleteNote = async (noteId: string) => {
@@ -207,33 +214,13 @@ export default function AllNotesPage() {
     setShowTagDialog(true)
   }
 
-  const handleSmartify = async (noteId: string) => {
-    try {
-      console.log('[FounderNote:AllNotes] Smartifying note:', noteId)
-      
-      const response = await fetch('/api/notes/smartify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ noteId })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Smartify failed')
-      }
-
-      const data = await response.json()
-      console.log('[FounderNote:AllNotes] Smartify complete:', data.extracted)
-      
-      const message = `Smartify complete! Extracted:\n- ${data.extracted.actionItems} action items\n- ${data.extracted.investorUpdates} investor updates\n- ${data.extracted.progressLogs} progress logs\n- ${data.extracted.productIdeas} product ideas\n- ${data.extracted.brainDump} brain dump notes\n\nVisit the template pages in the sidebar to view them.`
-      alert(message)
-      
-      // Refresh the page to show updated data
-      window.location.reload()
-    } catch (error) {
-      console.error('[FounderNote:AllNotes] Error smartifying note:', error)
-      alert(`Error: ${error instanceof Error ? error.message : 'Failed to smartify note'}`)
-    }
+  const handleSmartify = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    setSelectedNoteForSmartify({ 
+      id: noteId, 
+      title: note?.title || 'Untitled Note' 
+    })
+    setShowSmartifyModal(true)
   }
 
   if (isLoading) {
@@ -391,6 +378,8 @@ export default function AllNotesPage() {
                         onAddTag={() => handleAddTag(note.id)}
                         onSmartify={() => handleSmartify(note.id)}
                         noteId={note.id}
+                        isSmartified={!!note.smartified_at}
+                        canSmartify={!note.smartified_at || new Date(note.updated_at) > new Date(note.smartified_at)}
                       />
                     </motion.div>
                   ))}
@@ -468,6 +457,33 @@ export default function AllNotesPage() {
           }}
           noteId={selectedNoteForTag.id}
           existingTags={selectedNoteForTag.tags}
+        />
+      )}
+
+      {/* Edit Note Dialog */}
+      <EditNoteDialog
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open)
+          if (!open) {
+            setSelectedNoteForEdit(null)
+          }
+        }}
+        noteId={selectedNoteForEdit}
+      />
+
+      {/* Smartify Modal */}
+      {selectedNoteForSmartify && (
+        <SmartifyModal
+          open={showSmartifyModal}
+          onOpenChange={(open) => {
+            setShowSmartifyModal(open)
+            if (!open) {
+              setSelectedNoteForSmartify(null)
+            }
+          }}
+          noteId={selectedNoteForSmartify.id}
+          noteTitle={selectedNoteForSmartify.title}
         />
       )}
     </motion.div>

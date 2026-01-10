@@ -50,6 +50,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if note was already smartified and hasn't been edited since
+    if (note.smartified_at) {
+      const smartifiedAt = new Date(note.smartified_at)
+      const updatedAt = new Date(note.updated_at)
+      
+      // If note wasn't edited after smartify, prevent re-smartifying
+      if (updatedAt <= smartifiedAt) {
+        return NextResponse.json(
+          { 
+            error: 'Note already smartified',
+            message: 'This note has already been smartified. Edit the note to smartify again.',
+            canSmartify: false
+          },
+          { status: 400 }
+        )
+      }
+    }
+
     // Get transcript from note (prefer raw_transcript, fallback to content)
     const transcript = note.raw_transcript || note.content || note.formatted_content
 
@@ -77,41 +95,56 @@ export async function POST(request: NextRequest) {
 
       if (existingRecording) {
         recordingId = existingRecording.id
-      } else {
-        // Create a new recording record for this note
-        const { data: newRecording, error: recError } = await supabase
-          .from('recordings')
-          .insert({
-            user_id: user.id,
-            audio_url: note.audio_url,
-            raw_transcript: transcript,
-            cleaned_transcript: note.formatted_content || transcript,
-            duration_seconds: note.duration_seconds || 0,
-            processing_status: 'completed'
-          })
-          .select()
-          .single()
+      }
+    }
 
-        if (recError) {
-          console.error('[Smartify] Error creating recording:', recError)
-        } else {
-          recordingId = newRecording.id
-        }
+    // If no recording found, create a new one (even without audio_url)
+    if (!recordingId) {
+      console.log('[Smartify] Creating new recording record for note:', noteId)
+      const { data: newRecording, error: recError } = await supabase
+        .from('recordings')
+        .insert({
+          user_id: user.id,
+          audio_url: note.audio_url || null,
+          raw_transcript: transcript,
+          cleaned_transcript: note.formatted_content || transcript,
+          duration_seconds: note.duration_seconds || 0,
+          processing_status: 'completed'
+        })
+        .select()
+        .single()
+
+      if (recError) {
+        console.error('[Smartify] Error creating recording:', recError)
+        // Continue anyway - we'll try to extract without recordingId
+      } else {
+        recordingId = newRecording.id
       }
     }
 
     // Run all extraction functions in parallel
     if (recordingId) {
       console.log('[Smartify] Running extraction with recording ID:', recordingId)
-      await Promise.allSettled([
+      const results = await Promise.allSettled([
         extractActionItems(transcript, recordingId, user.id),
         extractInvestorUpdate(transcript, recordingId, user.id),
         extractProgressLog(transcript, recordingId, user.id),
         extractProductIdeas(transcript, recordingId, user.id),
         extractBrainDump(transcript, recordingId, user.id)
       ])
+      
+      // Log any failures
+      results.forEach((result, index) => {
+        const names = ['ActionItems', 'InvestorUpdate', 'ProgressLog', 'ProductIdeas', 'BrainDump']
+        if (result.status === 'rejected') {
+          console.error(`[Smartify] ${names[index]} extraction failed:`, result.reason)
+        } else {
+          console.log(`[Smartify] ${names[index]} extraction completed`)
+        }
+      })
     } else {
-      console.log('[Smartify] No recording ID available, skipping extraction')
+      console.warn('[Smartify] No recording ID available - extraction requires a recording record')
+      // Return empty counts if we couldn't create a recording
     }
 
     // Get counts of extracted items
@@ -124,6 +157,13 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Smartify] Extraction complete for note:', noteId)
+
+    // Update note to mark it as smartified
+    await supabase
+      .from('notes')
+      .update({ smartified_at: new Date().toISOString() })
+      .eq('id', noteId)
+      .eq('user_id', user.id)
 
     return NextResponse.json({
       success: true,

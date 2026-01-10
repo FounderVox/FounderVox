@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
-import { TrendingUp, CheckCircle2, Clock, AlertTriangle, Calendar, X } from 'lucide-react'
+import { TrendingUp, CheckCircle2, Clock, AlertTriangle, Calendar, X, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -245,15 +246,26 @@ export default function ProgressLogPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50"
+        >
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-green-100 mb-4">
             <TrendingUp className="h-8 w-8 text-green-600" />
           </div>
           <h3 className="text-black font-semibold mb-2">No progress logs yet</h3>
-          <p className="text-gray-600 text-sm max-w-sm mx-auto">
+          <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
             Use Smartify on a note to extract progress updates automatically.
           </p>
-        </div>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm"
+          >
+            Go to Notes
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </motion.div>
       )}
     </motion.div>
   )

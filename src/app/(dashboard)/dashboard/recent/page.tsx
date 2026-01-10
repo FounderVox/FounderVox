@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { NoteCard } from '@/components/dashboard/note-card'
+import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
 import { Clock, Mic } from 'lucide-react'
 
 interface Note {
@@ -19,6 +20,8 @@ interface Note {
 export default function RecentPage() {
   const [notes, setNotes] = useState<Note[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [selectedNoteForEdit, setSelectedNoteForEdit] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -83,6 +86,12 @@ export default function RecentPage() {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const handleEditNote = (noteId: string) => {
+    console.log('[FounderNote:Recent] Edit note:', noteId)
+    setSelectedNoteForEdit(noteId)
+    setShowEditDialog(true)
   }
 
   const toggleStar = async (noteId: string) => {
@@ -153,6 +162,8 @@ export default function RecentPage() {
                 isStarred={note.isStarred}
                 onStar={() => toggleStar(note.id)}
                 onPlay={() => console.log('[FounderNote:Recent] Playing note:', note.id)}
+                onEdit={() => handleEditNote(note.id)}
+                noteId={note.id}
               />
             </motion.div>
           ))}
@@ -168,6 +179,18 @@ export default function RecentPage() {
           </p>
         </div>
       )}
+
+      {/* Edit Note Dialog */}
+      <EditNoteDialog
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open)
+          if (!open) {
+            setSelectedNoteForEdit(null)
+          }
+        }}
+        noteId={selectedNoteForEdit}
+      />
     </motion.div>
   )
 }

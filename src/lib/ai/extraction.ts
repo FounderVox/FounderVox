@@ -97,8 +97,12 @@ Return format:
       status: 'open' as const
     }))
 
-    await supabase.from('action_items').insert(itemsToInsert)
-    console.log(`[Extraction] Saved ${actionItems.length} action items`)
+    const { data, error } = await supabase.from('action_items').insert(itemsToInsert).select()
+    if (error) {
+      console.error('[Extraction] Error saving action items:', error)
+    } else {
+      console.log(`[Extraction] Saved ${actionItems.length} action items to database:`, data?.map(i => i.id))
+    }
   } catch (error) {
     console.error('[Extraction] Action items error:', error)
   }
@@ -150,7 +154,7 @@ Return format:
 
     // Save to database
     const supabase = await createClient()
-    await supabase.from('investor_updates').insert({
+    const { data, error } = await supabase.from('investor_updates').insert({
       recording_id: recordingId,
       draft_subject: update.draft_subject,
       draft_body: update.draft_body,
@@ -159,9 +163,13 @@ Return format:
       challenges: update.challenges,
       asks: update.asks,
       status: 'draft'
-    })
+    }).select()
 
-    console.log('[Extraction] Saved investor update')
+    if (error) {
+      console.error('[Extraction] Error saving investor update:', error)
+    } else {
+      console.log('[Extraction] Saved investor update to database:', data?.[0]?.id)
+    }
   } catch (error) {
     console.error('[Extraction] Investor update error:', error)
   }
@@ -212,15 +220,19 @@ Return format:
 
     // Save to database
     const supabase = await createClient()
-    await supabase.from('progress_logs').insert({
+    const { data, error } = await supabase.from('progress_logs').insert({
       recording_id: recordingId,
       week_of: monday.toISOString().split('T')[0],
       completed: progress.completed,
       in_progress: progress.in_progress,
       blocked: progress.blocked
-    })
+    }).select()
 
-    console.log('[Extraction] Saved progress log')
+    if (error) {
+      console.error('[Extraction] Error saving progress log:', error)
+    } else {
+      console.log('[Extraction] Saved progress log to database:', data?.[0]?.id)
+    }
   } catch (error) {
     console.error('[Extraction] Progress log error:', error)
   }
@@ -290,8 +302,12 @@ Return format:
       votes: 0
     }))
 
-    await supabase.from('product_ideas').insert(ideasToInsert)
-    console.log(`[Extraction] Saved ${ideas.length} product ideas`)
+    const { data, error } = await supabase.from('product_ideas').insert(ideasToInsert).select()
+    if (error) {
+      console.error('[Extraction] Error saving product ideas:', error)
+    } else {
+      console.log(`[Extraction] Saved ${ideas.length} product ideas to database:`, data?.map(i => i.id))
+    }
   } catch (error) {
     console.error('[Extraction] Product ideas error:', error)
   }
@@ -356,8 +372,12 @@ Return format:
       participants: item.participants || []
     }))
 
-    await supabase.from('brain_dump').insert(itemsToInsert)
-    console.log(`[Extraction] Saved ${items.length} brain dump items`)
+    const { data, error } = await supabase.from('brain_dump').insert(itemsToInsert).select()
+    if (error) {
+      console.error('[Extraction] Error saving brain dump items:', error)
+    } else {
+      console.log(`[Extraction] Saved ${items.length} brain dump items to database:`, data?.map(i => i.id))
+    }
   } catch (error) {
     console.error('[Extraction] Brain dump error:', error)
   }

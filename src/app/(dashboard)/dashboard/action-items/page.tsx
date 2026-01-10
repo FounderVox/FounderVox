@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
-import { CheckSquare, Calendar, User, AlertCircle, CheckCircle2, Clock, X } from 'lucide-react'
+import { CheckSquare, Calendar, User, AlertCircle, CheckCircle2, Clock, X, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,13 +50,21 @@ export default function ActionItemsPage() {
         setProfile(profileData)
 
         // Load action items via recordings
-        const { data: recordings } = await supabase
+        const { data: recordings, error: recordingsError } = await supabase
           .from('recordings')
           .select('id')
           .eq('user_id', user.id)
 
+        if (recordingsError) {
+          console.error('[ActionItems] Error loading recordings:', recordingsError)
+        }
+
+        console.log('[ActionItems] Found recordings:', recordings?.length || 0)
+
         if (recordings && recordings.length > 0) {
           const recordingIds = recordings.map(r => r.id)
+          console.log('[ActionItems] Querying action_items for recording IDs:', recordingIds)
+          
           const { data: items, error: itemsError } = await supabase
             .from('action_items')
             .select('*')
@@ -65,8 +74,12 @@ export default function ActionItemsPage() {
           if (itemsError) {
             console.error('[ActionItems] Error loading items:', itemsError)
           } else {
+            console.log('[ActionItems] Loaded action items:', items?.length || 0)
             setActionItems(items || [])
           }
+        } else {
+          console.log('[ActionItems] No recordings found, setting empty array')
+          setActionItems([])
         }
 
         setIsLoading(false)
@@ -361,15 +374,26 @@ export default function ActionItemsPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50"
+        >
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-blue-100 mb-4">
             <CheckSquare className="h-8 w-8 text-blue-600" />
           </div>
           <h3 className="text-black font-semibold mb-2">No action items yet</h3>
-          <p className="text-gray-600 text-sm max-w-sm mx-auto">
+          <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
             Use Smartify on a note to extract action items automatically.
           </p>
-        </div>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm"
+          >
+            Go to Notes
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </motion.div>
       )}
     </motion.div>
   )
