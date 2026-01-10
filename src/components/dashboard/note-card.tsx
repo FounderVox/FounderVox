@@ -54,19 +54,19 @@ export function NoteCard({
   
   return (
     <motion.div
-      className="group bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-5 hover:bg-black hover:text-white hover:border-black transition-all cursor-pointer"
-      whileHover={{ y: -2 }}
+      className="group bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-5 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 cursor-pointer"
+      whileHover={{ y: -2, scale: 1.01 }}
       onClick={handleCardClick}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           {template && (
-            <span className="inline-block px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-black text-white rounded-full mb-2 group-hover:bg-white group-hover:text-black">
+            <span className="inline-block px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-black text-white rounded-full mb-2">
               {template}
             </span>
           )}
-          <h3 className="text-black font-semibold truncate group-hover:text-white">{title}</h3>
+          <h3 className="text-black font-semibold truncate">{title}</h3>
         </div>
         <div className="flex items-center gap-1 transition-opacity relative">
           {/* Show star when starred, even without hover */}
@@ -77,17 +77,17 @@ export function NoteCard({
           )}
 
           {/* Show interactive buttons on hover */}
-          <div className={cn("flex items-center gap-1", isStarred ? "hidden group-hover:flex" : "opacity-0 group-hover:opacity-100")}>
+          <div className={cn("flex items-center gap-1", isStarred ? "hidden group-hover:flex" : "opacity-0 group-hover:opacity-100 transition-opacity duration-200")}>
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 onStar?.()
               }}
               className={cn(
-                'p-1.5 rounded-lg transition-colors',
+                'p-1.5 rounded-lg transition-all duration-200',
                 isStarred
-                  ? 'text-amber-500 hover:bg-white hover:text-black'
-                  : 'text-white hover:bg-white/20'
+                  ? 'text-amber-500 hover:bg-amber-50 hover:shadow-sm'
+                  : 'text-gray-400 hover:bg-gray-100 hover:text-amber-500'
               )}
             >
               <Star className={cn('h-4 w-4', isStarred && 'fill-current')} />
@@ -98,7 +98,7 @@ export function NoteCard({
                 e.stopPropagation()
                 setIsMenuOpen(!isMenuOpen)
               }}
-              className="p-1.5 rounded-lg text-white hover:bg-white/20 transition-colors"
+              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-black transition-all duration-200"
             >
               <MoreVertical className="h-4 w-4" />
             </button>
@@ -129,7 +129,7 @@ export function NoteCard({
                         setIsMenuOpen(false)
                         onEdit?.()
                       }}
-                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-100 transition-colors"
+                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-50 transition-all duration-200"
                     >
                       <Edit className="h-4 w-4" />
                       Edit Note
@@ -140,7 +140,7 @@ export function NoteCard({
                         setIsMenuOpen(false)
                         onAddTag?.()
                       }}
-                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-100 transition-colors"
+                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-50 transition-all duration-200"
                     >
                       <Tag className="h-4 w-4" />
                       Add Tag
@@ -156,9 +156,9 @@ export function NoteCard({
                         }}
                         disabled={!canSmartify}
                         className={cn(
-                          "flex items-center gap-2 w-full px-4 py-2.5 text-sm transition-colors",
+                          "flex items-center gap-2 w-full px-4 py-2.5 text-sm transition-all duration-200",
                           canSmartify
-                            ? "text-purple-600 hover:bg-purple-50"
+                            ? "text-purple-600 hover:bg-purple-50 hover:shadow-sm"
                             : "text-gray-400 cursor-not-allowed"
                         )}
                         title={!canSmartify && isSmartified ? "Note already smartified. Edit to smartify again." : "Extract structured data from this note"}
@@ -176,7 +176,7 @@ export function NoteCard({
                         setIsMenuOpen(false)
                         onDelete?.()
                       }}
-                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:shadow-sm transition-all duration-200"
                     >
                       <Trash2 className="h-4 w-4" />
                       Delete Note
@@ -191,7 +191,7 @@ export function NoteCard({
       </div>
 
       {/* Preview */}
-      <p className="text-sm text-gray-600 line-clamp-2 mb-4 group-hover:text-white/90">{preview}</p>
+      <p className="text-sm text-gray-600 line-clamp-2 mb-4">{preview}</p>
 
       {/* Tags */}
       {tags && tags.length > 0 && (
@@ -199,13 +199,13 @@ export function NoteCard({
           {tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-full group-hover:bg-white/20 group-hover:text-white border border-gray-200 group-hover:border-white/30"
+              className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-full border border-gray-200"
             >
               {tag}
             </span>
           ))}
           {tags.length > 3 && (
-            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-gray-500 group-hover:text-white/70">
+            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-gray-500">
               +{tags.length - 3} more
             </span>
           )}
@@ -214,7 +214,7 @@ export function NoteCard({
 
       {/* Footer */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 text-xs text-gray-500 group-hover:text-white/70">
+        <div className="flex items-center gap-3 text-xs text-gray-500">
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
             {createdAt}
@@ -229,7 +229,7 @@ export function NoteCard({
               e.stopPropagation()
               onPlay()
             }}
-            className="p-2 rounded-full bg-white text-black hover:bg-white/90 transition-colors group-hover:bg-white group-hover:text-black"
+            className="p-2 rounded-full bg-white text-black hover:bg-gray-100 hover:shadow-md transition-all duration-200"
           >
             <Play className="h-4 w-4" fill="currentColor" />
           </button>

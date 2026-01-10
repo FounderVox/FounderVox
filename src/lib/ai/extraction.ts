@@ -1,9 +1,17 @@
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
+// Lazy initialization to avoid build-time errors
+let openaiClient: OpenAI | null = null
+
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    })
+  }
+  return openaiClient
+}
 
 interface ActionItem {
   task: string
@@ -68,7 +76,7 @@ Return format:
 ]`
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert at extracting action items from meeting transcripts. Return only valid JSON.' },
@@ -137,7 +145,7 @@ Return format:
 }`
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert at creating investor updates. Be concise, specific, and professional. Return only valid JSON.' },
@@ -195,7 +203,7 @@ Return format:
 }`
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert at extracting progress updates from conversations. Return only valid JSON.' },
@@ -272,7 +280,7 @@ Return format:
 }`
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert product manager at extracting and categorizing product ideas. Return only valid JSON.' },
@@ -345,7 +353,7 @@ Return format:
 }`
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert at organizing unstructured notes and thoughts. Return only valid JSON.' },

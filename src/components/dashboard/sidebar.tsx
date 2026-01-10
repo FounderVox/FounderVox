@@ -81,7 +81,8 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
           {isCollapsed ? (
             <div
               onClick={toggleCollapse}
-              className="h-8 w-8 rounded-lg bg-black flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+              className="h-8 w-8 rounded-lg flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+              style={{ backgroundColor: '#BD6750' }}
               title="Expand sidebar"
             >
               <Mic className="h-4 w-4 text-white" />
@@ -124,11 +125,11 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
               >
                 <div
                   className={cn(
-                    'flex items-center gap-3 rounded-lg text-sm font-medium transition-colors',
+                    'flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200',
                     isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5',
                     isActive
-                      ? 'bg-black text-white'
-                      : 'text-black hover:bg-black hover:text-white'
+                      ? 'bg-black text-white shadow-sm'
+                      : 'text-black hover:bg-gray-100/80 hover:shadow-sm'
                   )}
                 >
                   <Icon className="h-4 w-4 flex-shrink-0" />
@@ -146,7 +147,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
             <>
               <button
                 onClick={() => setNotesOpen(!notesOpen)}
-                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-black hover:bg-black hover:text-white rounded-lg transition-colors"
+                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-black hover:bg-gray-100/60 rounded-lg transition-all duration-200"
               >
                 <span className="flex items-center gap-2">
                   <FolderOpen className="h-3.5 w-3.5" />
@@ -170,10 +171,10 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                         <Link key={item.href} href={item.href}>
                           <div
                             className={cn(
-                              'flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
+                              'flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all duration-200',
                               isActive
-                                ? 'bg-black text-white'
-                                : 'text-black hover:bg-black hover:text-white'
+                                ? 'bg-black text-white shadow-sm'
+                                : 'text-black hover:bg-gray-100/80 hover:shadow-sm'
                             )}
                           >
                             <span className="flex items-center gap-3">
@@ -203,10 +204,10 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                   <Link key={item.href} href={item.href} title={item.label}>
                     <div
                       className={cn(
-                        'flex items-center justify-center p-2.5 rounded-lg text-sm transition-colors',
+                        'flex items-center justify-center p-2.5 rounded-lg text-sm transition-all duration-200',
                         isActive
-                          ? 'bg-black text-white'
-                          : 'text-black hover:bg-black hover:text-white'
+                          ? 'bg-black text-white shadow-sm'
+                          : 'text-black hover:bg-gray-100/80 hover:shadow-sm'
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -225,7 +226,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
             <>
               <button
                 onClick={() => setTemplatesOpen(!templatesOpen)}
-                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-black hover:bg-black hover:text-white rounded-lg transition-colors"
+                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-black hover:bg-gray-100/60 rounded-lg transition-all duration-200"
               >
                 <span className="flex items-center gap-2">
                   <FileText className="h-3.5 w-3.5" />
@@ -252,10 +253,10 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                         >
                           <div
                             className={cn(
-                              'flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors',
+                              'flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-all duration-200',
                               isActive
-                                ? 'bg-black text-white'
-                                : 'text-black hover:bg-black hover:text-white'
+                                ? 'bg-black text-white shadow-sm'
+                                : 'text-black hover:bg-gray-100/80 hover:shadow-sm'
                             )}
                           >
                             <Icon className="h-4 w-4" />
@@ -272,7 +273,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
             // Collapsed version - just template icon
             <div className="flex justify-center">
               <button
-                className="p-2.5 rounded-lg text-black hover:bg-black hover:text-white transition-colors"
+                className="p-2.5 rounded-lg text-black hover:bg-gray-100/80 hover:shadow-sm transition-all duration-200"
                 title="Templates"
               >
                 <FileText className="h-4 w-4" />
@@ -285,7 +286,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
         <div className={cn('border-t border-gray-200/50 space-y-1', isCollapsed ? 'p-2' : 'p-3')}>
           <Link href="/dashboard/settings" title={isCollapsed ? 'Settings' : undefined}>
             <div className={cn(
-              'flex items-center gap-3 rounded-lg text-sm text-black hover:bg-black hover:text-white transition-colors',
+              'flex items-center gap-3 rounded-lg text-sm text-black hover:bg-gray-100/80 hover:shadow-sm transition-all duration-200',
               isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'
             )}>
               <Settings className="h-4 w-4" />
@@ -294,7 +295,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
           </Link>
           <button
             className={cn(
-              'flex items-center gap-3 w-full rounded-lg text-sm text-black hover:bg-black hover:text-white transition-colors',
+              'flex items-center gap-3 w-full rounded-lg text-sm text-black hover:bg-gray-100/80 hover:shadow-sm transition-all duration-200',
               isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'
             )}
             title={isCollapsed ? 'Upgrade to Pro' : undefined}

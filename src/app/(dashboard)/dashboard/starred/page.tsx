@@ -243,7 +243,7 @@ export default function StarredPage() {
                 onView={() => handleViewNote(note.id)}
                 noteId={note.id}
                 isSmartified={!!note.smartified_at}
-                canSmartify={!note.smartified_at || (note.updated_at && new Date(note.updated_at) > new Date(note.smartified_at))}
+                canSmartify={!note.smartified_at || !!(note.updated_at && new Date(note.updated_at) > new Date(note.smartified_at))}
               />
             </motion.div>
           ))}

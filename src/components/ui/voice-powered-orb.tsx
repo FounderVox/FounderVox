@@ -192,7 +192,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
   const analyzeAudio = () => {
     if (!externalAnalyser || !externalDataArray) return 0;
 
-    externalAnalyser.getByteFrequencyData(externalDataArray);
+    externalAnalyser.getByteFrequencyData(externalDataArray as Uint8Array<ArrayBuffer>);
 
     // Calculate RMS (Root Mean Square) for better voice detection
     let sum = 0;
@@ -223,7 +223,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
     })
 
     let rendererInstance: Renderer | null = null;
-    let glContext: WebGLRenderingContext | WebGL2RenderingContext | null = null;
+    let glContext: Renderer['gl'] | null = null;
     let rafId: number;
     let program: Program | null = null;
 
@@ -242,7 +242,7 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       while (container.firstChild) {
         container.removeChild(container.firstChild);
       }
-      container.appendChild(glContext.canvas);
+      container.appendChild(glContext.canvas as HTMLCanvasElement);
       console.log('[FounderNote:VoiceOrb] WebGL canvas added to container', {
         canvasSize: { width: glContext.canvas.width, height: glContext.canvas.height }
       });

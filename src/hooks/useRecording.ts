@@ -38,6 +38,10 @@ export function useRecording() {
     extractedData: null
   })
 
+  // Use refs to access current state in callbacks without causing re-renders
+  const stateRef = useRef(state)
+  stateRef.current = state
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -160,8 +164,8 @@ export function useRecording() {
   }, [])
 
   const pauseRecording = useCallback(() => {
-    if (mediaRecorderRef.current && state.isRecording) {
-      if (state.isPaused) {
+    if (mediaRecorderRef.current && stateRef.current.isRecording) {
+      if (stateRef.current.isPaused) {
         mediaRecorderRef.current.resume()
         setState(prev => ({ ...prev, isPaused: false }))
       } else {
@@ -169,7 +173,7 @@ export function useRecording() {
         setState(prev => ({ ...prev, isPaused: true }))
       }
     }
-  }, [state.isRecording, state.isPaused])
+  }, [])
 
   const stopRecording = useCallback(async (): Promise<Blob | null> => {
     return new Promise((resolve) => {
@@ -178,8 +182,8 @@ export function useRecording() {
         resolve(null)
         return
       }
-      
-      if (!state.isRecording) {
+
+      if (!stateRef.current.isRecording) {
         console.warn('[FounderNote:Recording] Cannot stop: not currently recording')
         resolve(null)
         return
@@ -240,7 +244,7 @@ export function useRecording() {
           // Call original handler if it exists
           if (originalOnStop) {
             try {
-              originalOnStop.call(recorder)
+              originalOnStop.call(recorder, new Event('stop'))
             } catch (e) {
               console.warn('[FounderNote:Recording] Error calling original onstop:', e)
             }
@@ -291,7 +295,7 @@ export function useRecording() {
         }
       }, 200) // Delay stopping tracks to allow final data collection
     })
-  }, [state.isRecording])
+  }, [])
 
   const cancelRecording = useCallback(() => {
     if (mediaRecorderRef.current) {
@@ -325,12 +329,12 @@ export function useRecording() {
 
   const uploadAndProcess = useCallback(async (blobOverride?: Blob) => {
     // Use provided blob or state blob
-    const audioBlob = blobOverride || state.audioBlob
-    
+    const audioBlob = blobOverride || stateRef.current.audioBlob
+
     if (!audioBlob) {
       console.error('[FounderNote:Recording] No audio blob to upload', {
         hasBlobOverride: !!blobOverride,
-        hasStateBlob: !!state.audioBlob,
+        hasStateBlob: !!stateRef.current.audioBlob,
         chunks: audioChunksRef.current.length
       })
       setState(prev => ({ ...prev, error: 'No audio to upload' }))
@@ -418,7 +422,7 @@ export function useRecording() {
         error: error instanceof Error ? error.message : 'Failed to process recording'
       }))
     }
-  }, [state.audioBlob, state.recordingId])
+  }, [])
 
   const getAnalyserData = useCallback((): AudioAnalyserData => {
     return {

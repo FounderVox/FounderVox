@@ -293,7 +293,7 @@ export default function ActionItemsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     className={cn(
-                      'bg-white/60 backdrop-blur-sm border rounded-xl p-5 hover:bg-black hover:text-white hover:border-black transition-all group',
+                      'bg-white/60 backdrop-blur-sm border rounded-xl p-5 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 group',
                       item.status === 'done' && 'opacity-60'
                     )}
                   >

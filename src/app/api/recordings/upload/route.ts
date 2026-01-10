@@ -67,10 +67,7 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error('[Upload] Storage error:', {
-        message: uploadError.message,
-        statusCode: uploadError.statusCode,
-        error: uploadError.error,
-        name: uploadError.name
+        message: uploadError.message
       })
       return NextResponse.json(
         { error: 'Failed to upload audio file', details: uploadError.message },

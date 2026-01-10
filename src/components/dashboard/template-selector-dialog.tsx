@@ -70,9 +70,9 @@ export function TemplateSelectorDialog({
                     key={template}
                     onClick={() => handleTemplateSelect(template)}
                     className={cn(
-                      'flex items-center justify-between p-4 rounded-lg border-2 transition-all hover:border-black',
+                      'flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm',
                       selectedTemplate === template
-                        ? 'border-black bg-gray-50'
+                        ? 'border-black bg-gray-50 shadow-sm'
                         : 'border-gray-200'
                     )}
                   >
@@ -91,9 +91,9 @@ export function TemplateSelectorDialog({
                 <button
                   key={useCase.id}
                   onClick={() => setSelectedUseCase(useCase)}
-                  className="flex items-start gap-4 p-4 rounded-lg border-2 border-gray-200 hover:border-black transition-all text-left group"
+                  className="flex items-start gap-4 p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm transition-all duration-200 text-left group"
                 >
-                  <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-black group-hover:text-white transition-colors">
+                  <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-gray-200 transition-all duration-200">
                     <useCase.icon className="h-5 w-5" />
                   </div>
                   <div className="flex-1">

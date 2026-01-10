@@ -218,7 +218,7 @@ export default function BrainDumpPage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-5 hover:bg-black hover:text-white hover:border-black transition-all group"
+                      className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-5 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 group"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3 flex-1">
@@ -237,23 +237,23 @@ export default function BrainDumpPage() {
                                 {item.category.toUpperCase()}
                               </span>
                               {item.participants && item.participants.length > 0 && (
-                                <div className="flex items-center gap-1 text-xs text-gray-500 group-hover:text-white/70">
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
                                   <Users className="h-3 w-3" />
                                   <span>{item.participants.join(', ')}</span>
                                 </div>
                               )}
                             </div>
-                            <p className="text-gray-700 group-hover:text-white/90 whitespace-pre-wrap">
+                            <p className="text-gray-700 whitespace-pre-wrap">
                               {item.content}
                             </p>
-                            <p className="text-xs text-gray-400 group-hover:text-white/50 mt-2">
+                            <p className="text-xs text-gray-400 mt-2">
                               {new Date(item.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                             </p>
                           </div>
                         </div>
                         <button
                           onClick={() => deleteItem(item.id)}
-                          className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-red-600 hover:bg-red-50 group-hover:bg-red-500 group-hover:text-white transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-red-600 hover:bg-red-50 hover:shadow-sm transition-all duration-200"
                         >
                           <X className="h-4 w-4" />
                         </button>

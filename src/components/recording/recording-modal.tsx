@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Pause, Square, Trash2 } from 'lucide-react'
 import { useRecordingContext } from '@/contexts/recording-context'
@@ -12,75 +12,73 @@ interface RecordingModalProps {
   onClose: () => void
 }
 
-export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps) {
-  // Use context with error handling
-  let recordingContext
-  
-  try {
-    recordingContext = useRecordingContext()
-    if (!recordingContext) {
-      console.error('[FounderNote:RecordingModal] RecordingContext is null')
-      return null
-    }
-  } catch (err) {
-    // Context not available
-    console.error('[FounderNote:RecordingModal] RecordingContext not available:', err)
-    return null
-  }
-  
-  const {
-    isRecording,
-    isPaused,
-    isProcessing,
-    isComplete,
-    duration,
-    error,
-    extractedData,
-    audioBlob,
-    startRecording,
-    pauseRecording,
-    stopRecording,
-    cancelRecording,
-    uploadAndProcess,
-    getAnalyserData,
-    reset
-  } = recordingContext
+export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps & { onStop?: () => void }) {
+  // Always call hooks unconditionally
+  const recordingContext = useRecordingContext()
+
+  // Track if we've started recording for this modal session to prevent multiple calls
+  const hasStartedRef = useRef(false)
+
+  // Extract values from context (with defaults if null)
+  const isRecording = recordingContext?.isRecording ?? false
+  const isPaused = recordingContext?.isPaused ?? false
+  const isProcessing = recordingContext?.isProcessing ?? false
+  const isComplete = recordingContext?.isComplete ?? false
+  const duration = recordingContext?.duration ?? 0
+  const error = recordingContext?.error ?? null
+  const extractedData = recordingContext?.extractedData ?? null
+  const startRecording = recordingContext?.startRecording
+  const pauseRecording = recordingContext?.pauseRecording
+  const stopRecording = recordingContext?.stopRecording
+  const cancelRecording = recordingContext?.cancelRecording
+  const uploadAndProcess = recordingContext?.uploadAndProcess
+  const getAnalyserData = recordingContext?.getAnalyserData
+  const reset = recordingContext?.reset
 
   // Start recording when modal opens
   useEffect(() => {
-    if (isOpen && !isRecording && !isProcessing && !isComplete) {
+    if (!recordingContext || !startRecording) return
+
+    // Only start if modal just opened and we haven't started yet
+    if (isOpen && !hasStartedRef.current) {
+      hasStartedRef.current = true
       console.log('[FounderNote:RecordingModal] Modal opened, starting recording...')
       startRecording()
     }
-  }, [isOpen, isRecording, isProcessing, isComplete, startRecording])
-  
+
+    // Reset the flag when modal closes
+    if (!isOpen) {
+      hasStartedRef.current = false
+    }
+  }, [isOpen, recordingContext, startRecording])
+
   // Reset when modal closes
   useEffect(() => {
+    if (!recordingContext || !reset) return
     if (!isOpen && !isProcessing && !isComplete) {
-      // Only reset if we're not processing
-      if (!isProcessing) {
-        reset()
-      }
+      reset()
     }
-  }, [isOpen, isProcessing, isComplete, reset])
+  }, [isOpen, isProcessing, isComplete, reset, recordingContext])
 
   // Handle modal close
   const handleClose = () => {
     if (isRecording) {
-      cancelRecording()
+      cancelRecording?.()
     } else {
-      reset()
+      reset?.()
     }
     onClose()
   }
 
   // Handle stop recording - close modal immediately and process in background
   const handleStop = async () => {
+    if (!stopRecording || !uploadAndProcess) return
+
     console.log('[FounderNote:RecordingModal] Stopping recording...')
-    
+
     // Stop recording and get blob FIRST, before closing modal
     const blob = await stopRecording()
-    
+
     if (!blob) {
       console.error('[FounderNote:RecordingModal] No blob received from stopRecording')
       // Still close modal and show error via processing modal
@@ -91,13 +89,13 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps)
       }, 200)
       return
     }
-    
+
     if (blob.size === 0) {
       console.error('[FounderNote:RecordingModal] Blob is empty', {
         size: blob.size,
         type: blob.type
       })
-      // Still close modal and show error via processing modal  
+      // Still close modal and show error via processing modal
       onClose()
       onStop?.()
       setTimeout(() => {
@@ -105,16 +103,16 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps)
       }, 200)
       return
     }
-    
+
     console.log('[FounderNote:RecordingModal] Blob ready, starting upload...', {
       size: blob.size,
       type: blob.type
     })
-    
+
     // Close the recording modal and show processing modal
     onClose()
     onStop?.() // Notify parent to show processing modal
-    
+
     // Start processing with the blob directly (don't wait for state update)
     setTimeout(() => {
       uploadAndProcess(blob)
@@ -129,8 +127,9 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps)
   }
 
   // Get analyser data for the orb
-  const { analyser, dataArray } = getAnalyserData()
-  
+  const analyserData = getAnalyserData?.() ?? { analyser: null, dataArray: null }
+  const { analyser, dataArray } = analyserData
+
   // Debug logging
   useEffect(() => {
     if (isOpen) {
@@ -145,6 +144,12 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps)
       })
     }
   }, [isOpen, isRecording, isPaused, isProcessing, isComplete, analyser, dataArray, error])
+
+  // Return null if context is not available (after all hooks are called)
+  if (!recordingContext) {
+    console.error('[FounderNote:RecordingModal] RecordingContext is null')
+    return null
+  }
 
   return (
     <AnimatePresence>

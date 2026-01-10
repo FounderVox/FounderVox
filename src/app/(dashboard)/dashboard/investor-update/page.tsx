@@ -205,8 +205,8 @@ export default function InvestorUpdatePage() {
                         transition={{ delay: index * 0.05 }}
                         onClick={() => setSelectedUpdate(update)}
                         className={cn(
-                          'bg-white/60 backdrop-blur-sm border rounded-xl p-5 hover:bg-black hover:text-white hover:border-black transition-all cursor-pointer group',
-                          selectedUpdate?.id === update.id && 'bg-black text-white border-black'
+                          'bg-white/60 backdrop-blur-sm border rounded-xl p-5 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 cursor-pointer group',
+                          selectedUpdate?.id === update.id && 'bg-black text-white border-black shadow-md'
                         )}
                       >
                         <div className="flex items-start justify-between mb-3">

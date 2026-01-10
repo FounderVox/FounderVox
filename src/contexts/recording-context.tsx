@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, ReactNode } from 'react'
+import React, { createContext, useContext, ReactNode, useMemo } from 'react'
 import { useRecording } from '@/hooks/useRecording'
 
 interface RecordingContextType {
@@ -30,25 +30,58 @@ interface RecordingContextType {
 const RecordingContext = createContext<RecordingContextType | undefined>(undefined)
 
 export function RecordingProvider({ children }: { children: ReactNode }) {
-  try {
-    const recordingHook = useRecording()
+  const recordingHook = useRecording()
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo<RecordingContextType | null>(() => {
     if (!recordingHook) {
       console.error('[FounderNote:RecordingProvider] useRecording returned null')
-      // Return children without provider if hook fails
-      return <>{children}</>
+      return null
     }
+    return {
+      isRecording: recordingHook.isRecording,
+      isPaused: recordingHook.isPaused,
+      isProcessing: recordingHook.isProcessing,
+      isComplete: recordingHook.isComplete,
+      duration: recordingHook.duration,
+      error: recordingHook.error,
+      extractedData: recordingHook.extractedData,
+      audioBlob: recordingHook.audioBlob,
+      startRecording: recordingHook.startRecording,
+      pauseRecording: recordingHook.pauseRecording,
+      stopRecording: recordingHook.stopRecording,
+      cancelRecording: recordingHook.cancelRecording,
+      uploadAndProcess: recordingHook.uploadAndProcess,
+      getAnalyserData: recordingHook.getAnalyserData,
+      reset: recordingHook.reset
+    }
+  }, [
+    recordingHook.isRecording,
+    recordingHook.isPaused,
+    recordingHook.isProcessing,
+    recordingHook.isComplete,
+    recordingHook.duration,
+    recordingHook.error,
+    recordingHook.extractedData,
+    recordingHook.audioBlob,
+    recordingHook.startRecording,
+    recordingHook.pauseRecording,
+    recordingHook.stopRecording,
+    recordingHook.cancelRecording,
+    recordingHook.uploadAndProcess,
+    recordingHook.getAnalyserData,
+    recordingHook.reset
+  ])
 
-    return (
-      <RecordingContext.Provider value={recordingHook}>
-        {children}
-      </RecordingContext.Provider>
-    )
-  } catch (error) {
-    console.error('[FounderNote:RecordingProvider] Error initializing recording context:', error)
-    // Return children without provider if initialization fails
+  if (!contextValue) {
     return <>{children}</>
   }
+
+  return (
+    <RecordingContext.Provider value={contextValue}>
+      {children}
+    </RecordingContext.Provider>
+  )
 }
 
 export function useRecordingContext() {

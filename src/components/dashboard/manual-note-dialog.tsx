@@ -67,11 +67,8 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
       setIsSaving(false)
       onOpenChange(false)
 
-      // Dispatch event to notify other components
+      // Dispatch event to notify other components (pages listen for this)
       window.dispatchEvent(new CustomEvent('noteCreated'))
-
-      // Reload the page to show the new note
-      window.location.reload()
     } catch (error) {
       console.error('[FounderNote:ManualNote] Unexpected error:', error)
       setIsSaving(false)
@@ -147,11 +144,8 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
       setIsSaving(false)
       onOpenChange(false)
 
-      // Dispatch event to notify other components
+      // Dispatch event to notify other components (pages listen for this)
       window.dispatchEvent(new CustomEvent('noteCreated'))
-
-      // Reload the page to show the new note
-      window.location.reload()
     } catch (error) {
       console.error('[FounderNote:ManualNote] Unexpected error:', error)
       setIsSaving(false)

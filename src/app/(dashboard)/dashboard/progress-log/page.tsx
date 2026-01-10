@@ -153,23 +153,23 @@ export default function ProgressLogPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-6 hover:bg-black hover:text-white hover:border-black transition-all group"
+              className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-6 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 group"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-100 group-hover:bg-green-500">
-                    <Calendar className="h-5 w-5 text-green-600 group-hover:text-white" />
+                  <div className="p-2 rounded-lg bg-green-100">
+                    <Calendar className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold">Week of {formatWeek(log.week_of)}</h2>
-                    <p className="text-sm text-gray-500 group-hover:text-white/70">
+                    <p className="text-sm text-gray-500">
                       Created {new Date(log.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => deleteLog(log.id)}
-                  className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-red-600 hover:bg-red-50 group-hover:bg-red-500 group-hover:text-white transition-all"
+                  className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-red-600 hover:bg-red-50 hover:shadow-sm transition-all duration-200"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -179,7 +179,7 @@ export default function ProgressLogPage() {
                 {/* Completed */}
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 group-hover:text-green-400" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
                     <h3 className="font-semibold">
                       Completed ({log.completed?.length || 0})
                     </h3>
@@ -187,21 +187,21 @@ export default function ProgressLogPage() {
                   {log.completed && log.completed.length > 0 ? (
                     <ul className="space-y-2">
                       {log.completed.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2 bg-green-50 group-hover:bg-green-900/20 border border-green-200 group-hover:border-green-500 rounded-lg p-3">
-                          <CheckCircle2 className="h-4 w-4 text-green-600 group-hover:text-green-400 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-700 group-hover:text-white/90">{item}</span>
+                        <li key={idx} className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-lg p-3">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-gray-700">{item}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-gray-400 group-hover:text-white/50 italic">No completed items</p>
+                    <p className="text-sm text-gray-400 italic">No completed items</p>
                   )}
                 </div>
 
                 {/* In Progress */}
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-3">
-                    <Clock className="h-5 w-5 text-blue-600 group-hover:text-blue-400" />
+                    <Clock className="h-5 w-5 text-blue-600" />
                     <h3 className="font-semibold">
                       In Progress ({log.in_progress?.length || 0})
                     </h3>
@@ -209,21 +209,21 @@ export default function ProgressLogPage() {
                   {log.in_progress && log.in_progress.length > 0 ? (
                     <ul className="space-y-2">
                       {log.in_progress.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2 bg-blue-50 group-hover:bg-blue-900/20 border border-blue-200 group-hover:border-blue-500 rounded-lg p-3">
-                          <Clock className="h-4 w-4 text-blue-600 group-hover:text-blue-400 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-700 group-hover:text-white/90">{item}</span>
+                        <li key={idx} className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <Clock className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-gray-700">{item}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-gray-400 group-hover:text-white/50 italic">No items in progress</p>
+                    <p className="text-sm text-gray-400 italic">No items in progress</p>
                   )}
                 </div>
 
                 {/* Blocked */}
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-3">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600 group-hover:text-yellow-400" />
+                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
                     <h3 className="font-semibold">
                       Blocked ({log.blocked?.length || 0})
                     </h3>
@@ -231,14 +231,14 @@ export default function ProgressLogPage() {
                   {log.blocked && log.blocked.length > 0 ? (
                     <ul className="space-y-2">
                       {log.blocked.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2 bg-yellow-50 group-hover:bg-yellow-900/20 border border-yellow-200 group-hover:border-yellow-500 rounded-lg p-3">
-                          <AlertTriangle className="h-4 w-4 text-yellow-600 group-hover:text-yellow-400 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-700 group-hover:text-white/90">{item}</span>
+                        <li key={idx} className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-gray-700">{item}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-gray-400 group-hover:text-white/50 italic">No blocked items</p>
+                    <p className="text-sm text-gray-400 italic">No blocked items</p>
                   )}
                 </div>
               </div>

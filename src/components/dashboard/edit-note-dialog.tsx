@@ -113,11 +113,8 @@ export function EditNoteDialog({ open, onOpenChange, noteId }: EditNoteDialogPro
       setIsSaving(false)
       onOpenChange(false)
 
-      // Dispatch event to notify other components
+      // Dispatch event to notify other components (pages listen for this)
       window.dispatchEvent(new CustomEvent('noteUpdated', { detail: { noteId } }))
-
-      // Reload the page to show the updated note
-      window.location.reload()
     } catch (error) {
       console.error('[FounderNote:EditNote] Unexpected error:', error)
       setIsSaving(false)

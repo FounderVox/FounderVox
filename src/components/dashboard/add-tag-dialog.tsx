@@ -36,19 +36,33 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
           .eq('user_id', user.id)
 
         if (error) {
+          // Check if error is because tags column doesn't exist
+          if (error.code === '42703' && error.message?.includes('tags')) {
+            console.log('[FounderNote:AddTag] Tags column does not exist, tags feature unavailable')
+            setAllTags([])
+            return
+          }
           console.error('[FounderNote:AddTag] Error loading tags:', error)
+          setAllTags([])
           return
         }
 
         // Extract unique tags from all notes
         const uniqueTags = new Set<string>()
         data?.forEach((note: any) => {
-          note.tags?.forEach((tag: string) => uniqueTags.add(tag))
+          if (note.tags && Array.isArray(note.tags)) {
+            note.tags.forEach((tag: string) => {
+              if (tag && typeof tag === 'string' && tag.trim()) {
+                uniqueTags.add(tag.trim())
+              }
+            })
+          }
         })
 
         setAllTags(Array.from(uniqueTags).sort())
       } catch (error) {
         console.error('[FounderNote:AddTag] Unexpected error loading tags:', error)
+        setAllTags([])
       }
     }
 
@@ -109,6 +123,13 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
         .eq('user_id', user.id)
 
       if (error) {
+        // Check if error is because tags column doesn't exist
+        if (error.code === '42703' && error.message?.includes('tags')) {
+          console.error('[FounderNote:AddTag] Tags column does not exist. Please run the migration to add tags support.')
+          alert('Tags feature is not available. The tags column needs to be added to the database.')
+          setIsSaving(false)
+          return
+        }
         console.error('[FounderNote:AddTag] Error saving tags:', error)
         setIsSaving(false)
         return

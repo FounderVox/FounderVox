@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
 import { Mic, LayoutGrid, List } from 'lucide-react'
 import { NoteCard } from '@/components/dashboard/note-card'
@@ -11,6 +10,7 @@ import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
 import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
 import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
+import { useAuth } from '@/contexts/auth-context'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,10 +20,13 @@ interface Note {
   formatted_content: string | null
   raw_transcript: string | null
   created_at: string
+  updated_at: string
   duration: string | null
   template_label: string | null
   template_type: string | null
   is_starred: boolean
+  tags: string[] | null
+  smartified_at: string | null
 }
 
 interface GroupedNotes {
@@ -31,7 +34,7 @@ interface GroupedNotes {
 }
 
 export default function AllNotesPage() {
-  const [profile, setProfile] = useState<any>(null)
+  const { user, profile, supabase } = useAuth()
   const [notes, setNotes] = useState<Note[]>([])
   const [groupedNotes, setGroupedNotes] = useState<GroupedNotes>({})
   const [isLoading, setIsLoading] = useState(true)
@@ -44,123 +47,110 @@ export default function AllNotesPage() {
   const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<string | null>(null)
-  const supabase = createClient()
+
+  const groupNotesByDate = useCallback((notesData: Note[]) => {
+    const grouped: GroupedNotes = {}
+    notesData.forEach((note) => {
+      const date = new Date(note.created_at)
+      const today = new Date()
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+
+      let dateKey: string
+      if (date.toDateString() === today.toDateString()) {
+        dateKey = 'Today'
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        dateKey = 'Yesterday'
+      } else {
+        dateKey = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+      }
+
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = []
+      }
+      grouped[dateKey].push(note)
+    })
+    return grouped
+  }, [])
+
+  const loadNotes = useCallback(async () => {
+    if (!user) return
+
+    try {
+      const { data: notesData, error: notesError } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (notesError) {
+        console.error('[FounderNote:AllNotes] Error loading notes:', notesError)
+        return
+      }
+
+      setNotes(notesData || [])
+      setGroupedNotes(groupNotesByDate(notesData || []))
+    } catch (error) {
+      console.error('[FounderNote:AllNotes] Unexpected error:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user, supabase, groupNotesByDate])
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
+    loadNotes()
 
-        if (userError || !user) {
-          console.error('[FounderNote:AllNotes] Error getting user:', userError)
-          setIsLoading(false)
-          return
-        }
+    // Listen for note events to refresh
+    const handleNoteEvent = () => loadNotes()
 
-        // Load profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
+    window.addEventListener('noteCreated', handleNoteEvent)
+    window.addEventListener('noteUpdated', handleNoteEvent)
+    window.addEventListener('noteDeleted', handleNoteEvent)
 
-        setProfile(profileData)
-
-        // Load all notes
-        const { data: notesData, error: notesError } = await supabase
-          .from('notes')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-
-        if (notesError) {
-          console.error('[FounderNote:AllNotes] Error loading notes:', notesError)
-          setIsLoading(false)
-          return
-        }
-
-        setNotes(notesData || [])
-        
-        // Group notes by date
-        const grouped: GroupedNotes = {}
-        ;(notesData || []).forEach((note) => {
-          const date = new Date(note.created_at)
-          const today = new Date()
-          const yesterday = new Date(today)
-          yesterday.setDate(yesterday.getDate() - 1)
-
-          let dateKey: string
-          if (date.toDateString() === today.toDateString()) {
-            dateKey = 'Today'
-          } else if (date.toDateString() === yesterday.toDateString()) {
-            dateKey = 'Yesterday'
-          } else {
-            dateKey = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-          }
-
-          if (!grouped[dateKey]) {
-            grouped[dateKey] = []
-          }
-          grouped[dateKey].push(note)
-        })
-
-        setGroupedNotes(grouped)
-        setIsLoading(false)
-      } catch (error) {
-        console.error('[FounderNote:AllNotes] Unexpected error:', error)
-        setIsLoading(false)
-      }
+    return () => {
+      window.removeEventListener('noteCreated', handleNoteEvent)
+      window.removeEventListener('noteUpdated', handleNoteEvent)
+      window.removeEventListener('noteDeleted', handleNoteEvent)
     }
-
-    loadData()
-  }, [supabase])
+  }, [loadNotes])
 
   const toggleStar = async (noteId: string) => {
+    if (!user) return
+
+    const note = notes.find(n => n.id === noteId)
+    if (!note) return
+
+    const newStarredState = !note.is_starred
+
+    // Optimistic update
+    const updatedNotes = notes.map(n =>
+      n.id === noteId ? { ...n, is_starred: newStarredState } : n
+    )
+    setNotes(updatedNotes)
+    setGroupedNotes(groupNotesByDate(updatedNotes))
+
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const note = notes.find(n => n.id === noteId)
-      if (!note) return
-
       const { error } = await supabase
         .from('notes')
-        .update({ is_starred: !note.is_starred })
+        .update({ is_starred: newStarredState })
         .eq('id', noteId)
         .eq('user_id', user.id)
 
       if (error) {
         console.error('[FounderNote:AllNotes] Error toggling star:', error)
+        // Revert on error
+        setNotes(notes)
+        setGroupedNotes(groupNotesByDate(notes))
         return
       }
 
-      const newStarredState = !note.is_starred
-      console.log('[FounderNote:AllNotes] Star toggled:', {
-        noteId,
-        newState: newStarredState ? 'starred' : 'unstarred'
-      })
-
-      // Update local state
-      const updatedNotes = notes.map(note =>
-        note.id === noteId ? { ...note, is_starred: newStarredState } : note
-      )
-      setNotes(updatedNotes)
-
-      // Update grouped notes
-      const updatedGrouped: GroupedNotes = {}
-      Object.keys(groupedNotes).forEach(dateKey => {
-        updatedGrouped[dateKey] = groupedNotes[dateKey].map(note =>
-          note.id === noteId ? { ...note, is_starred: newStarredState } : note
-        )
-      })
-      setGroupedNotes(updatedGrouped)
-
-      // Dispatch event to update sidebar counts and starred page
       window.dispatchEvent(new CustomEvent('starToggled', {
         detail: { noteId, isStarred: newStarredState }
       }))
     } catch (error) {
       console.error('[FounderNote:AllNotes] Unexpected error toggling star:', error)
+      setNotes(notes)
+      setGroupedNotes(groupNotesByDate(notes))
     }
   }
 
@@ -170,18 +160,20 @@ export default function AllNotesPage() {
   }
 
   const handleEditNote = (noteId: string) => {
-    console.log('[FounderNote:AllNotes] Edit note:', noteId)
     setSelectedNoteForEdit(noteId)
     setShowEditDialog(true)
   }
 
   const handleDeleteNote = async (noteId: string) => {
+    if (!user) return
     if (!confirm('Are you sure you want to delete this note?')) return
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+    // Optimistic update
+    const updatedNotes = notes.filter(note => note.id !== noteId)
+    setNotes(updatedNotes)
+    setGroupedNotes(groupNotesByDate(updatedNotes))
 
+    try {
       const { error } = await supabase
         .from('notes')
         .delete()
@@ -190,38 +182,31 @@ export default function AllNotesPage() {
 
       if (error) {
         console.error('[FounderNote:AllNotes] Error deleting note:', error)
+        // Revert on error
+        setNotes(notes)
+        setGroupedNotes(groupNotesByDate(notes))
         return
       }
 
-      console.log('[FounderNote:AllNotes] Note deleted successfully')
-      const updatedNotes = notes.filter(note => note.id !== noteId)
-      setNotes(updatedNotes)
-
-      // Update grouped notes
-      const updatedGrouped: GroupedNotes = {}
-      Object.keys(groupedNotes).forEach(dateKey => {
-        const filtered = groupedNotes[dateKey].filter(note => note.id !== noteId)
-        if (filtered.length > 0) {
-          updatedGrouped[dateKey] = filtered
-        }
-      })
-      setGroupedNotes(updatedGrouped)
+      window.dispatchEvent(new CustomEvent('noteDeleted', { detail: { noteId } }))
     } catch (error) {
       console.error('[FounderNote:AllNotes] Unexpected error deleting note:', error)
+      setNotes(notes)
+      setGroupedNotes(groupNotesByDate(notes))
     }
   }
 
   const handleAddTag = (noteId: string) => {
     const note = notes.find(n => n.id === noteId)
-    setSelectedNoteForTag({ id: noteId, tags: (note as any)?.tags || [] })
+    setSelectedNoteForTag({ id: noteId, tags: note?.tags || [] })
     setShowTagDialog(true)
   }
 
   const handleSmartify = (noteId: string) => {
     const note = notes.find(n => n.id === noteId)
-    setSelectedNoteForSmartify({ 
-      id: noteId, 
-      title: note?.title || 'Untitled Note' 
+    setSelectedNoteForSmartify({
+      id: noteId,
+      title: note?.title || 'Untitled Note'
     })
     setShowSmartifyModal(true)
   }
@@ -290,7 +275,7 @@ export default function AllNotesPage() {
             <div key={dateKey}>
               {/* Date Header */}
               <h2 className="text-2xl font-semibold text-black mb-4">
-                {dateKey === 'Today' 
+                {dateKey === 'Today'
                   ? `Today, ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
                   : dateKey === 'Yesterday'
                   ? `Yesterday, ${new Date(Date.now() - 86400000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
@@ -310,21 +295,21 @@ export default function AllNotesPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <div className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 hover:bg-black hover:text-white hover:border-black transition-all cursor-pointer group">
+                      <div className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 cursor-pointer group">
                         {/* Header with time and title */}
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3 mb-2">
-                              <span className="text-sm text-gray-500 group-hover:text-white/70">
+                              <span className="text-sm text-gray-500">
                                 {formatTime(note.created_at)}
                               </span>
                               {note.template_label && (
-                                <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full group-hover:bg-white group-hover:text-black">
+                                <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full">
                                   {note.template_label}
                                 </span>
                               )}
                             </div>
-                            <h3 className="text-lg font-semibold text-black group-hover:text-white">
+                            <h3 className="text-lg font-semibold text-black">
                               {note.title || 'Untitled Note'}
                             </h3>
                           </div>
@@ -417,51 +402,7 @@ export default function AllNotesPage() {
           onOpenChange={(open) => {
             setShowTagDialog(open)
             if (!open) {
-              // Reload notes when dialog closes to show updated tags
-              const reloadNotes = async () => {
-                try {
-                  const { data: { user } } = await supabase.auth.getUser()
-                  if (!user) return
-
-                  const { data, error } = await supabase
-                    .from('notes')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false })
-
-                  if (!error && data) {
-                    console.log('[FounderNote:AllNotes] Notes reloaded after tag update')
-                    setNotes(data)
-                    
-                    // Update grouped notes
-                    const grouped: GroupedNotes = {}
-                    data.forEach((note) => {
-                      const date = new Date(note.created_at)
-                      const today = new Date()
-                      const yesterday = new Date(today)
-                      yesterday.setDate(yesterday.getDate() - 1)
-
-                      let dateKey: string
-                      if (date.toDateString() === today.toDateString()) {
-                        dateKey = 'Today'
-                      } else if (date.toDateString() === yesterday.toDateString()) {
-                        dateKey = 'Yesterday'
-                      } else {
-                        dateKey = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-                      }
-
-                      if (!grouped[dateKey]) {
-                        grouped[dateKey] = []
-                      }
-                      grouped[dateKey].push(note)
-                    })
-                    setGroupedNotes(grouped)
-                  }
-                } catch (error) {
-                  console.error('[FounderNote:AllNotes] Error reloading notes:', error)
-                }
-              }
-              reloadNotes()
+              loadNotes() // Refresh notes when dialog closes
             }
           }}
           noteId={selectedNoteForTag.id}
@@ -510,4 +451,3 @@ export default function AllNotesPage() {
     </motion.div>
   )
 }
-

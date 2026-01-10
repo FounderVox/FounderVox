@@ -97,8 +97,8 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
       // Show success briefly, then close
       setTimeout(() => {
         onOpenChange(false)
-        // Reload page to show new items
-        window.location.reload()
+        // Dispatch event to refresh pages (no reload needed)
+        window.dispatchEvent(new CustomEvent('noteUpdated', { detail: { noteId } }))
       }, 1500)
     } catch (error) {
       console.error('[FounderNote:SmartifyModal] Error confirming smartify:', error)

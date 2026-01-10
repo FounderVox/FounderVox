@@ -8,7 +8,7 @@ import Navigation from '@/components/landing/navigation'
 import Footer from '@/components/landing/footer'
 
 export default function PricingPage() {
-  const [billingPeriod, setBillingPeriod] = useState('monthly')
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
   const [platform, setPlatform] = useState('desktop')
 
   const desktopPlans = [

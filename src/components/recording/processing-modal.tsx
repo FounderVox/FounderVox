@@ -10,23 +10,13 @@ interface ProcessingModalProps {
 }
 
 export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
-  // Use context with error handling
-  let isProcessing = false
-  let isComplete = false
-  let error: string | null = null
-  
-  try {
-    const context = useRecordingContext()
-    if (context) {
-      isProcessing = context.isProcessing
-      isComplete = context.isComplete
-      error = context.error
-    }
-  } catch (err) {
-    // Context not available, don't show modal
-    console.warn('[FounderNote:ProcessingModal] Context not available:', err)
-    return null
-  }
+  // Always call hooks unconditionally
+  const context = useRecordingContext()
+
+  // Extract values from context (defaults if context is null)
+  const isProcessing = context?.isProcessing ?? false
+  const isComplete = context?.isComplete ?? false
+  const error = context?.error ?? null
 
   // Auto-close when complete
   useEffect(() => {
@@ -34,11 +24,10 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
       console.log('[FounderNote:ProcessingModal] Processing complete, closing...')
       const timer = setTimeout(() => {
         onComplete()
-        // Reload dashboard to show new note
+        // Dispatch event to refresh notes list (no reload needed)
         window.dispatchEvent(new CustomEvent('noteCreated'))
-        window.location.reload()
       }, 1500) // Show success briefly
-      
+
       return () => clearTimeout(timer)
     }
   }, [isComplete, onComplete])

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createDeepgramClient } from '@deepgram/sdk'
+import { createClient as createDeepgramClient, DeepgramClient } from '@deepgram/sdk'
 import {
   extractActionItems,
   extractInvestorUpdate,
@@ -13,7 +13,15 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300 // 5 minutes max execution time
 
-const deepgram = createDeepgramClient(process.env.DEEPGRAM_API_KEY!)
+// Lazy initialization to avoid build-time errors
+let deepgramClient: DeepgramClient | null = null
+
+function getDeepgram(): DeepgramClient {
+  if (!deepgramClient) {
+    deepgramClient = createDeepgramClient(process.env.DEEPGRAM_API_KEY!)
+  }
+  return deepgramClient
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,7 +98,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer)
 
     // Transcribe with Deepgram
-    const { result, error: deepgramError } = await deepgram.listen.prerecorded.transcribeFile(
+    const { result, error: deepgramError } = await getDeepgram().listen.prerecorded.transcribeFile(
       buffer,
       {
         model: 'nova-2',

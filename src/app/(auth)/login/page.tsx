@@ -167,7 +167,7 @@ function LoginContent() {
           <Logo size="lg" />
         </div>
         <h1 className="text-2xl font-bold mb-2">
-          Sign in to <span className="text-black">Founder</span><span className="text-gray-500">Vox</span>
+          Sign in to <span className="text-black">Founder</span> <span className="text-black">Note</span>
         </h1>
         <p className="text-gray-600">
           Enter your email and password to continue
@@ -250,7 +250,7 @@ function LoginContent() {
 
       <p className="text-center text-sm text-gray-600 mt-8">
         Don&apos;t have an account?{' '}
-        <a href="/signup" className="text-black hover:underline font-semibold">Sign up</a>
+        <a href="/signup" className="hover:underline font-semibold" style={{ color: '#BD6750' }}>Sign up</a>
       </p>
     </motion.div>
   )

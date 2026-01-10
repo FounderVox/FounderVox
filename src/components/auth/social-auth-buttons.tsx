@@ -78,7 +78,7 @@ export function SocialAuthButtons({ mode }: SocialAuthButtonsProps) {
         size="xl"
         onClick={handleGoogleAuth}
         disabled={isGoogleLoading || isAppleLoading}
-        className="w-full relative bg-white/60 backdrop-blur-sm border-gray-300 text-black hover:bg-black hover:text-white hover:border-black transition-all shadow-sm"
+        className="w-full relative bg-white/60 backdrop-blur-sm border-gray-300 text-black hover:bg-gray-50 hover:border-gray-400 hover:shadow-md transition-all duration-200 shadow-sm"
       >
         {isGoogleLoading ? (
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
@@ -112,7 +112,7 @@ export function SocialAuthButtons({ mode }: SocialAuthButtonsProps) {
         size="xl"
         onClick={handleAppleAuth}
         disabled={isGoogleLoading || isAppleLoading}
-        className="w-full relative bg-white/60 backdrop-blur-sm border-gray-300 text-black hover:bg-black hover:text-white hover:border-black transition-all shadow-sm"
+        className="w-full relative bg-white/60 backdrop-blur-sm border-gray-300 text-black hover:bg-gray-50 hover:border-gray-400 hover:shadow-md transition-all duration-200 shadow-sm"
       >
         {isAppleLoading ? (
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />

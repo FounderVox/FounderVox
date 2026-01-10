@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
 export const dynamic = 'force-dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
-import { createClient } from '@/lib/supabase/client'
 import { QuickRecord } from '@/components/dashboard/quick-record'
 import { NoteCard } from '@/components/dashboard/note-card'
 import { FilterBar } from '@/components/dashboard/filter-bar'
@@ -15,10 +14,10 @@ import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
 import { FileText, Mic, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import type { Profile } from '@/types/database'
+import { useAuth } from '@/contexts/auth-context'
 
 export default function DashboardPage() {
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const { user, profile, supabase } = useAuth()
   const [notes, setNotes] = useState<any[]>([])
   const [isRecentNotesExpanded, setIsRecentNotesExpanded] = useState(false)
   const [showTagDialog, setShowTagDialog] = useState(false)
@@ -29,172 +28,91 @@ export default function DashboardPage() {
   const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<string | null>(null)
-  const supabase = createClient()
+
+  const loadNotes = useCallback(async () => {
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(6)
+
+      if (error) {
+        console.error('[FounderNote:Dashboard:Page] Error loading notes:', error)
+        return
+      }
+
+      setNotes(data || [])
+    } catch (error) {
+      console.error('[FounderNote:Dashboard:Page] Unexpected error loading notes:', error)
+    }
+  }, [user, supabase])
 
   useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        console.log('[FounderNote:Dashboard:Page] Loading profile data...')
-        console.log('[FounderNote:Dashboard:Page] Supabase client:', supabase ? 'initialized' : 'not initialized')
-        
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
-
-        if (userError) {
-          console.error('[FounderNote:Dashboard:Page] Error getting user:', {
-            message: userError.message,
-            status: userError.status,
-            name: userError.name
-          })
-          return
-        }
-
-        if (!user) {
-          console.warn('[FounderNote:Dashboard:Page] No user found')
-          return
-        }
-
-        console.log('[FounderNote:Dashboard:Page] User found:', {
-          id: user.id,
-          email: user.email
-        })
-
-        const { data, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-
-        if (profileError) {
-          console.error('[FounderNote:Dashboard:Page] Error loading profile:', {
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint,
-            code: profileError.code,
-            status: profileError.status,
-            name: profileError.name
-          })
-          return
-        }
-
-        console.log('[FounderNote:Dashboard:Page] Profile loaded successfully:', {
-          display_name: data?.display_name,
-          email: data?.email,
-          use_cases: data?.use_cases
-        })
-        setProfile(data)
-      } catch (error) {
-        console.error('[FounderNote:Dashboard:Page] Unexpected error in loadProfile:', {
-          error,
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-          name: error instanceof Error ? error.name : undefined
-        })
-      }
-    }
-
-    loadProfile()
-  }, [supabase])
-
-  useEffect(() => {
-    const loadNotes = async () => {
-      try {
-        console.log('[FounderNote:Dashboard:Page] Loading notes...')
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
-        
-        if (userError) {
-          console.error('[FounderNote:Dashboard:Page] Error getting user in loadNotes:', {
-            message: userError.message,
-            status: userError.status
-          })
-          return
-        }
-        
-        if (!user) {
-          console.warn('[FounderNote:Dashboard:Page] No user found in loadNotes')
-          return
-        }
-
-        console.log('[FounderNote:Dashboard:Page] Fetching notes for user:', user.id)
-        const { data, error } = await supabase
-          .from('notes')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(6)
-
-        if (error) {
-          console.error('[FounderNote:Dashboard:Page] Error loading notes:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-            status: error.status
-          })
-          return
-        }
-
-        console.log('[FounderNote:Dashboard:Page] Notes loaded successfully:', {
-          count: data?.length || 0,
-          notes: data?.map(n => ({ id: n.id, title: n.title, is_starred: n.is_starred, tags: n.tags }))
-        })
-        setNotes(data || [])
-      } catch (error) {
-        console.error('[FounderNote:Dashboard:Page] Unexpected error loading notes:', {
-          error,
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined
-        })
-      }
-    }
-
     loadNotes()
-  }, [supabase])
+
+    // Listen for note events to refresh
+    const handleNoteEvent = () => loadNotes()
+
+    window.addEventListener('noteCreated', handleNoteEvent)
+    window.addEventListener('noteUpdated', handleNoteEvent)
+    window.addEventListener('noteDeleted', handleNoteEvent)
+
+    return () => {
+      window.removeEventListener('noteCreated', handleNoteEvent)
+      window.removeEventListener('noteUpdated', handleNoteEvent)
+      window.removeEventListener('noteDeleted', handleNoteEvent)
+    }
+  }, [loadNotes])
 
   const toggleStar = async (noteId: string) => {
+    if (!user) return
+
+    const note = notes.find(n => n.id === noteId)
+    if (!note) return
+
+    const newStarredState = !note.is_starred
+
+    // Optimistic update
+    setNotes(notes.map(n =>
+      n.id === noteId ? { ...n, is_starred: newStarredState } : n
+    ))
+
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const note = notes.find(n => n.id === noteId)
-      if (!note) return
-
       const { error } = await supabase
         .from('notes')
-        .update({ is_starred: !note.is_starred })
+        .update({ is_starred: newStarredState })
         .eq('id', noteId)
         .eq('user_id', user.id)
 
       if (error) {
         console.error('[FounderNote:Dashboard:Page] Error toggling star:', error)
+        // Revert on error
+        setNotes(notes)
         return
       }
 
-      const newStarredState = !note.is_starred
-      console.log('[FounderNote:Dashboard:Page] Star toggled:', {
-        noteId,
-        newState: newStarredState ? 'starred' : 'unstarred'
-      })
-
-      setNotes(notes.map(note =>
-        note.id === noteId ? { ...note, is_starred: newStarredState } : note
-      ))
-
-      // Dispatch event to update sidebar counts and starred page
       window.dispatchEvent(new CustomEvent('starToggled', {
         detail: { noteId, isStarred: newStarredState }
       }))
     } catch (error) {
       console.error('[FounderNote:Dashboard:Page] Unexpected error toggling star:', error)
+      setNotes(notes)
     }
   }
 
   const handleDeleteNote = async (noteId: string) => {
+    if (!user) return
     if (!confirm('Are you sure you want to delete this note?')) return
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+    // Optimistic update
+    const originalNotes = notes
+    setNotes(notes.filter(note => note.id !== noteId))
 
+    try {
       const { error } = await supabase
         .from('notes')
         .delete()
@@ -203,13 +121,14 @@ export default function DashboardPage() {
 
       if (error) {
         console.error('[FounderNote:Dashboard:Page] Error deleting note:', error)
+        setNotes(originalNotes)
         return
       }
 
-      console.log('[FounderNote:Dashboard] Note deleted successfully')
-      setNotes(notes.filter(note => note.id !== noteId))
+      window.dispatchEvent(new CustomEvent('noteDeleted', { detail: { noteId } }))
     } catch (error) {
       console.error('[FounderNote:Dashboard:Page] Unexpected error deleting note:', error)
+      setNotes(originalNotes)
     }
   }
 
@@ -226,9 +145,9 @@ export default function DashboardPage() {
 
   const handleSmartify = (noteId: string) => {
     const note = notes.find(n => n.id === noteId)
-    setSelectedNoteForSmartify({ 
-      id: noteId, 
-      title: note?.title || 'Untitled Note' 
+    setSelectedNoteForSmartify({
+      id: noteId,
+      title: note?.title || 'Untitled Note'
     })
     setShowSmartifyModal(true)
   }
@@ -238,7 +157,7 @@ export default function DashboardPage() {
     setShowDetailModal(true)
   }
 
-  // Helper function to get full date label (e.g., "January 8, 2026")
+  // Helper function to get full date label
   const getDateLabel = (dateString: string) => {
     const noteDate = new Date(dateString)
     return noteDate.toLocaleDateString('en-US', {
@@ -258,7 +177,6 @@ export default function DashboardPage() {
     return groups
   }, {} as Record<string, Array<typeof notes[number]>>)
 
-  // Order of date groups
   const dateOrder = ['Today', 'Yesterday', 'Last Week', 'Last Month']
   const sortedDateLabels = Object.keys(groupedNotes).sort((a, b) => {
     const aIndex = dateOrder.indexOf(a)
@@ -266,7 +184,7 @@ export default function DashboardPage() {
     if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex
     if (aIndex !== -1) return -1
     if (bIndex !== -1) return 1
-    return b.localeCompare(a) // For month names, sort reverse alphabetically
+    return b.localeCompare(a)
   })
 
   return (
@@ -277,7 +195,7 @@ export default function DashboardPage() {
     >
       {/* Filter Bar */}
       <FilterBar
-        avatarUrl={null}
+        avatarUrl={profile?.avatar_url}
         displayName={profile?.display_name}
         email={profile?.email}
         recordingsCount={profile?.recordings_count || 0}
@@ -298,7 +216,7 @@ export default function DashboardPage() {
               <Link
                 href="/dashboard/notes"
                 onClick={(e) => e.stopPropagation()}
-                className="text-sm text-black hover:bg-black hover:text-white px-3 py-1 rounded-lg transition-colors"
+                className="text-sm text-black hover:bg-gray-100/80 hover:shadow-sm px-3 py-1 rounded-lg transition-all duration-200"
               >
                 View all
               </Link>
@@ -325,12 +243,9 @@ export default function DashboardPage() {
                 <div className="space-y-6">
                   {sortedDateLabels.map((dateLabel, groupIndex) => (
                     <div key={dateLabel}>
-                      {/* Date Header */}
                       <h3 className="text-sm font-semibold text-gray-700 mb-3 px-1">
                         {dateLabel}
                       </h3>
-
-                      {/* Notes Grid for this date */}
                       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {groupedNotes[dateLabel].map((note: any, index: number) => (
                           <motion.div
@@ -372,7 +287,6 @@ export default function DashboardPage() {
                   <h3 className="text-black font-semibold mb-2">No notes yet</h3>
                   <p className="text-gray-600 text-sm max-w-sm mx-auto">
                     Start recording your first voice note to see it here.
-                    Your thoughts, organized and ready to use.
                   </p>
                 </div>
               )}
@@ -387,12 +301,9 @@ export default function DashboardPage() {
           <div className="space-y-8">
             {sortedDateLabels.map((dateLabel, groupIndex) => (
               <div key={dateLabel}>
-                {/* Clear Date Header */}
                 <h2 className="text-2xl font-bold text-black mb-6">
                   {dateLabel}
                 </h2>
-
-                {/* Notes Grid for this date */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {groupedNotes[dateLabel].map((note: any, index: number) => (
                     <motion.div
@@ -434,7 +345,6 @@ export default function DashboardPage() {
             <h3 className="text-black font-semibold mb-2">No notes yet</h3>
             <p className="text-gray-600 text-sm max-w-sm mx-auto">
               Start recording your first voice note to see it here.
-              Your thoughts, organized and ready to use.
             </p>
           </div>
         )}
@@ -450,7 +360,7 @@ export default function DashboardPage() {
         >
           <h3 className="text-sm font-medium text-black mb-3">Your Focus Areas</h3>
           <div className="flex flex-wrap gap-2">
-            {profile.use_cases.map((useCase) => (
+            {profile.use_cases.map((useCase: string) => (
               <span
                 key={useCase}
                 className="px-3 py-1.5 bg-black text-white text-sm rounded-full hover:bg-gray-900 transition-colors cursor-pointer"
@@ -469,28 +379,7 @@ export default function DashboardPage() {
           onOpenChange={(open) => {
             setShowTagDialog(open)
             if (!open) {
-              // Reload notes when dialog closes to show updated tags
-              const reloadNotes = async () => {
-                try {
-                  const { data: { user } } = await supabase.auth.getUser()
-                  if (!user) return
-
-                  const { data, error } = await supabase
-                    .from('notes')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false })
-                    .limit(6)
-
-                  if (!error && data) {
-                    console.log('[FounderNote:Dashboard:Page] Notes reloaded after tag update')
-                    setNotes(data)
-                  }
-                } catch (error) {
-                  console.error('[FounderNote:Dashboard:Page] Error reloading notes:', error)
-                }
-              }
-              reloadNotes()
+              loadNotes() // Refresh notes when dialog closes
             }
           }}
           noteId={selectedNoteForTag.id}

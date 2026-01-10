@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disable source maps in production to reduce build size and eliminate warnings
+  productionBrowserSourceMaps: false,
+  
   images: {
     remotePatterns: [
       {
@@ -28,7 +31,7 @@ const nextConfig = {
     },
   },
   // Webpack configuration for better error handling
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -37,6 +40,17 @@ const nextConfig = {
         tls: false,
       }
     }
+    
+    // Suppress source map warnings in development
+    if (dev) {
+      config.ignoreWarnings = [
+        { module: /node_modules/ },
+        { file: /\.map$/ },
+        { message: /Failed to parse source map/ },
+        { message: /Source Map loading errors/ },
+      ]
+    }
+    
     return config
   },
 }

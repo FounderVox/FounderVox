@@ -6,9 +6,17 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300 // 5 minutes max execution time
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
+// Lazy initialization to avoid build-time errors
+let openaiClient: OpenAI | null = null
+
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    })
+  }
+  return openaiClient
+}
 
 // This endpoint extracts data but DOES NOT save it - returns preview only
 export async function POST(request: NextRequest) {
@@ -122,7 +130,7 @@ Return format:
 }`
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: 'You are an expert at analyzing transcripts and estimating what structured data can be extracted. Return only valid JSON.' },

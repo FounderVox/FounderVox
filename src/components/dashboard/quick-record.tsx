@@ -29,8 +29,8 @@ export function QuickRecord() {
       <div className="flex items-center gap-4">
         {/* Record Button */}
         <motion.div
-          animate={isRecording ? { scale: [1, 1.05, 1] } : {}}
-          transition={{ repeat: Infinity, duration: 1.5 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
           <Button
             onClick={handleRecord}
@@ -48,7 +48,7 @@ export function QuickRecord() {
           <span className="text-xs text-black block mb-1">Format as:</span>
           <button
             onClick={() => setIsTemplateOpen(!isTemplateOpen)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-black hover:bg-black hover:text-white transition-colors min-w-[160px] shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-black hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all duration-200 min-w-[160px] shadow-sm"
           >
             <span className="flex-1 text-left text-sm">{selectedTemplate.label}</span>
             <ChevronDown className="h-4 w-4" />
@@ -68,10 +68,10 @@ export function QuickRecord() {
                       setSelectedTemplate(template)
                       setIsTemplateOpen(false)
                     }}
-                    className={`w-full px-4 py-2.5 text-sm text-left transition-colors ${
+                    className={`w-full px-4 py-2.5 text-sm text-left transition-all duration-200 ${
                       selectedTemplate.id === template.id
                         ? 'bg-black text-white'
-                        : 'text-black hover:bg-black hover:text-white'
+                        : 'text-black hover:bg-gray-50'
                     }`}
                   >
                     {template.label}

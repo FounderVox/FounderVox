@@ -53,62 +53,91 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
           return
         }
         
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        // Get all notes with template_type and tags (tags may not exist yet)
-        const { data: allNotes, error: allError } = await supabase
-          .from('notes')
-          .select('template_type')
-          .eq('user_id', user.id)
-
-        if (allError) {
-          console.error('[FounderNote:FilterBar] Error loading notes:', allError)
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        if (userError) {
+          console.error('[FounderNote:FilterBar] Error getting user:', userError)
+          return
+        }
+        
+        if (!user) {
+          console.log('[FounderNote:FilterBar] No user found, skipping filter pills')
           return
         }
 
-        // Try to get tags separately (in case column doesn't exist)
-        let notesWithTags: any[] = []
-        try {
-          const { data: notesWithTagsData, error: tagsError } = await supabase
-            .from('notes')
-            .select('id, tags')
-            .eq('user_id', user.id)
-          
-          if (!tagsError && notesWithTagsData) {
-            notesWithTags = notesWithTagsData
+        // First, try to get notes with tags (if column exists)
+        let allNotes: any[] = []
+        let hasTagsColumn = true
+        
+        const { data: notesWithTags, error: tagsError } = await supabase
+          .from('notes')
+          .select('id, template_type, tags')
+          .eq('user_id', user.id)
+
+        if (tagsError) {
+          // Check if error is because tags column doesn't exist
+          if (tagsError.code === '42703' && tagsError.message?.includes('tags')) {
+            console.log('[FounderNote:FilterBar] Tags column does not exist, querying without tags')
+            hasTagsColumn = false
+            
+            // Retry query without tags column
+            const { data: notesWithoutTags, error: noTagsError } = await supabase
+              .from('notes')
+              .select('id, template_type')
+              .eq('user_id', user.id)
+            
+            if (noTagsError) {
+              // Handle specific error codes
+              if (noTagsError.code === 'PGRST116') {
+                // No rows found - that's okay, just use empty array
+                console.log('[FounderNote:FilterBar] No notes found')
+                setFilterPills([{ id: 'all', label: 'All', count: 0 }])
+                return
+              }
+              console.error('[FounderNote:FilterBar] Error loading notes:', noTagsError)
+              setFilterPills([{ id: 'all', label: 'All', count: 0 }])
+              return
+            }
+            
+            allNotes = notesWithoutTags || []
+          } else if (tagsError.code === 'PGRST116') {
+            // No rows found - that's okay, just use empty array
+            console.log('[FounderNote:FilterBar] No notes found')
+            setFilterPills([{ id: 'all', label: 'All', count: 0 }])
+            return
+          } else {
+            console.error('[FounderNote:FilterBar] Error loading notes:', tagsError)
+            setFilterPills([{ id: 'all', label: 'All', count: 0 }])
+            return
           }
-        } catch (err) {
-          // Tags column doesn't exist, that's okay
-          console.log('[FounderNote:FilterBar] Tags column not available, skipping tag filters')
+        } else {
+          allNotes = notesWithTags || []
         }
 
         // Count notes by template type
         const counts: Record<string, number> = {}
-        allNotes?.forEach(note => {
+        allNotes.forEach((note: any) => {
           const type = note.template_type || 'none'
           counts[type] = (counts[type] || 0) + 1
         })
 
-        // Extract unique tags and count them (merge with notesWithTags)
+        // Extract unique tags and count them (only if tags column exists)
         const tagCounts: Record<string, number> = {}
-        const notesMap = new Map(notesWithTags.map(n => [n.id, n]))
-        
-        allNotes?.forEach((note: any) => {
-          const noteWithTags = notesMap.get(note.id)
-          const tags = noteWithTags?.tags || note.tags
-          if (tags && Array.isArray(tags)) {
-            tags.forEach((tag: string) => {
-              if (tag && typeof tag === 'string') {
-                tagCounts[tag] = (tagCounts[tag] || 0) + 1
-              }
-            })
-          }
-        })
+        if (hasTagsColumn) {
+          allNotes.forEach((note: any) => {
+            const tags = note.tags
+            if (tags && Array.isArray(tags)) {
+              tags.forEach((tag: string) => {
+                if (tag && typeof tag === 'string' && tag.trim()) {
+                  tagCounts[tag] = (tagCounts[tag] || 0) + 1
+                }
+              })
+            }
+          })
+        }
 
         // Build filter pills
         const pills: FilterPill[] = [
-          { id: 'all', label: 'All', count: allNotes?.length || 0 }
+          { id: 'all', label: 'All', count: allNotes.length }
         ]
 
         // Add template-specific filters
@@ -270,7 +299,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                 <button
                   type="button"
                   onClick={handleCloseSearch}
-                  className="p-2 rounded-lg text-black hover:bg-black hover:text-white transition-colors"
+                  className="p-2 rounded-lg text-black hover:bg-gray-100/80 hover:shadow-sm transition-all duration-200"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -313,14 +342,14 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           // TODO: Navigate to note detail page when implemented
                           handleCloseSearch()
                         }}
-                        className="p-4 bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl hover:bg-black hover:text-white hover:border-black transition-all cursor-pointer group"
+                        className="p-4 bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl hover:bg-white/90 hover:border-gray-300 hover:shadow-md transition-all duration-200 cursor-pointer group"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold text-black group-hover:text-white truncate">
+                            <h3 className="text-sm font-semibold text-black truncate">
                               {result.title || 'Untitled Note'}
                             </h3>
-                            <p className="text-xs text-gray-500 group-hover:text-white/70 mt-1">
+                            <p className="text-xs text-gray-500 mt-1">
                               {new Date(result.created_at).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
@@ -331,12 +360,12 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                             </p>
                           </div>
                           {result.template_label && (
-                            <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full group-hover:bg-white group-hover:text-black ml-2 flex-shrink-0">
+                            <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full ml-2 flex-shrink-0">
                               {result.template_label}
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 line-clamp-2 group-hover:text-white/90">
+                        <p className="text-sm text-gray-600 line-clamp-2">
                           {result.formatted_content?.substring(0, 150) || result.raw_transcript?.substring(0, 150) || 'No content'}
                         </p>
                       </div>
@@ -368,10 +397,10 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                 key={pill.id}
                 onClick={() => setActiveFilter(pill.id)}
                 className={cn(
-                  'px-4 py-2 rounded-full text-sm font-medium transition-all',
+                  'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
                   activeFilter === pill.id
                     ? 'bg-black text-white shadow-md'
-                    : 'bg-white/60 border border-gray-200 text-black hover:bg-black hover:text-white hover:border-black'
+                    : 'bg-white/60 border border-gray-200 text-black hover:bg-gray-100/80 hover:border-gray-300 hover:shadow-sm'
                 )}
               >
                 {pill.label} ({pill.count})
@@ -384,7 +413,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
             {/* Search Button */}
             <button
               onClick={handleSearchClick}
-              className="p-2 rounded-lg text-black hover:bg-black hover:text-white transition-colors"
+              className="p-2 rounded-lg text-black hover:bg-gray-100/80 hover:shadow-sm transition-all duration-200"
             >
               <Search className="h-5 w-5" />
             </button>
@@ -393,16 +422,20 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-black hover:bg-black hover:text-white transition-colors"
+                className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-black transition-colors group"
               >
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={displayName || 'Profile'}
-                    className="h-8 w-8 rounded-full object-cover"
-                  />
+                  <div className="h-8 w-8 rounded-full overflow-hidden group-hover:ring-2 group-hover:ring-[#BD6750] transition-all">
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || 'Profile'}
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  </div>
                 ) : (
-                  <div className="h-8 w-8 rounded-full bg-black text-white flex items-center justify-center text-sm font-medium">
+                  <div 
+                    className="h-8 w-8 rounded-full bg-black text-white flex items-center justify-center text-sm font-medium transition-colors group-hover:bg-[#BD6750]"
+                  >
                     {initials}
                   </div>
                 )}
@@ -452,7 +485,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           style={{ width: `${Math.min(progressPercentage, 100)}%` }}
                         />
                       </div>
-                      <button className="w-full px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition-colors flex items-center justify-center gap-2">
+                      <button className="w-full px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-black/90 hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2">
                         <Sparkles className="h-4 w-4" />
                         Upgrade to Pro
                       </button>
@@ -465,7 +498,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           setIsProfileOpen(false)
                           router.push('/dashboard/settings')
                         }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-black hover:text-white rounded-lg transition-colors"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-50 rounded-lg transition-all duration-200"
                       >
                         <Settings className="h-4 w-4" />
                         Settings
@@ -475,7 +508,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           setIsProfileOpen(false)
                           router.push('/dashboard/analytics')
                         }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-black hover:text-white rounded-lg transition-colors"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-50 rounded-lg transition-all duration-200"
                       >
                         <BarChart3 className="h-4 w-4" />
                         Analytics
@@ -485,7 +518,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           setIsProfileOpen(false)
                           router.push('/dashboard/integrations')
                         }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-black hover:text-white rounded-lg transition-colors"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-50 rounded-lg transition-all duration-200"
                       >
                         <Plug className="h-4 w-4" />
                         Integrations
@@ -495,7 +528,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           setIsProfileOpen(false)
                           router.push('/dashboard/help')
                         }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-black hover:text-white rounded-lg transition-colors"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-50 rounded-lg transition-all duration-200"
                       >
                         <HelpCircle className="h-4 w-4" />
                         Help

@@ -25,7 +25,8 @@ export function Logo({ size = 'md', showText = true, variant = 'dark' }: LogoPro
   return (
     <div className="flex items-center gap-2">
       <motion.div
-        className={`${sizes[size]} bg-black rounded-md flex items-center justify-center shadow-md`}
+        className={`${sizes[size]} rounded-md flex items-center justify-center shadow-md`}
+        style={{ backgroundColor: '#BD6750' }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >

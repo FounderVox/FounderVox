@@ -274,7 +274,7 @@ export default function ProductIdeasPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-5 hover:bg-black hover:text-white hover:border-black transition-all group"
+                    className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-5 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 group"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -300,21 +300,21 @@ export default function ProductIdeasPage() {
                         </div>
                         <h3 className="text-lg font-semibold mb-2">{idea.idea}</h3>
                         {idea.context && (
-                          <p className="text-sm text-gray-600 group-hover:text-white/90 mb-3">
+                          <p className="text-sm text-gray-600 mb-3">
                             {idea.context}
                           </p>
                         )}
                       </div>
                       <button
                         onClick={() => deleteIdea(idea.id)}
-                        className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-red-600 hover:bg-red-50 group-hover:bg-red-500 group-hover:text-white transition-all"
+                        className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-red-600 hover:bg-red-50 hover:shadow-sm transition-all duration-200"
                       >
                         <X className="h-4 w-4" />
                       </button>
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 group-hover:text-white/70">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
                         <ThumbsUp className="h-4 w-4" />
                         <span>{idea.votes} votes</span>
                       </div>
@@ -322,7 +322,7 @@ export default function ProductIdeasPage() {
                         value={idea.status}
                         onChange={(e) => updateStatus(idea.id, e.target.value as ProductIdea['status'])}
                         onClick={(e) => e.stopPropagation()}
-                        className="text-xs bg-white border border-gray-200 rounded-md px-2 py-1 text-gray-700 group-hover:bg-gray-800 group-hover:text-white group-hover:border-gray-600"
+                        className="text-xs bg-white border border-gray-200 rounded-md px-2 py-1 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
                       >
                         <option value="idea">Idea</option>
                         <option value="considering">Considering</option>
