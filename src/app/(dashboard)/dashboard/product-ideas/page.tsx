@@ -338,7 +338,11 @@ export default function ProductIdeasPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50"
+        >
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-amber-100 mb-4">
             <Lightbulb className="h-8 w-8 text-amber-600" />
           </div>

@@ -19,6 +19,7 @@ interface NoteCardProps {
   onDelete?: () => void
   onAddTag?: () => void
   onSmartify?: () => void
+  onView?: () => void
   noteId?: string
   canSmartify?: boolean
   isSmartified?: boolean
@@ -38,15 +39,24 @@ export function NoteCard({
   onDelete,
   onAddTag,
   onSmartify,
+  onView,
   noteId,
   canSmartify = true,
   isSmartified = false,
 }: NoteCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  
+  const handleCardClick = () => {
+    if (onView) {
+      onView()
+    }
+  }
+  
   return (
     <motion.div
       className="group bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-5 hover:bg-black hover:text-white hover:border-black transition-all cursor-pointer"
       whileHover={{ y: -2 }}
+      onClick={handleCardClick}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">

@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { NoteCard } from '@/components/dashboard/note-card'
 import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
+import { SmartifyModal } from '@/components/dashboard/smartify-modal'
+import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
 import { Clock, Mic } from 'lucide-react'
 
 interface Note {
@@ -22,6 +24,10 @@ export default function RecentPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedNoteForEdit, setSelectedNoteForEdit] = useState<string | null>(null)
+  const [showSmartifyModal, setShowSmartifyModal] = useState(false)
+  const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -94,6 +100,20 @@ export default function RecentPage() {
     setShowEditDialog(true)
   }
 
+  const handleSmartify = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    setSelectedNoteForSmartify({ 
+      id: noteId, 
+      title: note?.title || 'Untitled Note' 
+    })
+    setShowSmartifyModal(true)
+  }
+
+  const handleViewNote = (noteId: string) => {
+    setSelectedNoteForDetail(noteId)
+    setShowDetailModal(true)
+  }
+
   const toggleStar = async (noteId: string) => {
     const note = notes.find(n => n.id === noteId)
     if (!note) return
@@ -163,6 +183,8 @@ export default function RecentPage() {
                 onStar={() => toggleStar(note.id)}
                 onPlay={() => console.log('[FounderNote:Recent] Playing note:', note.id)}
                 onEdit={() => handleEditNote(note.id)}
+                onSmartify={() => handleSmartify(note.id)}
+                onView={() => handleViewNote(note.id)}
                 noteId={note.id}
               />
             </motion.div>
@@ -190,6 +212,33 @@ export default function RecentPage() {
           }
         }}
         noteId={selectedNoteForEdit}
+      />
+
+      {/* Smartify Modal */}
+      {selectedNoteForSmartify && (
+        <SmartifyModal
+          open={showSmartifyModal}
+          onOpenChange={(open) => {
+            setShowSmartifyModal(open)
+            if (!open) {
+              setSelectedNoteForSmartify(null)
+            }
+          }}
+          noteId={selectedNoteForSmartify.id}
+          noteTitle={selectedNoteForSmartify.title}
+        />
+      )}
+
+      {/* Note Detail Modal */}
+      <NoteDetailModal
+        open={showDetailModal}
+        onOpenChange={(open) => {
+          setShowDetailModal(open)
+          if (!open) {
+            setSelectedNoteForDetail(null)
+          }
+        }}
+        noteId={selectedNoteForDetail}
       />
     </motion.div>
   )

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
 import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
 import { SmartifyModal } from '@/components/dashboard/smartify-modal'
+import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,6 +42,8 @@ export default function AllNotesPage() {
   const [selectedNoteForEdit, setSelectedNoteForEdit] = useState<string | null>(null)
   const [showSmartifyModal, setShowSmartifyModal] = useState(false)
   const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -223,6 +226,11 @@ export default function AllNotesPage() {
     setShowSmartifyModal(true)
   }
 
+  const handleViewNote = (noteId: string) => {
+    setSelectedNoteForDetail(noteId)
+    setShowDetailModal(true)
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -377,6 +385,7 @@ export default function AllNotesPage() {
                         onDelete={() => handleDeleteNote(note.id)}
                         onAddTag={() => handleAddTag(note.id)}
                         onSmartify={() => handleSmartify(note.id)}
+                        onView={() => handleViewNote(note.id)}
                         noteId={note.id}
                         isSmartified={!!note.smartified_at}
                         canSmartify={!note.smartified_at || new Date(note.updated_at) > new Date(note.smartified_at)}
@@ -486,6 +495,18 @@ export default function AllNotesPage() {
           noteTitle={selectedNoteForSmartify.title}
         />
       )}
+
+      {/* Note Detail Modal */}
+      <NoteDetailModal
+        open={showDetailModal}
+        onOpenChange={(open) => {
+          setShowDetailModal(open)
+          if (!open) {
+            setSelectedNoteForDetail(null)
+          }
+        }}
+        noteId={selectedNoteForDetail}
+      />
     </motion.div>
   )
 }
