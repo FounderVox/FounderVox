@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Clock, MoreVertical, Play, Edit, Trash2, Tag } from 'lucide-react'
+import { Star, Clock, MoreVertical, Play, Edit, Trash2, Tag, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NoteCardProps {
@@ -12,11 +12,14 @@ interface NoteCardProps {
   duration?: string
   isStarred?: boolean
   template?: string
+  tags?: string[]
   onPlay?: () => void
   onStar?: () => void
   onEdit?: () => void
   onDelete?: () => void
   onAddTag?: () => void
+  onSmartify?: () => void
+  noteId?: string
 }
 
 export function NoteCard({
@@ -26,11 +29,14 @@ export function NoteCard({
   duration,
   isStarred = false,
   template,
+  tags = [],
   onPlay,
   onStar,
   onEdit,
   onDelete,
   onAddTag,
+  onSmartify,
+  noteId,
 }: NoteCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   return (
@@ -125,6 +131,19 @@ export function NoteCard({
                       <Tag className="h-4 w-4" />
                       Add Tag
                     </button>
+                    {onSmartify && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setIsMenuOpen(false)
+                          onSmartify?.()
+                        }}
+                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 transition-colors"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Smartify
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -147,6 +166,25 @@ export function NoteCard({
 
       {/* Preview */}
       <p className="text-sm text-gray-600 line-clamp-2 mb-4 group-hover:text-white/90">{preview}</p>
+
+      {/* Tags */}
+      {tags && tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-full group-hover:bg-white/20 group-hover:text-white border border-gray-200 group-hover:border-white/30"
+            >
+              {tag}
+            </span>
+          ))}
+          {tags.length > 3 && (
+            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-gray-500 group-hover:text-white/70">
+              +{tags.length - 3} more
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between">

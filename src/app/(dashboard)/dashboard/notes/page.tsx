@@ -125,9 +125,15 @@ export default function AllNotesPage() {
         return
       }
 
+      const newStarredState = !note.is_starred
+      console.log('[FounderNote:AllNotes] Star toggled:', {
+        noteId,
+        newState: newStarredState ? 'starred' : 'unstarred'
+      })
+
       // Update local state
       const updatedNotes = notes.map(note =>
-        note.id === noteId ? { ...note, is_starred: !note.is_starred } : note
+        note.id === noteId ? { ...note, is_starred: newStarredState } : note
       )
       setNotes(updatedNotes)
 
@@ -135,13 +141,15 @@ export default function AllNotesPage() {
       const updatedGrouped: GroupedNotes = {}
       Object.keys(groupedNotes).forEach(dateKey => {
         updatedGrouped[dateKey] = groupedNotes[dateKey].map(note =>
-          note.id === noteId ? { ...note, is_starred: !note.is_starred } : note
+          note.id === noteId ? { ...note, is_starred: newStarredState } : note
         )
       })
       setGroupedNotes(updatedGrouped)
 
-      // Dispatch event to update sidebar counts
-      window.dispatchEvent(new CustomEvent('starToggled'))
+      // Dispatch event to update sidebar counts and starred page
+      window.dispatchEvent(new CustomEvent('starToggled', {
+        detail: { noteId, isStarred: newStarredState }
+      }))
     } catch (error) {
       console.error('[FounderNote:AllNotes] Unexpected error toggling star:', error)
     }
@@ -197,6 +205,35 @@ export default function AllNotesPage() {
     const note = notes.find(n => n.id === noteId)
     setSelectedNoteForTag({ id: noteId, tags: (note as any)?.tags || [] })
     setShowTagDialog(true)
+  }
+
+  const handleSmartify = async (noteId: string) => {
+    try {
+      console.log('[FounderNote:AllNotes] Smartifying note:', noteId)
+      
+      const response = await fetch('/api/notes/smartify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noteId })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Smartify failed')
+      }
+
+      const data = await response.json()
+      console.log('[FounderNote:AllNotes] Smartify complete:', data.extracted)
+      
+      const message = `Smartify complete! Extracted:\n- ${data.extracted.actionItems} action items\n- ${data.extracted.investorUpdates} investor updates\n- ${data.extracted.progressLogs} progress logs\n- ${data.extracted.productIdeas} product ideas\n- ${data.extracted.brainDump} brain dump notes\n\nVisit the template pages in the sidebar to view them.`
+      alert(message)
+      
+      // Refresh the page to show updated data
+      window.location.reload()
+    } catch (error) {
+      console.error('[FounderNote:AllNotes] Error smartifying note:', error)
+      alert(`Error: ${error instanceof Error ? error.message : 'Failed to smartify note'}`)
+    }
   }
 
   if (isLoading) {
@@ -346,11 +383,14 @@ export default function AllNotesPage() {
                         duration={note.duration || '0:00'}
                         template={note.template_label || note.template_type || 'Note'}
                         isStarred={note.is_starred}
+                        tags={note.tags || []}
                         onStar={() => toggleStar(note.id)}
                         onPlay={() => console.log('[FounderNote:AllNotes] Playing note:', note.id)}
                         onEdit={() => handleEditNote(note.id)}
                         onDelete={() => handleDeleteNote(note.id)}
                         onAddTag={() => handleAddTag(note.id)}
+                        onSmartify={() => handleSmartify(note.id)}
+                        noteId={note.id}
                       />
                     </motion.div>
                   ))}
@@ -376,7 +416,56 @@ export default function AllNotesPage() {
       {selectedNoteForTag && (
         <AddTagDialog
           open={showTagDialog}
-          onOpenChange={setShowTagDialog}
+          onOpenChange={(open) => {
+            setShowTagDialog(open)
+            if (!open) {
+              // Reload notes when dialog closes to show updated tags
+              const reloadNotes = async () => {
+                try {
+                  const { data: { user } } = await supabase.auth.getUser()
+                  if (!user) return
+
+                  const { data, error } = await supabase
+                    .from('notes')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+
+                  if (!error && data) {
+                    console.log('[FounderNote:AllNotes] Notes reloaded after tag update')
+                    setNotes(data)
+                    
+                    // Update grouped notes
+                    const grouped: GroupedNotes = {}
+                    data.forEach((note) => {
+                      const date = new Date(note.created_at)
+                      const today = new Date()
+                      const yesterday = new Date(today)
+                      yesterday.setDate(yesterday.getDate() - 1)
+
+                      let dateKey: string
+                      if (date.toDateString() === today.toDateString()) {
+                        dateKey = 'Today'
+                      } else if (date.toDateString() === yesterday.toDateString()) {
+                        dateKey = 'Yesterday'
+                      } else {
+                        dateKey = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+                      }
+
+                      if (!grouped[dateKey]) {
+                        grouped[dateKey] = []
+                      }
+                      grouped[dateKey].push(note)
+                    })
+                    setGroupedNotes(grouped)
+                  }
+                } catch (error) {
+                  console.error('[FounderNote:AllNotes] Error reloading notes:', error)
+                }
+              }
+              reloadNotes()
+            }
+          }}
           noteId={selectedNoteForTag.id}
           existingTags={selectedNoteForTag.tags}
         />

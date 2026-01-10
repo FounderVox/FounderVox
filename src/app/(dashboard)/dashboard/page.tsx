@@ -26,11 +26,16 @@ export default function DashboardPage() {
     const loadProfile = async () => {
       try {
         console.log('[FounderNote:Dashboard:Page] Loading profile data...')
+        console.log('[FounderNote:Dashboard:Page] Supabase client:', supabase ? 'initialized' : 'not initialized')
         
         const { data: { user }, error: userError } = await supabase.auth.getUser()
 
         if (userError) {
-          console.error('[FounderNote:Dashboard:Page] Error getting user:', userError)
+          console.error('[FounderNote:Dashboard:Page] Error getting user:', {
+            message: userError.message,
+            status: userError.status,
+            name: userError.name
+          })
           return
         }
 
@@ -39,7 +44,10 @@ export default function DashboardPage() {
           return
         }
 
-        console.log('[FounderNote:Dashboard:Page] User found:', user.id)
+        console.log('[FounderNote:Dashboard:Page] User found:', {
+          id: user.id,
+          email: user.email
+        })
 
         const { data, error: profileError } = await supabase
           .from('profiles')
@@ -48,12 +56,13 @@ export default function DashboardPage() {
           .single()
 
         if (profileError) {
-          console.error('[FounderNote:Dashboard:Page] Error loading profile:', profileError)
-          console.error('[FounderNote:Dashboard:Page] Error details:', {
+          console.error('[FounderNote:Dashboard:Page] Error loading profile:', {
             message: profileError.message,
             details: profileError.details,
             hint: profileError.hint,
-            code: profileError.code
+            code: profileError.code,
+            status: profileError.status,
+            name: profileError.name
           })
           return
         }
@@ -65,7 +74,12 @@ export default function DashboardPage() {
         })
         setProfile(data)
       } catch (error) {
-        console.error('[FounderNote:Dashboard:Page] Unexpected error:', error)
+        console.error('[FounderNote:Dashboard:Page] Unexpected error in loadProfile:', {
+          error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          name: error instanceof Error ? error.name : undefined
+        })
       }
     }
 
@@ -75,9 +89,23 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadNotes = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        console.log('[FounderNote:Dashboard:Page] Loading notes...')
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        
+        if (userError) {
+          console.error('[FounderNote:Dashboard:Page] Error getting user in loadNotes:', {
+            message: userError.message,
+            status: userError.status
+          })
+          return
+        }
+        
+        if (!user) {
+          console.warn('[FounderNote:Dashboard:Page] No user found in loadNotes')
+          return
+        }
 
+        console.log('[FounderNote:Dashboard:Page] Fetching notes for user:', user.id)
         const { data, error } = await supabase
           .from('notes')
           .select('*')
@@ -86,13 +114,27 @@ export default function DashboardPage() {
           .limit(6)
 
         if (error) {
-          console.error('[FounderNote:Dashboard:Page] Error loading notes:', error)
+          console.error('[FounderNote:Dashboard:Page] Error loading notes:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            status: error.status
+          })
           return
         }
 
+        console.log('[FounderNote:Dashboard:Page] Notes loaded successfully:', {
+          count: data?.length || 0,
+          notes: data?.map(n => ({ id: n.id, title: n.title, is_starred: n.is_starred, tags: n.tags }))
+        })
         setNotes(data || [])
       } catch (error) {
-        console.error('[FounderNote:Dashboard:Page] Unexpected error loading notes:', error)
+        console.error('[FounderNote:Dashboard:Page] Unexpected error loading notes:', {
+          error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined
+        })
       }
     }
 
@@ -118,12 +160,20 @@ export default function DashboardPage() {
         return
       }
 
+      const newStarredState = !note.is_starred
+      console.log('[FounderNote:Dashboard:Page] Star toggled:', {
+        noteId,
+        newState: newStarredState ? 'starred' : 'unstarred'
+      })
+
       setNotes(notes.map(note =>
-        note.id === noteId ? { ...note, is_starred: !note.is_starred } : note
+        note.id === noteId ? { ...note, is_starred: newStarredState } : note
       ))
 
-      // Dispatch event to update sidebar counts
-      window.dispatchEvent(new CustomEvent('starToggled'))
+      // Dispatch event to update sidebar counts and starred page
+      window.dispatchEvent(new CustomEvent('starToggled', {
+        detail: { noteId, isStarred: newStarredState }
+      }))
     } catch (error) {
       console.error('[FounderNote:Dashboard:Page] Unexpected error toggling star:', error)
     }
@@ -165,6 +215,36 @@ export default function DashboardPage() {
     setShowTagDialog(true)
   }
 
+  const handleSmartify = async (noteId: string) => {
+    try {
+      console.log('[FounderNote:Dashboard] Smartifying note:', noteId)
+      
+      // Show loading state (you could add a toast or loading indicator here)
+      const response = await fetch('/api/notes/smartify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noteId })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Smartify failed')
+      }
+
+      const data = await response.json()
+      console.log('[FounderNote:Dashboard] Smartify complete:', data.extracted)
+      
+      const message = `Smartify complete! Extracted:\n- ${data.extracted.actionItems} action items\n- ${data.extracted.investorUpdates} investor updates\n- ${data.extracted.progressLogs} progress logs\n- ${data.extracted.productIdeas} product ideas\n- ${data.extracted.brainDump} brain dump notes\n\nVisit the template pages in the sidebar to view them.`
+      alert(message)
+      
+      // Refresh the page to show updated data
+      window.location.reload()
+    } catch (error) {
+      console.error('[FounderNote:Dashboard] Error smartifying note:', error)
+      alert(`Error: ${error instanceof Error ? error.message : 'Failed to smartify note'}`)
+    }
+  }
+
   // Helper function to get full date label (e.g., "January 8, 2026")
   const getDateLabel = (dateString: string) => {
     const noteDate = new Date(dateString)
@@ -183,7 +263,7 @@ export default function DashboardPage() {
     }
     groups[dateLabel].push(note)
     return groups
-  }, {} as Record<string, typeof notes>)
+  }, {} as Record<string, Array<typeof notes[number]>>)
 
   // Order of date groups
   const dateOrder = ['Today', 'Yesterday', 'Last Week', 'Last Month']
@@ -273,11 +353,14 @@ export default function DashboardPage() {
                               duration={note.duration || '0:00'}
                               template={note.template_label || note.template_type || 'Note'}
                               isStarred={note.is_starred || false}
+                              tags={note.tags || []}
                               onStar={() => toggleStar(note.id)}
                               onPlay={() => console.log('[FounderNote:Dashboard] Playing note:', note.id)}
                               onEdit={() => handleEditNote(note.id)}
                               onDelete={() => handleDeleteNote(note.id)}
                               onAddTag={() => handleAddTag(note.id)}
+                              onSmartify={() => handleSmartify(note.id)}
+                              noteId={note.id}
                             />
                           </motion.div>
                         ))}
@@ -329,11 +412,14 @@ export default function DashboardPage() {
                         duration={note.duration || '0:00'}
                         template={note.template_label || note.template_type || 'Note'}
                         isStarred={note.is_starred || false}
+                        tags={note.tags || []}
                         onStar={() => toggleStar(note.id)}
                         onPlay={() => console.log('[FounderNote:Dashboard] Playing note:', note.id)}
                         onEdit={() => handleEditNote(note.id)}
                         onDelete={() => handleDeleteNote(note.id)}
                         onAddTag={() => handleAddTag(note.id)}
+                        onSmartify={() => handleSmartify(note.id)}
+                        noteId={note.id}
                       />
                     </motion.div>
                   ))}
@@ -381,7 +467,33 @@ export default function DashboardPage() {
       {selectedNoteForTag && (
         <AddTagDialog
           open={showTagDialog}
-          onOpenChange={setShowTagDialog}
+          onOpenChange={(open) => {
+            setShowTagDialog(open)
+            if (!open) {
+              // Reload notes when dialog closes to show updated tags
+              const reloadNotes = async () => {
+                try {
+                  const { data: { user } } = await supabase.auth.getUser()
+                  if (!user) return
+
+                  const { data, error } = await supabase
+                    .from('notes')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(6)
+
+                  if (!error && data) {
+                    console.log('[FounderNote:Dashboard:Page] Notes reloaded after tag update')
+                    setNotes(data)
+                  }
+                } catch (error) {
+                  console.error('[FounderNote:Dashboard:Page] Error reloading notes:', error)
+                }
+              }
+              reloadNotes()
+            }
+          }}
           noteId={selectedNoteForTag.id}
           existingTags={selectedNoteForTag.tags}
         />

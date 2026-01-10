@@ -41,14 +41,22 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
   const router = useRouter()
   const supabase = createClient()
 
-  // Load note counts from Supabase
+  // Load note counts and tags from Supabase
   useEffect(() => {
-    const loadNoteCounts = async () => {
+    const loadFilterPills = async () => {
       try {
+        console.log('[FounderNote:FilterBar] Loading filter pills...')
+        
+        // Check if supabase and auth are available
+        if (!supabase || !supabase.auth) {
+          console.error('[FounderNote:FilterBar] Supabase client or auth not available')
+          return
+        }
+        
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        // Get all notes
+        // Get all notes with template_type and tags (tags may not exist yet)
         const { data: allNotes, error: allError } = await supabase
           .from('notes')
           .select('template_type')
@@ -59,6 +67,22 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
           return
         }
 
+        // Try to get tags separately (in case column doesn't exist)
+        let notesWithTags: any[] = []
+        try {
+          const { data: notesWithTagsData, error: tagsError } = await supabase
+            .from('notes')
+            .select('id, tags')
+            .eq('user_id', user.id)
+          
+          if (!tagsError && notesWithTagsData) {
+            notesWithTags = notesWithTagsData
+          }
+        } catch (err) {
+          // Tags column doesn't exist, that's okay
+          console.log('[FounderNote:FilterBar] Tags column not available, skipping tag filters')
+        }
+
         // Count notes by template type
         const counts: Record<string, number> = {}
         allNotes?.forEach(note => {
@@ -66,12 +90,28 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
           counts[type] = (counts[type] || 0) + 1
         })
 
-        // Build filter pills from actual data
+        // Extract unique tags and count them (merge with notesWithTags)
+        const tagCounts: Record<string, number> = {}
+        const notesMap = new Map(notesWithTags.map(n => [n.id, n]))
+        
+        allNotes?.forEach((note: any) => {
+          const noteWithTags = notesMap.get(note.id)
+          const tags = noteWithTags?.tags || note.tags
+          if (tags && Array.isArray(tags)) {
+            tags.forEach((tag: string) => {
+              if (tag && typeof tag === 'string') {
+                tagCounts[tag] = (tagCounts[tag] || 0) + 1
+              }
+            })
+          }
+        })
+
+        // Build filter pills
         const pills: FilterPill[] = [
           { id: 'all', label: 'All', count: allNotes?.length || 0 }
         ]
 
-        // Add template-specific filters only if they have notes
+        // Add template-specific filters
         const templateLabels: Record<string, string> = {
           'investor': 'Investor',
           'ideas': 'Ideas',
@@ -80,7 +120,8 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
           'pitch': 'Pitch',
           'braindump': 'Brain Dump',
           'email': 'Email',
-          'standup': 'Standup'
+          'standup': 'Standup',
+          'recording': 'Recording'
         }
 
         Object.entries(counts).forEach(([type, count]) => {
@@ -93,22 +134,47 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
           }
         })
 
+        // Add tag pills (sorted by count descending)
+        const tagPills: FilterPill[] = Object.entries(tagCounts)
+          .map(([tag, count]) => ({
+            id: `tag:${tag}`,
+            label: tag,
+            count
+          }))
+          .sort((a, b) => b.count - a.count)
+
+        pills.push(...tagPills)
+
+        console.log('[FounderNote:FilterBar] Filter pills loaded:', {
+          total: pills.length,
+          templates: Object.keys(counts).length,
+          tags: Object.keys(tagCounts).length
+        })
+
         setFilterPills(pills)
       } catch (error) {
-        console.error('[FounderNote:FilterBar] Error loading note counts:', error)
+        console.error('[FounderNote:FilterBar] Error loading filter pills:', error)
       }
     }
 
-    loadNoteCounts()
+    loadFilterPills()
 
-    // Listen for note creation events to refresh counts
+    // Listen for note creation and tag update events to refresh counts
     const handleNoteCreated = () => {
-      loadNoteCounts()
+      console.log('[FounderNote:FilterBar] Note created event, reloading filter pills...')
+      loadFilterPills()
     }
+    const handleTagsUpdated = () => {
+      console.log('[FounderNote:FilterBar] Tags updated event, reloading filter pills...')
+      loadFilterPills()
+    }
+
     window.addEventListener('noteCreated', handleNoteCreated)
+    window.addEventListener('tagsUpdated', handleTagsUpdated)
 
     return () => {
       window.removeEventListener('noteCreated', handleNoteCreated)
+      window.removeEventListener('tagsUpdated', handleTagsUpdated)
     }
   }, [supabase])
 

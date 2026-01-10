@@ -171,3 +171,4 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 - Check browser console for detailed logs
 
 
+

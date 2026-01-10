@@ -114,16 +114,17 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
         return
       }
 
-      console.log('[FounderNote:AddTag] Tags saved successfully')
+      console.log('[FounderNote:AddTag] Tags saved successfully:', selectedTags)
 
-      // Dispatch event to notify other components
-      window.dispatchEvent(new CustomEvent('tagsUpdated'))
+      // Dispatch event to notify other components (filter bar, etc.)
+      window.dispatchEvent(new CustomEvent('tagsUpdated', { 
+        detail: { noteId, tags: selectedTags } 
+      }))
 
       setIsSaving(false)
       onOpenChange(false)
-
-      // Reload to reflect changes
-      window.location.reload()
+      
+      // Note: We don't reload the page anymore - components listen to tagsUpdated event
     } catch (error) {
       console.error('[FounderNote:AddTag] Unexpected error:', error)
       setIsSaving(false)
@@ -136,7 +137,7 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
         <DialogHeader>
           <DialogTitle>Manage Tags</DialogTitle>
           <DialogDescription>
-            Click existing tags to add/remove them, or create new ones
+            Select tags for this note or create new ones
           </DialogDescription>
         </DialogHeader>
 
@@ -166,7 +167,7 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
           {/* All Available Tags */}
           {allTags.length > 0 && (
             <div className="space-y-2">
-              <Label>Available Tags (click to toggle)</Label>
+              <Label>Available Tags</Label>
               <div className="flex flex-wrap gap-2">
                 {allTags.map((tag) => {
                   const isSelected = selectedTags.includes(tag)
@@ -174,14 +175,16 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
                     <button
                       key={tag}
                       onClick={() => handleToggleTag(tag)}
+                      aria-pressed={isSelected}
+                      aria-label={`${isSelected ? 'Remove' : 'Add'} tag ${tag}`}
                       className={cn(
-                        'inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full transition-all',
+                        'inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2',
                         isSelected
                           ? 'bg-black text-white hover:bg-gray-800'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                       )}
                     >
-                      {isSelected && <Check className="h-3 w-3" />}
+                      {isSelected && <Check className="h-3 w-3" aria-hidden="true" />}
                       <span>{tag}</span>
                     </button>
                   )

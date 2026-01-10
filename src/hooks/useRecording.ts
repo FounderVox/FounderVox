@@ -45,6 +45,7 @@ export function useRecording() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const dataArrayRef = useRef<Uint8Array | null>(null)
+  const mimeTypeRef = useRef<string>('audio/webm')
 
   // Timer effect
   useEffect(() => {
@@ -102,22 +103,44 @@ export function useRecording() {
         audioBitsPerSecond: 128000
       })
       mediaRecorderRef.current = mediaRecorder
+      
+      // Store mimeType in a ref for later use (can't set on MediaRecorder as it's read-only)
+      mimeTypeRef.current = mimeType
 
       audioChunksRef.current = []
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
+          console.log('[FounderNote:Recording] Data chunk received:', {
+            size: event.data.size,
+            type: event.data.type,
+            totalChunks: audioChunksRef.current.length + 1
+          })
           audioChunksRef.current.push(event.data)
+        } else {
+          console.warn('[FounderNote:Recording] Received empty data chunk')
         }
       }
-
+      
+      // Also request final data when stopping
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
-        setState(prev => ({ ...prev, audioBlob, isRecording: false }))
+        console.log('[FounderNote:Recording] MediaRecorder stopped event fired', {
+          chunks: audioChunksRef.current.length,
+          totalSize: audioChunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0)
+        })
       }
 
-      mediaRecorder.start(1000) // Collect data every second
-      console.log('[FounderNote:Recording] Recording started')
+      // Note: onstop handler is set dynamically in stopRecording to return a promise
+      // This allows us to wait for the blob to be ready
+
+      // Start recording - collect data every 100ms to ensure we get chunks
+      // Some browsers need more frequent data collection
+      mediaRecorder.start(100)
+      console.log('[FounderNote:Recording] Recording started', {
+        mimeType,
+        state: mediaRecorder.state,
+        timeslice: 100
+      })
 
       setState(prev => ({
         ...prev,
@@ -148,20 +171,126 @@ export function useRecording() {
     }
   }, [state.isRecording, state.isPaused])
 
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && state.isRecording) {
-      mediaRecorderRef.current.stop()
-
-      // Stop all tracks
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
+  const stopRecording = useCallback(async (): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      if (!mediaRecorderRef.current) {
+        console.warn('[FounderNote:Recording] Cannot stop: MediaRecorder is null')
+        resolve(null)
+        return
+      }
+      
+      if (!state.isRecording) {
+        console.warn('[FounderNote:Recording] Cannot stop: not currently recording')
+        resolve(null)
+        return
+      }
+      
+      const mimeType = mimeTypeRef.current || 'audio/webm'
+      const recorder = mediaRecorderRef.current
+      
+      console.log('[FounderNote:Recording] Stopping MediaRecorder...', {
+        chunks: audioChunksRef.current.length,
+        mimeType,
+        recorderState: recorder.state
+      })
+      
+      // Request final data before stopping
+      if (recorder.state === 'recording' || recorder.state === 'paused') {
+        try {
+          recorder.requestData()
+          console.log('[FounderNote:Recording] Requested final data chunk')
+        } catch (e) {
+          console.warn('[FounderNote:Recording] Could not request final data:', e)
+        }
+      }
+      
+      // Set up a one-time listener for when the blob is ready
+      const originalOnStop = recorder.onstop
+      recorder.onstop = () => {
+        console.log('[FounderNote:Recording] MediaRecorder onstop fired', {
+          chunks: audioChunksRef.current.length,
+          totalSize: audioChunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0)
+        })
+        
+        // Wait a moment for any final chunks to arrive
+        setTimeout(() => {
+          if (audioChunksRef.current.length === 0) {
+            console.error('[FounderNote:Recording] No audio chunks collected!')
+            setState(prev => ({ ...prev, isRecording: false, error: 'No audio data was recorded' }))
+            resolve(null)
+            return
+          }
+          
+          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
+          console.log('[FounderNote:Recording] Blob created:', {
+            size: audioBlob.size,
+            type: audioBlob.type,
+            chunks: audioChunksRef.current.length
+          })
+          
+          if (audioBlob.size === 0) {
+            console.error('[FounderNote:Recording] Blob is empty!')
+            setState(prev => ({ ...prev, isRecording: false, error: 'Recorded audio is empty' }))
+            resolve(null)
+            return
+          }
+          
+          setState(prev => ({ ...prev, audioBlob, isRecording: false }))
+          
+          // Call original handler if it exists
+          if (originalOnStop) {
+            try {
+              originalOnStop.call(recorder)
+            } catch (e) {
+              console.warn('[FounderNote:Recording] Error calling original onstop:', e)
+            }
+          }
+          
+          resolve(audioBlob)
+        }, 150) // Wait for final chunks
       }
 
-      // Close audio context
-      if (audioContextRef.current) {
-        audioContextRef.current.close()
+      try {
+        // Stop the recorder
+        if (recorder.state === 'recording') {
+          recorder.stop()
+        } else if (recorder.state === 'paused') {
+          recorder.stop()
+        }
+        console.log('[FounderNote:Recording] MediaRecorder.stop() called, state:', recorder.state)
+      } catch (error) {
+        console.error('[FounderNote:Recording] Error stopping MediaRecorder:', error)
+        // Try to create blob from existing chunks
+        if (audioChunksRef.current.length > 0) {
+          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
+          setState(prev => ({ ...prev, audioBlob, isRecording: false }))
+          resolve(audioBlob)
+        } else {
+          resolve(null)
+        }
+        return
       }
-    }
+
+      // Stop all tracks AFTER a delay to ensure final data is collected
+      setTimeout(() => {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => {
+            track.stop()
+            console.log('[FounderNote:Recording] Stopped track:', track.kind)
+          })
+        }
+
+        // Close audio context
+        if (audioContextRef.current) {
+          try {
+            audioContextRef.current.close()
+            console.log('[FounderNote:Recording] AudioContext closed')
+          } catch (e) {
+            console.warn('[FounderNote:Recording] Error closing AudioContext:', e)
+          }
+        }
+      }, 200) // Delay stopping tracks to allow final data collection
+    })
   }, [state.isRecording])
 
   const cancelRecording = useCallback(() => {
@@ -194,24 +323,35 @@ export function useRecording() {
     })
   }, [])
 
-  const uploadAndProcess = useCallback(async () => {
-    if (!state.audioBlob) {
-      console.error('[FounderNote:Recording] No audio blob to upload')
+  const uploadAndProcess = useCallback(async (blobOverride?: Blob) => {
+    // Use provided blob or state blob
+    const audioBlob = blobOverride || state.audioBlob
+    
+    if (!audioBlob) {
+      console.error('[FounderNote:Recording] No audio blob to upload', {
+        hasBlobOverride: !!blobOverride,
+        hasStateBlob: !!state.audioBlob,
+        chunks: audioChunksRef.current.length
+      })
       setState(prev => ({ ...prev, error: 'No audio to upload' }))
       return
     }
 
-    console.log('[FounderNote:Recording] Starting upload and processing...')
-    setState(prev => ({ ...prev, isProcessing: true, error: null }))
+    console.log('[FounderNote:Recording] Starting upload and processing...', {
+      blobSize: audioBlob.size,
+      blobType: audioBlob.type,
+      chunks: audioChunksRef.current.length
+    })
+    setState(prev => ({ ...prev, isProcessing: true, error: null, audioBlob: audioBlob }))
 
     try {
       // Step 1: Upload audio
       console.log('[FounderNote:Recording] Uploading audio...', {
-        size: state.audioBlob.size,
-        type: state.audioBlob.type
+        size: audioBlob.size,
+        type: audioBlob.type
       })
       const formData = new FormData()
-      formData.append('audio', state.audioBlob, `recording-${Date.now()}.webm`)
+      formData.append('audio', audioBlob, `recording-${Date.now()}.webm`)
 
       const uploadResponse = await fetch('/api/recordings/upload', {
         method: 'POST',
@@ -221,8 +361,22 @@ export function useRecording() {
       console.log('[FounderNote:Recording] Upload response status:', uploadResponse.status)
 
       if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json()
-        throw new Error(errorData.error || 'Upload failed')
+        let errorMessage = 'Upload failed'
+        try {
+          const errorData = await uploadResponse.json()
+          errorMessage = errorData.error || errorData.details || 'Upload failed'
+          console.error('[FounderNote:Recording] Upload error details:', {
+            error: errorData.error,
+            details: errorData.details,
+            code: errorData.code,
+            fullError: errorData
+          })
+        } catch (e) {
+          const errorText = await uploadResponse.text()
+          console.error('[FounderNote:Recording] Upload error (non-JSON):', errorText)
+          errorMessage = errorText || 'Upload failed'
+        }
+        throw new Error(errorMessage)
       }
 
       const uploadData = await uploadResponse.json()
@@ -264,7 +418,7 @@ export function useRecording() {
         error: error instanceof Error ? error.message : 'Failed to process recording'
       }))
     }
-  }, [state.audioBlob])
+  }, [state.audioBlob, state.recordingId])
 
   const getAnalyserData = useCallback((): AudioAnalyserData => {
     return {

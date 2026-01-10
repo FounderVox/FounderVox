@@ -68,6 +68,17 @@ export default function StarredPage() {
     }
 
     loadStarredNotes()
+
+    // Listen for star toggle events to reload starred notes
+    const handleStarToggled = () => {
+      console.log('[FounderNote:Starred] Star toggled event received, reloading starred notes...')
+      loadStarredNotes()
+    }
+    window.addEventListener('starToggled', handleStarToggled)
+
+    return () => {
+      window.removeEventListener('starToggled', handleStarToggled)
+    }
   }, [supabase])
 
   const formatDate = (dateString: string): string => {
@@ -140,6 +151,10 @@ export default function StarredPage() {
 
   const handleAddTag = (noteId: string) => {
     const note = notes.find(n => n.id === noteId)
+    console.log('[FounderNote:Starred] Opening tag dialog for note:', {
+      noteId,
+      currentTags: note?.tags || []
+    })
     setSelectedNoteForTag({ id: noteId, tags: note?.tags || [] })
     setShowTagDialog(true)
   }
@@ -190,6 +205,7 @@ export default function StarredPage() {
                 duration={note.duration}
                 template={note.template}
                 isStarred={note.isStarred}
+                tags={note.tags}
                 onStar={() => toggleStar(note.id)}
                 onPlay={() => console.log('[FounderNote:Starred] Playing note:', note.id)}
                 onEdit={() => handleEditNote(note.id)}
@@ -215,7 +231,44 @@ export default function StarredPage() {
       {selectedNoteForTag && (
         <AddTagDialog
           open={showTagDialog}
-          onOpenChange={setShowTagDialog}
+          onOpenChange={(open) => {
+            setShowTagDialog(open)
+            if (!open) {
+              // Reload starred notes when dialog closes to show updated tags
+              const reloadStarredNotes = async () => {
+                try {
+                  const { data: { user } } = await supabase.auth.getUser()
+                  if (!user) return
+
+                  const { data, error } = await supabase
+                    .from('notes')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .eq('is_starred', true)
+                    .order('created_at', { ascending: false })
+                    .limit(50)
+
+                  if (!error && data) {
+                    console.log('[FounderNote:Starred] Starred notes reloaded after tag update')
+                    const formattedNotes: Note[] = data.map((note) => ({
+                      id: note.id,
+                      title: note.title || 'Untitled Note',
+                      preview: note.content?.substring(0, 150) || note.formatted_content?.substring(0, 150) || 'No content',
+                      createdAt: formatDate(note.created_at),
+                      duration: formatDuration(note.duration_seconds || 0),
+                      template: note.template_label || note.template_type || 'Note',
+                      isStarred: true,
+                      tags: note.tags || [],
+                    }))
+                    setNotes(formattedNotes)
+                  }
+                } catch (error) {
+                  console.error('[FounderNote:Starred] Error reloading starred notes:', error)
+                }
+              }
+              reloadStarredNotes()
+            }
+          }}
           noteId={selectedNoteForTag.id}
           existingTags={selectedNoteForTag.tags}
         />
@@ -223,5 +276,6 @@ export default function StarredPage() {
     </motion.div>
   )
 }
+
 
 

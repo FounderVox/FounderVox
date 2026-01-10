@@ -215,7 +215,12 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
       return;
     }
 
-    console.log('[FounderNote:VoiceOrb] Initializing WebGL renderer...')
+    console.log('[FounderNote:VoiceOrb] Initializing WebGL renderer...', {
+      enableVoiceControl,
+      hasAnalyser: !!externalAnalyser,
+      hasDataArray: !!externalDataArray,
+      containerSize: { width: container.clientWidth, height: container.clientHeight }
+    })
 
     let rendererInstance: Renderer | null = null;
     let glContext: WebGLRenderingContext | WebGL2RenderingContext | null = null;
@@ -238,7 +243,9 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
         container.removeChild(container.firstChild);
       }
       container.appendChild(glContext.canvas);
-      console.log('[FounderNote:VoiceOrb] WebGL canvas added to container');
+      console.log('[FounderNote:VoiceOrb] WebGL canvas added to container', {
+        canvasSize: { width: glContext.canvas.width, height: glContext.canvas.height }
+      });
 
       const geometry = new Triangle(glContext);
       program = new Program(glContext, {

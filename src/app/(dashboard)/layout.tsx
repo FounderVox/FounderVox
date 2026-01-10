@@ -10,8 +10,11 @@ import { cn } from '@/lib/utils'
 import CloudBackground from '@/components/shared/cloud-background'
 import { ManualNoteDialog } from '@/components/dashboard/manual-note-dialog'
 import { TemplateSelectorDialog } from '@/components/dashboard/template-selector-dialog'
+import { RecordingModal } from '@/components/recording/recording-modal'
+import { ProcessingModal } from '@/components/recording/processing-modal'
+import { RecordingProvider } from '@/contexts/recording-context'
 import { UseCase } from '@/lib/constants/use-cases'
-
+import { ErrorBoundary } from '@/components/error-boundary'
 
 export default function DashboardLayout({
   children,
@@ -26,18 +29,47 @@ export default function DashboardLayout({
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-  const supabase = createClient()
+  
+  // Initialize Supabase client with error handling
+  let supabase
+  try {
+    supabase = createClient()
+    if (!supabase) {
+      throw new Error('Failed to create Supabase client')
+    }
+  } catch (error) {
+    console.error('[FounderNote:Dashboard:Layout] Error creating Supabase client:', error)
+    // Return error UI
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-2">Configuration Error</h1>
+          <p className="text-gray-600">Supabase client could not be initialized. Please check your environment variables.</p>
+        </div>
+      </div>
+    )
+  }
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
         console.log('[FounderNote:Dashboard:Layout] Starting profile load...')
+        console.log('[FounderNote:Dashboard:Layout] Supabase client:', supabase ? 'initialized' : 'not initialized')
         
-        // Get user
+        // Get user - check if supabase and auth are available
+        if (!supabase || !supabase.auth) {
+          throw new Error('Supabase client or auth is not available')
+        }
+        
         const { data: { user }, error: userError } = await supabase.auth.getUser()
         
         if (userError) {
-          console.error('[FounderNote:Dashboard:Layout] Error getting user:', userError)
+          console.error('[FounderNote:Dashboard:Layout] Error getting user:', {
+            message: userError.message,
+            status: userError.status,
+            name: userError.name,
+            stack: userError.stack
+          })
           router.push('/login')
           return
         }
@@ -47,6 +79,11 @@ export default function DashboardLayout({
           router.push('/login')
           return
         }
+
+        console.log('[FounderNote:Dashboard:Layout] User authenticated:', {
+          id: user.id,
+          email: user.email
+        })
 
         console.log('[FounderNote:Dashboard:Layout] User found:', user.id)
 
@@ -58,12 +95,13 @@ export default function DashboardLayout({
           .single()
 
         if (profileError) {
-          console.error('[FounderNote:Dashboard:Layout] Error loading profile:', profileError)
-          console.error('[FounderNote:Dashboard:Layout] Error details:', {
+          console.error('[FounderNote:Dashboard:Layout] Error loading profile:', {
             message: profileError.message,
             details: profileError.details,
             hint: profileError.hint,
-            code: profileError.code
+            code: profileError.code,
+            status: profileError.status,
+            name: profileError.name
           })
           
           // If profile doesn't exist, create a default one
@@ -129,16 +167,25 @@ export default function DashboardLayout({
         setIsLoading(false)
         console.log('[FounderNote:Dashboard:Layout] Profile state set successfully, dashboard ready')
       } catch (error) {
-        console.error('[FounderNote:Dashboard:Layout] Unexpected error:', error)
+        console.error('[FounderNote:Dashboard:Layout] Unexpected error:', {
+          error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          name: error instanceof Error ? error.name : undefined
+        })
         // Set default profile even on error so dashboard can render
-        const { data: { user: errorUser } } = await supabase.auth.getUser()
-        if (errorUser) {
-          setProfile({
-            display_name: errorUser.email?.split('@')[0] || null,
-            avatar_url: null,
-            email: errorUser.email || null,
-            recordings_count: 0
-          })
+        try {
+          const { data: { user: errorUser } } = await supabase.auth.getUser()
+          if (errorUser) {
+            setProfile({
+              display_name: errorUser.email?.split('@')[0] || null,
+              avatar_url: null,
+              email: errorUser.email || null,
+              recordings_count: 0
+            })
+          }
+        } catch (fallbackError) {
+          console.error('[FounderNote:Dashboard:Layout] Fallback error:', fallbackError)
         }
         setIsLoading(false)
       }
@@ -164,9 +211,11 @@ export default function DashboardLayout({
   })
 
   return (
-    <DashboardContent profile={profile}>
-      {children}
-    </DashboardContent>
+    <ErrorBoundary>
+      <DashboardContent profile={profile}>
+        {children}
+      </DashboardContent>
+    </ErrorBoundary>
   )
 }
 
@@ -221,9 +270,11 @@ function DashboardContent({
       loadCounts()
     }
     const handleTagsUpdated = () => {
+      console.log('[FounderNote:Dashboard:Layout] Tags updated event received, reloading counts...')
       loadCounts()
     }
     const handleStarToggled = () => {
+      console.log('[FounderNote:Dashboard:Layout] Star toggled event received, reloading counts...')
       loadCounts()
     }
     window.addEventListener('noteCreated', handleNoteCreated)
@@ -238,17 +289,21 @@ function DashboardContent({
   }, [supabase])
 
   return (
-    <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
-      <CloudBackground />
+    <ErrorBoundary>
+      <RecordingProvider>
+        <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
+          <CloudBackground />
 
-      {/* Sidebar - fixed on left */}
-      <Sidebar notesCount={notesCount} starredCount={starredCount} />
+          {/* Sidebar - fixed on left */}
+          <Sidebar notesCount={notesCount} starredCount={starredCount} />
 
-      {/* Main Content - fixed on right */}
-      <SidebarContent profile={profile}>
-        {children}
-      </SidebarContent>
-    </SidebarContext.Provider>
+          {/* Main Content - fixed on right */}
+          <SidebarContent profile={profile}>
+            {children}
+          </SidebarContent>
+        </SidebarContext.Provider>
+      </RecordingProvider>
+    </ErrorBoundary>
   )
 }
 
@@ -288,14 +343,23 @@ function SidebarContent({
 }
 
 function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
-  const [isRecording, setIsRecording] = useState(false)
+  const [showRecordingModal, setShowRecordingModal] = useState(false)
   const [showManualNoteDialog, setShowManualNoteDialog] = useState(false)
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<{ useCase: string; template: string } | null>(null)
 
   const handleRecord = () => {
-    setIsRecording(!isRecording)
-    console.log('[FounderNote:Dashboard] Recording:', !isRecording)
+    setShowRecordingModal(true)
+    console.log('[FounderNote:Dashboard] Opening recording modal')
+  }
+
+  const handleRecordingStop = () => {
+    // Close recording modal - processing modal will show automatically when processing starts
+    setShowRecordingModal(false)
+  }
+
+  const handleProcessingComplete = () => {
+    // Processing modal handles its own closing
   }
 
   const handleTemplateSelect = (useCase: UseCase, template: string) => {
@@ -326,22 +390,14 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
         {/* Center Button - Tap to Record */}
         <motion.button
           onClick={handleRecord}
-          animate={isRecording ? { scale: [1, 1.05, 1] } : {}}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-          className={cn(
-            'h-14 px-8 rounded-full shadow-xl flex items-center gap-3 font-medium transition-colors',
-            isRecording
-              ? 'bg-red-500 hover:bg-red-600 text-white'
-              : 'bg-black hover:bg-gray-900 text-white'
-          )}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="h-14 px-8 rounded-full shadow-xl flex items-center gap-3 font-medium transition-colors bg-black hover:bg-gray-900 text-white"
         >
-          <div className={cn(
-            'p-1.5 rounded-full',
-            isRecording ? 'bg-white/20 animate-pulse' : 'bg-white/20'
-          )}>
+          <div className="p-1.5 rounded-full bg-white/20">
             <Mic className="h-5 w-5" />
           </div>
-          {isRecording ? 'Stop Recording' : 'Tap to record'}
+          Tap to record
         </motion.button>
 
         {/* Right Button - Template Selector */}
@@ -365,6 +421,16 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
       </div>
 
       {/* Dialogs */}
+      <RecordingModal
+        isOpen={showRecordingModal}
+        onClose={() => setShowRecordingModal(false)}
+        onStop={handleRecordingStop}
+      />
+      {/* Processing modal - always mounted, shows when processing */}
+      <ProcessingModal
+        isOpen={true}
+        onComplete={handleProcessingComplete}
+      />
       <ManualNoteDialog
         open={showManualNoteDialog}
         onOpenChange={setShowManualNoteDialog}

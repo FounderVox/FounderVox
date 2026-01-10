@@ -48,11 +48,11 @@ const noteCategories = [
 ]
 
 const templates = [
-  { label: 'Action Items', icon: CheckSquare, id: 'action_items' },
-  { label: 'Investor Update', icon: Mail, id: 'investor_update' },
-  { label: 'Progress Log', icon: TrendingUp, id: 'progress_log' },
-  { label: 'Product Ideas', icon: Lightbulb, id: 'product_ideas' },
-  { label: 'Brain Dump', icon: Zap, id: 'brain_dump' },
+  { label: 'Action Items', icon: CheckSquare, id: 'action_items', href: '/dashboard/action-items' },
+  { label: 'Investor Update', icon: Mail, id: 'investor_update', href: '/dashboard/investor-update' },
+  { label: 'Progress Log', icon: TrendingUp, id: 'progress_log', href: '/dashboard/progress-log' },
+  { label: 'Product Ideas', icon: Lightbulb, id: 'product_ideas', href: '/dashboard/product-ideas' },
+  { label: 'Brain Dump', icon: Zap, id: 'brain_dump', href: '/dashboard/brain-dump' },
 ]
 
 interface SidebarProps {
@@ -244,14 +244,24 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                   >
                     {templates.map((template) => {
                       const Icon = template.icon
+                      const isActive = pathname === template.href
                       return (
-                        <button
+                        <Link
                           key={template.id}
-                          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-black hover:bg-black hover:text-white transition-colors text-left"
+                          href={template.href}
                         >
-                          <Icon className="h-4 w-4" />
-                          {template.label}
-                        </button>
+                          <div
+                            className={cn(
+                              'flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors',
+                              isActive
+                                ? 'bg-black text-white'
+                                : 'text-black hover:bg-black hover:text-white'
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                            {template.label}
+                          </div>
+                        </Link>
                       )
                     })}
                   </motion.div>

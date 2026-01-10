@@ -118,42 +118,46 @@ export async function POST(request: NextRequest) {
     // Get actual duration from Deepgram
     const actualDuration = result.metadata?.duration || recording.duration_seconds
 
-    // Update recording with raw transcript
+    // Generate cleaned transcript using GPT-4o (for display in note)
+    const cleanedTranscript = await generateCleanedTranscript(rawTranscript)
+
+    // Update recording with transcripts and mark as completed
     await supabase
       .from('recordings')
       .update({
         raw_transcript: rawTranscript,
-        duration_seconds: Math.floor(actualDuration)
-      })
-      .eq('id', recordingId)
-
-    console.log('[Process] Starting AI extraction...')
-
-    // Run all extraction functions in parallel
-    await Promise.allSettled([
-      extractActionItems(rawTranscript, recordingId, user.id),
-      extractInvestorUpdate(rawTranscript, recordingId, user.id),
-      extractProgressLog(rawTranscript, recordingId, user.id),
-      extractProductIdeas(rawTranscript, recordingId, user.id),
-      extractBrainDump(rawTranscript, recordingId, user.id)
-    ])
-
-    console.log('[Process] AI extraction complete')
-
-    // Generate cleaned transcript using GPT-4o
-    const cleanedTranscript = await generateCleanedTranscript(rawTranscript)
-
-    // Update recording with cleaned transcript and mark as completed
-    await supabase
-      .from('recordings')
-      .update({
         cleaned_transcript: cleanedTranscript,
+        duration_seconds: Math.floor(actualDuration),
         processing_status: 'completed'
       })
       .eq('id', recordingId)
 
-    // Get counts of extracted items
-    const counts = await getExtractionCounts(supabase, recordingId)
+    console.log('[Process] Creating note from transcript...')
+
+    // Create a note from the transcript
+    const noteTitle = `Recording ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+    const { data: note, error: noteError } = await supabase
+      .from('notes')
+      .insert({
+        user_id: user.id,
+        title: noteTitle,
+        content: cleanedTranscript,
+        formatted_content: cleanedTranscript,
+        raw_transcript: rawTranscript,
+        audio_url: recording.audio_url,
+        duration_seconds: Math.floor(actualDuration),
+        template_type: 'recording',
+        template_label: 'Recording'
+      })
+      .select()
+      .single()
+
+    if (noteError) {
+      console.error('[Process] Error creating note:', noteError)
+      // Continue even if note creation fails
+    } else {
+      console.log('[Process] Note created successfully:', note.id)
+    }
 
     console.log('[Process] Processing complete for recording:', recordingId)
 
@@ -165,7 +169,14 @@ export async function POST(request: NextRequest) {
         transcript: cleanedTranscript,
         duration: Math.floor(actualDuration)
       },
-      extracted: counts
+      note: note ? { id: note.id } : null,
+      extracted: {
+        actionItems: 0,
+        investorUpdates: 0,
+        progressLogs: 0,
+        productIdeas: 0,
+        brainDump: 0
+      }
     })
 
   } catch (error) {
@@ -219,20 +230,3 @@ async function generateCleanedTranscript(rawTranscript: string): Promise<string>
   }
 }
 
-async function getExtractionCounts(supabase: any, recordingId: string) {
-  const [actionItems, investorUpdates, progressLogs, productIdeas, brainDump] = await Promise.all([
-    supabase.from('action_items').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId),
-    supabase.from('investor_updates').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId),
-    supabase.from('progress_logs').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId),
-    supabase.from('product_ideas').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId),
-    supabase.from('brain_dump').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId)
-  ])
-
-  return {
-    actionItems: actionItems.count || 0,
-    investorUpdates: investorUpdates.count || 0,
-    progressLogs: progressLogs.count || 0,
-    productIdeas: productIdeas.count || 0,
-    brainDump: brainDump.count || 0
-  }
-}
