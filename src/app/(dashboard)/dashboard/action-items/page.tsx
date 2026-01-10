@@ -351,13 +351,10 @@ export default function ActionItemsPage() {
                 <div className="space-y-3 min-h-[300px]">
                   {items.length > 0 ? (
                     items.map((item, index) => (
-                      <motion.div
+                      <div
                         key={item.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
                         draggable
-                        onDragStart={(e) => handleDragStart(e, item.id, status, index)}
+                        onDragStart={(e: React.DragEvent) => handleDragStart(e, item.id, status, index)}
                         className={cn(
                           "bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 cursor-move transition-all duration-200 group",
                           draggedItem?.itemId === item.id && draggedItem?.status === status
@@ -406,7 +403,7 @@ export default function ActionItemsPage() {
                             {item.priority.toUpperCase()}
                           </span>
                           <button
-                            onClick={(e) => {
+                            onClick={(e: React.MouseEvent) => {
                               e.stopPropagation()
                               deleteItem(item.id)
                             }}
@@ -415,7 +412,7 @@ export default function ActionItemsPage() {
                             <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                      </motion.div>
+                      </div>
                     ))
                   ) : (
                     <div className={cn(
