@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 
 export const dynamic = 'force-dynamic'
-import { motion, AnimatePresence } from 'framer-motion'
-import { QuickRecord } from '@/components/dashboard/quick-record'
+import { motion } from 'framer-motion'
 import { NoteCard } from '@/components/dashboard/note-card'
 import { FilterBar } from '@/components/dashboard/filter-bar'
 import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
@@ -12,17 +11,57 @@ import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
 import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
 import { DeleteNoteDialog } from '@/components/dashboard/delete-note-dialog'
-import { FileText, Mic, ChevronDown } from 'lucide-react'
+import { Toast } from '@/components/ui/toast'
+import {
+  Mic,
+  ArrowRight,
+  ArrowUpRight,
+  Calendar,
+  AlertCircle,
+  PlayCircle
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
+import { ActionItem, BrainDumpItem, isOverdue, formatDeadline, dispatchActionItemEvent } from '@/types/dashboard'
+import { createClient } from '@/lib/supabase/client'
+
+// Get time-aware greeting
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+// Get formatted date
+function getFormattedDate(): string {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+// Get first name from display name
+function getFirstName(displayName: string | null | undefined): string {
+  if (!displayName) return ''
+  return displayName.split(' ')[0]
+}
 
 export default function DashboardPage() {
   const { user, profile, supabase } = useAuth()
   const [notes, setNotes] = useState<any[]>([])
   const [filteredNotes, setFilteredNotes] = useState<any[]>([])
   const [activeFilter, setActiveFilter] = useState('all')
-  const [isRecentNotesExpanded, setIsRecentNotesExpanded] = useState(false)
+  const [actionItems, setActionItems] = useState<ActionItem[]>([])
+  const [brainDumpItems, setBrainDumpItems] = useState<BrainDumpItem[]>([])
+  const [movingItems, setMovingItems] = useState<Set<string>>(new Set())
+  const [toast, setToast] = useState<{ open: boolean; message: string; description?: string; variant: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    variant: 'success'
+  })
   const [showTagDialog, setShowTagDialog] = useState(false)
   const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -43,10 +82,10 @@ export default function DashboardPage() {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(6)
+        .limit(9)
 
       if (error) {
-        console.error('[FounderNote:Dashboard:Page] Error loading notes:', error)
+        console.error('[Dashboard] Error loading notes:', error)
         return
       }
 
@@ -54,9 +93,57 @@ export default function DashboardPage() {
       setNotes(notesData)
       applyFilter(notesData, activeFilter)
     } catch (error) {
-      console.error('[FounderNote:Dashboard:Page] Unexpected error loading notes:', error)
+      console.error('[Dashboard] Unexpected error loading notes:', error)
     }
   }, [user, supabase, activeFilter])
+
+  const loadFocusItems = useCallback(async () => {
+    if (!user) return
+
+    try {
+      const { data: recordings } = await supabase
+        .from('recordings')
+        .select('id')
+        .eq('user_id', user.id)
+
+      if (!recordings || recordings.length === 0) {
+        setActionItems([])
+        setBrainDumpItems([])
+        return
+      }
+
+      const recordingIds = recordings.map(r => r.id)
+
+      // Load all open and in_progress action items
+      const { data: actionData, error: actionError } = await supabase
+        .from('action_items')
+        .select('*')
+        .in('recording_id', recordingIds)
+        .in('status', ['open', 'in_progress'])
+        .order('created_at', { ascending: false })
+
+      if (actionError) {
+        console.error('[Dashboard] Error loading action items:', actionError)
+      } else {
+        setActionItems(actionData || [])
+      }
+
+      // Load brain dump items (for concerns count)
+      const { data: brainData, error: brainError } = await supabase
+        .from('brain_dump')
+        .select('*')
+        .in('recording_id', recordingIds)
+        .order('created_at', { ascending: false })
+
+      if (brainError) {
+        console.error('[Dashboard] Error loading brain dump:', brainError)
+      } else {
+        setBrainDumpItems(brainData || [])
+      }
+    } catch (error) {
+      console.error('[Dashboard] Unexpected error loading focus items:', error)
+    }
+  }, [user, supabase])
 
   const applyFilter = useCallback((notesData: any[], filter: string) => {
     let filtered = notesData
@@ -65,7 +152,7 @@ export default function DashboardPage() {
       filtered = notesData
     } else if (filter.startsWith('tag:')) {
       const tagName = filter.replace('tag:', '')
-      filtered = notesData.filter(note => 
+      filtered = notesData.filter(note =>
         note.tags && Array.isArray(note.tags) && note.tags.includes(tagName)
       )
     } else {
@@ -75,7 +162,6 @@ export default function DashboardPage() {
     setFilteredNotes(filtered)
   }, [])
 
-  // Listen for filter changes
   useEffect(() => {
     const handleFilterChange = (event: CustomEvent) => {
       setActiveFilter(event.detail.filter)
@@ -88,7 +174,6 @@ export default function DashboardPage() {
     }
   }, [notes, applyFilter])
 
-  // Apply filter when notes or activeFilter changes
   useEffect(() => {
     if (notes.length > 0) {
       applyFilter(notes, activeFilter)
@@ -97,26 +182,124 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadNotes()
+    loadFocusItems()
 
-    // Listen for note events to refresh
-    const handleNoteEvent = (event?: CustomEvent) => {
-      console.log('[FounderNote:Dashboard] Note event received:', event?.detail)
+    const handleNoteEvent = () => {
       loadNotes()
+      loadFocusItems()
     }
     const handleTagsUpdated = () => loadNotes()
+    const handleActionItemEvent = () => loadFocusItems()
 
     window.addEventListener('noteCreated', handleNoteEvent as EventListener)
     window.addEventListener('noteUpdated', handleNoteEvent as EventListener)
     window.addEventListener('noteDeleted', handleNoteEvent as EventListener)
     window.addEventListener('tagsUpdated', handleTagsUpdated)
+    window.addEventListener('actionItemCompleted', handleActionItemEvent as EventListener)
+    window.addEventListener('actionItemUpdated', handleActionItemEvent as EventListener)
 
     return () => {
       window.removeEventListener('noteCreated', handleNoteEvent as EventListener)
       window.removeEventListener('noteUpdated', handleNoteEvent as EventListener)
       window.removeEventListener('noteDeleted', handleNoteEvent as EventListener)
       window.removeEventListener('tagsUpdated', handleTagsUpdated)
+      window.removeEventListener('actionItemCompleted', handleActionItemEvent as EventListener)
+      window.removeEventListener('actionItemUpdated', handleActionItemEvent as EventListener)
     }
-  }, [loadNotes])
+  }, [loadNotes, loadFocusItems])
+
+  // Move item to in_progress
+  const handleStartWork = async (itemId: string) => {
+    if (movingItems.has(itemId)) return
+
+    setMovingItems(prev => new Set(prev).add(itemId))
+
+    // Optimistic update
+    setActionItems(items =>
+      items.map(item =>
+        item.id === itemId
+          ? { ...item, status: 'in_progress' as const }
+          : item
+      )
+    )
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('action_items')
+        .update({ status: 'in_progress' })
+        .eq('id', itemId)
+
+      if (error) throw error
+
+      dispatchActionItemEvent('actionItemUpdated', { itemId, status: 'in_progress' })
+
+      setToast({
+        open: true,
+        message: 'Task moved to in progress',
+        variant: 'success'
+      })
+    } catch (error) {
+      console.error('Failed to update item:', error)
+      loadFocusItems()
+      setToast({
+        open: true,
+        message: 'Failed to update task',
+        variant: 'error'
+      })
+    } finally {
+      setMovingItems(prev => {
+        const next = new Set(prev)
+        next.delete(itemId)
+        return next
+      })
+    }
+  }
+
+  // Complete item (mark as done)
+  const handleCompleteItem = async (itemId: string) => {
+    if (movingItems.has(itemId)) return
+
+    setMovingItems(prev => new Set(prev).add(itemId))
+
+    // Optimistic update - remove from list
+    setActionItems(items => items.filter(item => item.id !== itemId))
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('action_items')
+        .update({
+          status: 'done',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', itemId)
+
+      if (error) throw error
+
+      dispatchActionItemEvent('actionItemCompleted', { itemId, status: 'done' })
+
+      setToast({
+        open: true,
+        message: 'Task completed',
+        variant: 'success'
+      })
+    } catch (error) {
+      console.error('Failed to complete item:', error)
+      loadFocusItems()
+      setToast({
+        open: true,
+        message: 'Failed to complete task',
+        variant: 'error'
+      })
+    } finally {
+      setMovingItems(prev => {
+        const next = new Set(prev)
+        next.delete(itemId)
+        return next
+      })
+    }
+  }
 
   const toggleStar = async (noteId: string) => {
     if (!user) return
@@ -126,7 +309,6 @@ export default function DashboardPage() {
 
     const newStarredState = !note.is_starred
 
-    // Optimistic update
     setNotes(notes.map(n =>
       n.id === noteId ? { ...n, is_starred: newStarredState } : n
     ))
@@ -139,8 +321,7 @@ export default function DashboardPage() {
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderNote:Dashboard:Page] Error toggling star:', error)
-        // Revert on error
+        console.error('[Dashboard] Error toggling star:', error)
         setNotes(notes)
         return
       }
@@ -149,7 +330,7 @@ export default function DashboardPage() {
         detail: { noteId, isStarred: newStarredState }
       }))
     } catch (error) {
-      console.error('[FounderNote:Dashboard:Page] Unexpected error toggling star:', error)
+      console.error('[Dashboard] Unexpected error toggling star:', error)
       setNotes(notes)
     }
   }
@@ -166,7 +347,6 @@ export default function DashboardPage() {
     const noteId = selectedNoteForDelete.id
     const originalNotes = notes
 
-    // Optimistic update
     setNotes(notes.filter(note => note.id !== noteId))
 
     try {
@@ -177,14 +357,14 @@ export default function DashboardPage() {
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderNote:Dashboard:Page] Error deleting note:', error)
+        console.error('[Dashboard] Error deleting note:', error)
         setNotes(originalNotes)
         return
       }
 
       window.dispatchEvent(new CustomEvent('noteDeleted', { detail: { noteId } }))
     } catch (error) {
-      console.error('[FounderNote:Dashboard:Page] Unexpected error deleting note:', error)
+      console.error('[Dashboard] Unexpected error deleting note:', error)
       setNotes(originalNotes)
     }
   }
@@ -213,42 +393,84 @@ export default function DashboardPage() {
     window.location.href = `/dashboard/notes/${noteId}`
   }
 
-  // Helper function to get full date label
-  const getDateLabel = (dateString: string) => {
-    const noteDate = new Date(dateString)
-    return noteDate.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    })
+  const displayNotes = activeFilter === 'all' ? notes : filteredNotes
+
+  // Sort and separate action items
+  const { todoItems, inProgressItems, overdueCount, concernsCount } = useMemo(() => {
+    const priorityOrder = { high: 0, medium: 1, low: 2 }
+
+    // Sort function: overdue first, then priority, then deadline
+    const sortItems = (items: ActionItem[]) => {
+      return [...items].sort((a, b) => {
+        const aOverdue = isOverdue(a.deadline)
+        const bOverdue = isOverdue(b.deadline)
+
+        // Overdue items first
+        if (aOverdue && !bOverdue) return -1
+        if (!aOverdue && bOverdue) return 1
+
+        // Then by priority
+        const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority]
+        if (priorityDiff !== 0) return priorityDiff
+
+        // Then by deadline (earlier first)
+        if (a.deadline && b.deadline) {
+          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+        }
+        if (a.deadline) return -1
+        if (b.deadline) return 1
+
+        return 0
+      })
+    }
+
+    const todos = sortItems(actionItems.filter(i => i.status === 'open'))
+    const inProgress = sortItems(actionItems.filter(i => i.status === 'in_progress'))
+    const overdue = actionItems.filter(i => i.status !== 'done' && isOverdue(i.deadline)).length
+    const concerns = brainDumpItems.filter(i => i.category === 'concern').length
+
+    return {
+      todoItems: todos,
+      inProgressItems: inProgress,
+      overdueCount: overdue,
+      concernsCount: concerns
+    }
+  }, [actionItems, brainDumpItems])
+
+  // Priority styles
+  const getPriorityStyles = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return { border: 'border-l-red-500', text: 'text-red-600' }
+      case 'medium':
+        return { border: 'border-l-amber-500', text: 'text-amber-600' }
+      default:
+        return { border: 'border-l-gray-300', text: 'text-gray-500' }
+    }
   }
 
-  // Group notes by date (use filtered notes when filter is active)
-  const displayNotes = activeFilter === 'all' ? notes : filteredNotes
-  const groupedNotes = displayNotes.reduce((groups, note) => {
-    const dateLabel = getDateLabel(note.created_at)
-    if (!groups[dateLabel]) {
-      groups[dateLabel] = []
-    }
-    groups[dateLabel].push(note)
-    return groups
-  }, {} as Record<string, Array<typeof notes[number]>>)
+  // Build dynamic summary
+  const summaryParts: string[] = []
+  if (overdueCount > 0) {
+    summaryParts.push(`${overdueCount} overdue`)
+  }
+  if (todoItems.length > 0) {
+    summaryParts.push(`${todoItems.length} in queue`)
+  }
+  if (inProgressItems.length > 0) {
+    summaryParts.push(`${inProgressItems.length} in progress`)
+  }
+  if (concernsCount > 0) {
+    summaryParts.push(`${concernsCount} concern${concernsCount > 1 ? 's' : ''} flagged`)
+  }
 
-  const dateOrder = ['Today', 'Yesterday', 'Last Week', 'Last Month']
-  const sortedDateLabels = Object.keys(groupedNotes).sort((a, b) => {
-    const aIndex = dateOrder.indexOf(a)
-    const bIndex = dateOrder.indexOf(b)
-    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex
-    if (aIndex !== -1) return -1
-    if (bIndex !== -1) return 1
-    return b.localeCompare(a)
-  })
+  const hasFocusItems = todoItems.length > 0 || inProgressItems.length > 0
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.4 }}
     >
       {/* Filter Bar */}
       <FilterBar
@@ -258,187 +480,405 @@ export default function DashboardPage() {
         recordingsCount={profile?.recordings_count || 0}
       />
 
-      {/* Recent Notes Section - Collapsible */}
-      <div className="mb-8">
-        <button
-          onClick={() => setIsRecentNotesExpanded(!isRecentNotesExpanded)}
-          className="flex items-center justify-between w-full hover:bg-white/80 hover:shadow-md transition-all rounded-xl p-4 -mx-4 mb-4"
-        >
-          <h2 className="text-lg font-semibold text-black flex items-center gap-2">
-            <FileText className="h-5 w-5 text-black" />
-            Recent Notes
-          </h2>
-          <div className="flex items-center gap-3">
-            {isRecentNotesExpanded && (
-              <Link
-                href="/dashboard/notes"
-                onClick={(e) => e.stopPropagation()}
-                className="text-sm text-black hover:bg-gray-100/80 hover:shadow-sm px-3 py-1 rounded-lg transition-all duration-200"
-              >
-                View all
-              </Link>
-            )}
-            <ChevronDown
-              className={cn(
-                'h-5 w-5 text-black transition-transform duration-300',
-                isRecentNotesExpanded && 'rotate-180'
-              )}
-            />
-          </div>
-        </button>
+      {/* Personalized Greeting */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-8"
+      >
+        <h1 className="text-3xl font-semibold text-gray-900 tracking-tight">
+          {getGreeting()}{profile?.display_name ? `, ${getFirstName(profile.display_name)}` : ''}
+        </h1>
+        <p className="text-gray-500 mt-1 text-sm tracking-wide">
+          {getFormattedDate()}
+        </p>
 
-        <AnimatePresence>
-          {isRecentNotesExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="overflow-hidden"
-            >
-              {displayNotes.length > 0 ? (
-                <div className="space-y-6">
-                  {sortedDateLabels.map((dateLabel, groupIndex) => (
-                    <div key={dateLabel}>
-                      <h3 className="text-sm font-semibold text-gray-700 mb-3 px-1">
-                        {dateLabel}
-                      </h3>
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {groupedNotes[dateLabel]?.map((note: any, index: number) => (
-                          <motion.div
-                            key={note.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: (groupIndex * 0.1) + (index * 0.05) }}
-                          >
-                            <NoteCard
-                              title={note.title || 'Untitled Note'}
-                              preview={note.formatted_content?.substring(0, 150) || note.raw_transcript?.substring(0, 150) || 'No content'}
-                              createdAt={new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(note.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                              duration={note.duration || '0:00'}
-                              template={note.template_label || note.template_type || 'Note'}
-                              isStarred={note.is_starred || false}
-                              tags={note.tags || []}
-                              onStar={() => toggleStar(note.id)}
-                              onPlay={() => console.log('[FounderNote:Dashboard] Playing note:', note.id)}
-                              onEdit={() => handleEditNote(note.id)}
-                              onDelete={() => handleDeleteNote(note.id)}
-                              onAddTag={() => handleAddTag(note.id)}
-                              onSmartify={() => handleSmartify(note.id)}
-                              onView={() => handleViewNote(note.id)}
-                              noteId={note.id}
-                              isSmartified={!!note.smartified_at}
-                              canSmartify={!note.smartified_at || new Date(note.updated_at) > new Date(note.smartified_at)}
-                            />
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white shadow-sm rounded-2xl p-12 text-center border border-gray-200">
-                  <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-brand-light border-2 border-brand/20 mb-4">
-                    <Mic className="h-8 w-8 text-brand" />
-                  </div>
-                  <h3 className="text-gray-900 font-semibold mb-2">No notes yet</h3>
-                  <p className="text-gray-600 text-sm max-w-sm mx-auto">
-                    Start recording your first voice note to see it here.
-                  </p>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* All Notes Section with Date Headers */}
-      <div className="mb-8">
-        {notes.length > 0 ? (
-          <div className="space-y-8">
-            {sortedDateLabels.map((dateLabel, groupIndex) => (
-              <div key={dateLabel}>
-                <h2 className="text-2xl font-bold text-black mb-6">
-                  {dateLabel}
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedNotes[dateLabel].map((note: any, index: number) => (
-                    <motion.div
-                      key={note.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: (groupIndex * 0.1) + (index * 0.05) }}
-                    >
-                      <NoteCard
-                        title={note.title || 'Untitled Note'}
-                        preview={note.formatted_content?.substring(0, 150) || note.raw_transcript?.substring(0, 150) || 'No content'}
-                        createdAt={new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(note.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                        duration={note.duration || '0:00'}
-                        template={note.template_label || note.template_type || 'Note'}
-                        isStarred={note.is_starred || false}
-                        tags={note.tags || []}
-                        onStar={() => toggleStar(note.id)}
-                        onPlay={() => console.log('[FounderNote:Dashboard] Playing note:', note.id)}
-                        onEdit={() => handleEditNote(note.id)}
-                        onDelete={() => handleDeleteNote(note.id)}
-                        onAddTag={() => handleAddTag(note.id)}
-                        onSmartify={() => handleSmartify(note.id)}
-                        onView={() => handleViewNote(note.id)}
-                        noteId={note.id}
-                        isSmartified={!!note.smartified_at}
-                        canSmartify={!note.smartified_at || new Date(note.updated_at) > new Date(note.smartified_at)}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white shadow-sm rounded-2xl p-12 text-center border border-gray-200">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-brand-light border-2 border-brand/20 mb-4">
-              <Mic className="h-8 w-8 text-brand" />
-            </div>
-            <h3 className="text-gray-900 font-semibold mb-2">No notes yet</h3>
-            <p className="text-gray-600 text-sm max-w-sm mx-auto">
-              Start recording your first voice note to see it here.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Use Cases Summary */}
-      {profile?.use_cases && profile.use_cases.length > 0 && (
-        <motion.div
-          className="bg-white shadow-sm rounded-2xl p-6 border border-gray-200"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <h3 className="text-sm font-medium text-gray-900 mb-3">Your Focus Areas</h3>
-          <div className="flex flex-wrap gap-2">
-            {profile.use_cases.map((useCase: string) => (
-              <span
-                key={useCase}
-                className="px-3 py-1.5 bg-brand text-white text-sm rounded-full hover:opacity-90 transition-colors cursor-pointer"
-              >
-                {useCase}
+        {/* Dynamic Summary */}
+        {summaryParts.length > 0 && (
+          <div className="mt-3 flex items-center gap-1.5 text-sm">
+            {summaryParts.map((part, index) => (
+              <span key={index} className="flex items-center">
+                {index > 0 && <span className="text-gray-300 mx-1.5">·</span>}
+                <span className={cn(
+                  part.includes('overdue') ? 'text-red-600 font-medium' :
+                  part.includes('concern') ? 'text-amber-600' :
+                  'text-gray-600'
+                )}>
+                  {part}
+                </span>
               </span>
             ))}
+          </div>
+        )}
+      </motion.div>
+
+      {/* Today's Focus - Two Column Layout */}
+      {hasFocusItems && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-12"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+              Today's Focus
+            </h2>
+            <Link
+              href="/dashboard/action-items"
+              className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1 transition-colors"
+            >
+              View all tasks
+              <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* To Do Column */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-medium text-gray-900">To Do</h3>
+                {todoItems.length > 3 && (
+                  <span className="text-xs text-gray-400">
+                    +{todoItems.length - 3} more
+                  </span>
+                )}
+              </div>
+
+              {todoItems.length > 0 ? (
+                <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
+                  {todoItems.slice(0, 3).map((item, index) => {
+                    const priorityStyles = getPriorityStyles(item.priority)
+                    const deadline = formatDeadline(item.deadline)
+                    const overdue = isOverdue(item.deadline)
+                    const isMoving = movingItems.has(item.id)
+
+                    return (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: isMoving ? 0.5 : 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className={cn(
+                          "group bg-white rounded-lg border border-gray-200 p-4 border-l-[3px] transition-all",
+                          priorityStyles.border,
+                          "hover:shadow-sm hover:border-gray-300"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-800 leading-relaxed">
+                              {item.task}
+                            </p>
+                            <div className="flex items-center gap-3 mt-2">
+                              {deadline && (
+                                <span className={cn(
+                                  "flex items-center gap-1 text-[11px]",
+                                  overdue ? "text-red-600 font-medium" : "text-gray-500"
+                                )}>
+                                  {overdue && <AlertCircle className="h-3 w-3" />}
+                                  <Calendar className="h-3 w-3" />
+                                  {deadline}
+                                </span>
+                              )}
+                              {item.assignee && (
+                                <span className="text-[11px] text-gray-400">
+                                  {item.assignee}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Work Button */}
+                          <button
+                            onClick={() => handleStartWork(item.id)}
+                            disabled={isMoving}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                              "bg-gray-900 text-white hover:bg-gray-800",
+                              "opacity-0 group-hover:opacity-100",
+                              isMoving && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            Work
+                            <ArrowRight className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                  {todoItems.length > 3 && (
+                    <div className="pt-2">
+                      {todoItems.slice(3).map((item, index) => {
+                        const priorityStyles = getPriorityStyles(item.priority)
+                        const deadline = formatDeadline(item.deadline)
+                        const overdue = isOverdue(item.deadline)
+                        const isMoving = movingItems.has(item.id)
+
+                        return (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: isMoving ? 0.5 : 1 }}
+                            className={cn(
+                              "group bg-white rounded-lg border border-gray-200 p-4 border-l-[3px] transition-all mb-2",
+                              priorityStyles.border,
+                              "hover:shadow-sm hover:border-gray-300"
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-800 leading-relaxed">
+                                  {item.task}
+                                </p>
+                                <div className="flex items-center gap-3 mt-2">
+                                  {deadline && (
+                                    <span className={cn(
+                                      "flex items-center gap-1 text-[11px]",
+                                      overdue ? "text-red-600 font-medium" : "text-gray-500"
+                                    )}>
+                                      {overdue && <AlertCircle className="h-3 w-3" />}
+                                      <Calendar className="h-3 w-3" />
+                                      {deadline}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleStartWork(item.id)}
+                                disabled={isMoving}
+                                className={cn(
+                                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                                  "bg-gray-900 text-white hover:bg-gray-800",
+                                  "opacity-0 group-hover:opacity-100"
+                                )}
+                              >
+                                Work
+                                <ArrowRight className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-lg border border-dashed border-gray-200 p-8 text-center">
+                  <p className="text-sm text-gray-500">No tasks in queue</p>
+                </div>
+              )}
+            </div>
+
+            {/* In Progress Column */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-medium text-gray-900">In Progress</h3>
+                {inProgressItems.length > 3 && (
+                  <span className="text-xs text-gray-400">
+                    +{inProgressItems.length - 3} more
+                  </span>
+                )}
+              </div>
+
+              {inProgressItems.length > 0 ? (
+                <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
+                  {inProgressItems.slice(0, 3).map((item, index) => {
+                    const priorityStyles = getPriorityStyles(item.priority)
+                    const deadline = formatDeadline(item.deadline)
+                    const overdue = isOverdue(item.deadline)
+                    const isMoving = movingItems.has(item.id)
+
+                    return (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: isMoving ? 0.5 : 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className={cn(
+                          "group bg-blue-50/50 rounded-lg border border-blue-200/60 p-4 border-l-[3px] border-l-blue-500 transition-all",
+                          "hover:shadow-sm hover:border-blue-300"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <PlayCircle className="h-3.5 w-3.5 text-blue-600" />
+                              <span className="text-[10px] font-medium text-blue-600 uppercase tracking-wide">
+                                Working
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-800 leading-relaxed">
+                              {item.task}
+                            </p>
+                            <div className="flex items-center gap-3 mt-2">
+                              {deadline && (
+                                <span className={cn(
+                                  "flex items-center gap-1 text-[11px]",
+                                  overdue ? "text-red-600 font-medium" : "text-gray-500"
+                                )}>
+                                  <Calendar className="h-3 w-3" />
+                                  {deadline}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Complete Button */}
+                          <button
+                            onClick={() => handleCompleteItem(item.id)}
+                            disabled={isMoving}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                              "bg-emerald-600 text-white hover:bg-emerald-700",
+                              "opacity-0 group-hover:opacity-100",
+                              isMoving && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            Done
+                          </button>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                  {inProgressItems.length > 3 && (
+                    <div className="pt-2">
+                      {inProgressItems.slice(3).map((item) => {
+                        const deadline = formatDeadline(item.deadline)
+                        const overdue = isOverdue(item.deadline)
+                        const isMoving = movingItems.has(item.id)
+
+                        return (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: isMoving ? 0.5 : 1 }}
+                            className={cn(
+                              "group bg-blue-50/50 rounded-lg border border-blue-200/60 p-4 border-l-[3px] border-l-blue-500 transition-all mb-2",
+                              "hover:shadow-sm hover:border-blue-300"
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <PlayCircle className="h-3.5 w-3.5 text-blue-600" />
+                                  <span className="text-[10px] font-medium text-blue-600 uppercase tracking-wide">
+                                    Working
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-800 leading-relaxed">
+                                  {item.task}
+                                </p>
+                                {deadline && (
+                                  <span className={cn(
+                                    "flex items-center gap-1 text-[11px] mt-2",
+                                    overdue ? "text-red-600" : "text-gray-500"
+                                  )}>
+                                    <Calendar className="h-3 w-3" />
+                                    {deadline}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => handleCompleteItem(item.id)}
+                                disabled={isMoving}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 opacity-0 group-hover:opacity-100 transition-all"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-lg border border-dashed border-gray-200 p-8 text-center">
+                  <p className="text-sm text-gray-500">No tasks in progress</p>
+                  <p className="text-xs text-gray-400 mt-1">Click "Work" on a task to start</p>
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
       )}
 
-      {/* Add Tag Dialog */}
+      {/* Notes Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mb-8"
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+            Recent Notes
+          </h2>
+          {notes.length > 0 && (
+            <Link
+              href="/dashboard/notes"
+              className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1 transition-colors"
+            >
+              View all
+              <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          )}
+        </div>
+
+        {displayNotes.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {displayNotes.map((note: any, index: number) => (
+              <motion.div
+                key={note.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 + (index * 0.04) }}
+              >
+                <NoteCard
+                  title={note.title || 'Untitled Note'}
+                  preview={note.formatted_content?.substring(0, 150) || note.raw_transcript?.substring(0, 150) || 'No content'}
+                  createdAt={new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(note.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                  duration={note.duration || '0:00'}
+                  template={note.template_label || note.template_type || 'Note'}
+                  isStarred={note.is_starred || false}
+                  tags={note.tags || []}
+                  onStar={() => toggleStar(note.id)}
+                  onPlay={() => console.log('[Dashboard] Playing note:', note.id)}
+                  onEdit={() => handleEditNote(note.id)}
+                  onDelete={() => handleDeleteNote(note.id)}
+                  onAddTag={() => handleAddTag(note.id)}
+                  onSmartify={() => handleSmartify(note.id)}
+                  onView={() => handleViewNote(note.id)}
+                  noteId={note.id}
+                  isSmartified={!!note.smartified_at}
+                  canSmartify={!note.smartified_at || new Date(note.updated_at) > new Date(note.smartified_at)}
+                />
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl p-16 text-center border border-gray-200">
+            <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-gray-100 mb-4">
+              <Mic className="h-6 w-6 text-gray-400" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-gray-900 font-medium mb-1">No notes yet</h3>
+            <p className="text-gray-500 text-sm max-w-xs mx-auto">
+              Start recording your first voice note to see it here.
+            </p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Dialogs */}
       {selectedNoteForTag && (
         <AddTagDialog
           open={showTagDialog}
           onOpenChange={async (open) => {
             setShowTagDialog(open)
             if (!open) {
-              // Reload notes to get updated tags
               await loadNotes()
-              // Also reload the specific note to update existingTags
               if (selectedNoteForTag) {
                 const note = notes.find(n => n.id === selectedNoteForTag.id)
                 if (note) {
@@ -452,56 +892,54 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Edit Note Dialog */}
       <EditNoteDialog
         open={showEditDialog}
         onOpenChange={(open) => {
           setShowEditDialog(open)
-          if (!open) {
-            setSelectedNoteForEdit(null)
-          }
+          if (!open) setSelectedNoteForEdit(null)
         }}
         noteId={selectedNoteForEdit}
       />
 
-      {/* Smartify Modal */}
       {selectedNoteForSmartify && (
         <SmartifyModal
           open={showSmartifyModal}
           onOpenChange={(open) => {
             setShowSmartifyModal(open)
-            if (!open) {
-              setSelectedNoteForSmartify(null)
-            }
+            if (!open) setSelectedNoteForSmartify(null)
           }}
           noteId={selectedNoteForSmartify.id}
           noteTitle={selectedNoteForSmartify.title}
         />
       )}
 
-      {/* Note Detail Modal */}
       <NoteDetailModal
         open={showDetailModal}
         onOpenChange={(open) => {
           setShowDetailModal(open)
-          if (!open) {
-            setSelectedNoteForDetail(null)
-          }
+          if (!open) setSelectedNoteForDetail(null)
         }}
         noteId={selectedNoteForDetail}
       />
 
-      {/* Delete Note Dialog */}
       <DeleteNoteDialog
         open={showDeleteDialog}
         onOpenChange={(open) => {
           setShowDeleteDialog(open)
-          if (!open) {
-            setSelectedNoteForDelete(null)
-          }
+          if (!open) setSelectedNoteForDelete(null)
         }}
         onConfirm={confirmDeleteNote}
         noteTitle={selectedNoteForDelete?.title}
+      />
+
+      {/* Toast */}
+      <Toast
+        open={toast.open}
+        onClose={() => setToast(prev => ({ ...prev, open: false }))}
+        message={toast.message}
+        description={toast.description}
+        variant={toast.variant}
+        position="bottom-right"
       />
     </motion.div>
   )

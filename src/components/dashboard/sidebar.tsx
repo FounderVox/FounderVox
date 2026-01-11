@@ -80,7 +80,10 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
         initial={false}
         animate={{ width: currentWidth }}
         transition={{ duration: 0.2, ease: 'easeInOut' }}
-        className="fixed left-0 top-0 bottom-0 bg-surface-sunken border-r border-gray-200 flex flex-col z-[200] shadow-sm"
+        className={cn(
+          "fixed left-0 top-0 bottom-0 bg-surface-sunken border-r border-gray-200 flex flex-col z-[200] shadow-sm",
+          isCollapsed && "overflow-visible"
+        )}
         style={{ height: '100vh' }}
       >
         {/* Logo & Collapse Toggle */}
@@ -109,7 +112,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className={cn('flex-1 py-2 space-y-1 overflow-hidden', isCollapsed ? 'px-2' : 'px-3')}>
+        <nav className={cn('flex-1 py-2 space-y-1', isCollapsed ? 'px-2' : 'px-3 overflow-y-auto')}>
           {/* Main Nav */}
           {mainNavItems.map((item) => {
             const Icon = item.icon
@@ -118,12 +121,10 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={isCollapsed ? "relative group" : ""}
                 onClick={(e) => {
                   if (isCollapsed) {
                     e.preventDefault()
                     setIsCollapsed(false)
-                    // Navigate after animation completes
                     setTimeout(() => {
                       window.location.href = item.href
                     }, 200)
@@ -133,7 +134,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                 <div
                   className={cn(
                     'flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200',
-                    isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5',
+                    isCollapsed ? 'justify-center p-2.5 relative group' : 'px-3 py-2.5',
                     isActive
                       ? 'bg-brand text-white shadow-sm'
                       : 'text-gray-700 hover:bg-gray-200 hover:shadow-sm'
@@ -141,14 +142,14 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                 >
                   <Icon className="h-4 w-4 flex-shrink-0" />
                   {!isCollapsed && item.label}
+                  {/* Hover tooltip for collapsed state */}
+                  {isCollapsed && (
+                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
+                      {item.label}
+                      <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
+                    </div>
+                  )}
                 </div>
-                {/* Hover tooltip for collapsed state */}
-                {isCollapsed && (
-                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
-                    {item.label}
-                    <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
-                  </div>
-                )}
               </Link>
             )
           })}
@@ -215,21 +216,21 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                 const Icon = item.icon
                 const isActive = pathname === item.href
                 return (
-                  <Link key={item.href} href={item.href} className="relative group">
+                  <Link key={item.href} href={item.href}>
                     <div
                       className={cn(
-                        'flex items-center justify-center p-2.5 rounded-lg text-sm transition-all duration-200',
+                        'flex items-center justify-center p-2.5 rounded-lg text-sm transition-all duration-200 relative group',
                         isActive
                           ? 'bg-brand text-white shadow-sm'
                           : 'text-gray-700 hover:bg-gray-200 hover:shadow-sm'
                       )}
                     >
                       <Icon className="h-4 w-4" />
-                    </div>
-                    {/* Hover tooltip */}
-                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
-                      {item.label}
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
+                      {/* Hover tooltip */}
+                      <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
+                        {item.label}
+                        <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
+                      </div>
                     </div>
                   </Link>
                 )
@@ -298,23 +299,21 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                   <Link
                     key={template.id}
                     href={template.href}
-                    className="relative group"
                   >
                     <div
                       className={cn(
-                        'flex items-center justify-center p-2.5 rounded-lg transition-all duration-200',
+                        'flex items-center justify-center p-2.5 rounded-lg transition-all duration-200 relative group',
                         isActive
                           ? 'bg-brand text-white shadow-sm'
                           : 'text-gray-700 hover:bg-gray-200 hover:shadow-sm'
                       )}
-                      title={template.label}
                     >
                       <Icon className={cn("h-4 w-4", !isActive && getTemplateIconColor(template.id))} />
-                    </div>
-                    {/* Hover tooltip */}
-                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
-                      {template.label}
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
+                      {/* Hover tooltip */}
+                      <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
+                        {template.label}
+                        <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
+                      </div>
                     </div>
                   </Link>
                 )
@@ -325,21 +324,21 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
 
         {/* Bottom Section */}
         <div className={cn('border-t border-gray-200 space-y-1', isCollapsed ? 'p-2' : 'p-3')}>
-          <Link href="/dashboard/settings" className={isCollapsed ? "relative group" : ""}>
+          <Link href="/dashboard/settings">
             <div className={cn(
               'flex items-center gap-3 rounded-lg text-sm text-gray-700 hover:bg-gray-200 hover:shadow-sm transition-all duration-200',
-              isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'
+              isCollapsed ? 'justify-center p-2.5 relative group' : 'px-3 py-2.5'
             )}>
               <Settings className="h-4 w-4" />
               {!isCollapsed && 'Settings'}
+              {/* Hover tooltip for collapsed state */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
+                  Settings
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
+                </div>
+              )}
             </div>
-            {/* Hover tooltip for collapsed state */}
-            {isCollapsed && (
-              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
-                Settings
-                <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
-              </div>
-            )}
           </Link>
           <button
             className={cn(

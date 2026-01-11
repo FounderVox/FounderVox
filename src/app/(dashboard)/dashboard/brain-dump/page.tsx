@@ -8,6 +8,8 @@ import { Brain, Users, MessageSquare, HelpCircle, AlertCircle, UserCircle, X, Ar
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useSidebar } from '@/components/dashboard/sidebar'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Toast } from '@/components/ui/toast'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +29,9 @@ export default function BrainDumpPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [draggedItem, setDraggedItem] = useState<{ itemId: string; category: CategoryColumn; index: number } | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<CategoryColumn | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [toast, setToast] = useState<{ open: boolean; message: string; description?: string; variant: 'success' | 'error' }>({ open: false, message: '', variant: 'success' })
   const supabase = createClient()
   const { setIsCollapsed } = useSidebar()
 
@@ -156,26 +161,46 @@ export default function BrainDumpPage() {
     setDraggedItem(null)
   }
 
-  const deleteItem = async (itemId: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return
+  const handleDeleteClick = (itemId: string) => {
+    setDeleteConfirmId(itemId)
+  }
 
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return
+
+    setIsDeleting(true)
     try {
       const supabase = getSupabase()
       if (!supabase) return
-      
+
       const { error } = await supabase
         .from('brain_dump')
         .delete()
-        .eq('id', itemId)
+        .eq('id', deleteConfirmId)
 
       if (error) {
         console.error('[BrainDump] Error deleting item:', error)
+        setToast({
+          open: true,
+          message: 'Failed to delete',
+          description: 'There was an error deleting the item',
+          variant: 'error'
+        })
         return
       }
 
-      setItems(items => items.filter(item => item.id !== itemId))
+      setItems(items => items.filter(item => item.id !== deleteConfirmId))
+      setToast({
+        open: true,
+        message: 'Item deleted',
+        description: 'The brain dump item has been removed',
+        variant: 'success'
+      })
     } catch (error) {
       console.error('[BrainDump] Unexpected error:', error)
+    } finally {
+      setIsDeleting(false)
+      setDeleteConfirmId(null)
     }
   }
 
@@ -354,7 +379,7 @@ export default function BrainDumpPage() {
                         <button
                           onClick={(e: React.MouseEvent) => {
                             e.stopPropagation()
-                            deleteItem(item.id)
+                            handleDeleteClick(item.id)
                           }}
                           className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all z-10"
                         >
@@ -412,6 +437,29 @@ export default function BrainDumpPage() {
           </Link>
         </motion.div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirmId !== null}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={confirmDelete}
+        title="Delete Brain Dump Item"
+        description="Are you sure you want to delete this item? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isDeleting}
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        open={toast.open}
+        onClose={() => setToast(prev => ({ ...prev, open: false }))}
+        message={toast.message}
+        description={toast.description}
+        variant={toast.variant}
+        position="bottom-right"
+      />
     </motion.div>
   )
 }

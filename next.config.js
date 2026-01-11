@@ -3,6 +3,13 @@ const nextConfig = {
   // Disable source maps in production to reduce build size and eliminate warnings
   productionBrowserSourceMaps: false,
   
+  // Ensure consistent port and prevent port conflicts
+  // This will be handled by package.json script, but we ensure clean builds
+  experimental: {
+    // Improve reliability of static asset serving
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
+  },
+  
   images: {
     remotePatterns: [
       {

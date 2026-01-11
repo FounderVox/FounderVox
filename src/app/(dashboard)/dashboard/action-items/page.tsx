@@ -162,6 +162,19 @@ export default function ActionItemsPage() {
 
   useEffect(() => {
     loadData()
+
+    // Listen for cross-page sync events from dashboard
+    const handleActionItemEvent = () => {
+      loadData()
+    }
+
+    window.addEventListener('actionItemCompleted', handleActionItemEvent as EventListener)
+    window.addEventListener('actionItemUpdated', handleActionItemEvent as EventListener)
+
+    return () => {
+      window.removeEventListener('actionItemCompleted', handleActionItemEvent as EventListener)
+      window.removeEventListener('actionItemUpdated', handleActionItemEvent as EventListener)
+    }
   }, [])
 
   const handleDragStart = (e: React.DragEvent, itemId: string, status: StatusColumn, index: number) => {

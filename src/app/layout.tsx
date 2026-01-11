@@ -46,16 +46,24 @@ export default function RootLayout({
                 });
               });
               
-              // Log resource loading errors
+              // Log resource loading errors (but ignore Next.js internal 404s in development)
               window.addEventListener('error', function(event) {
                 if (event.target && event.target.tagName) {
-                  const target = event.target as HTMLElement;
+                  const target = event.target;
                   if (target.tagName === 'SCRIPT' || target.tagName === 'LINK' || target.tagName === 'IMG') {
-                    console.error('[FounderNote:Global] Resource loading error:', {
-                      tag: target.tagName,
-                      src: (target as any).src || (target as any).href,
-                      error: event.error
-                    });
+                    const src = target.src || target.href || '';
+                    // Ignore Next.js internal chunk loading errors in development (these are often false positives)
+                    const isNextJsInternal = src.includes('/_next/static/') || src.includes('/_next/chunks/');
+                    const is404 = event.message && event.message.includes('404');
+                    
+                    // Only log if it's not a Next.js internal 404 (which are often harmless in dev)
+                    if (!(isNextJsInternal && is404)) {
+                      console.error('[FounderNote:Global] Resource loading error:', {
+                        tag: target.tagName,
+                        src: src,
+                        error: event.error
+                      });
+                    }
                   }
                 }
               }, true);
