@@ -128,7 +128,7 @@ export default function DashboardPage() {
         setActionItems(actionData || [])
       }
 
-      // Load brain dump items (for concerns count)
+      // Load brain dump items (for blockers count)
       const { data: brainData, error: brainError } = await supabase
         .from('brain_dump')
         .select('*')
@@ -191,12 +191,19 @@ export default function DashboardPage() {
     const handleTagsUpdated = () => loadNotes()
     const handleActionItemEvent = () => loadFocusItems()
 
+    // Handle search panel note click - open in detail modal
+    const handleOpenNoteDetail = (event: CustomEvent<{ noteId: string }>) => {
+      setSelectedNoteForDetail(event.detail.noteId)
+      setShowDetailModal(true)
+    }
+
     window.addEventListener('noteCreated', handleNoteEvent as EventListener)
     window.addEventListener('noteUpdated', handleNoteEvent as EventListener)
     window.addEventListener('noteDeleted', handleNoteEvent as EventListener)
     window.addEventListener('tagsUpdated', handleTagsUpdated)
     window.addEventListener('actionItemCompleted', handleActionItemEvent as EventListener)
     window.addEventListener('actionItemUpdated', handleActionItemEvent as EventListener)
+    window.addEventListener('openNoteDetail', handleOpenNoteDetail as EventListener)
 
     return () => {
       window.removeEventListener('noteCreated', handleNoteEvent as EventListener)
@@ -205,6 +212,7 @@ export default function DashboardPage() {
       window.removeEventListener('tagsUpdated', handleTagsUpdated)
       window.removeEventListener('actionItemCompleted', handleActionItemEvent as EventListener)
       window.removeEventListener('actionItemUpdated', handleActionItemEvent as EventListener)
+      window.removeEventListener('openNoteDetail', handleOpenNoteDetail as EventListener)
     }
   }, [loadNotes, loadFocusItems])
 
@@ -396,7 +404,7 @@ export default function DashboardPage() {
   const displayNotes = activeFilter === 'all' ? notes : filteredNotes
 
   // Sort and separate action items
-  const { todoItems, inProgressItems, overdueCount, concernsCount } = useMemo(() => {
+  const { todoItems, inProgressItems, overdueCount, blockersCount } = useMemo(() => {
     const priorityOrder = { high: 0, medium: 1, low: 2 }
 
     // Sort function: overdue first, then priority, then deadline
@@ -427,13 +435,13 @@ export default function DashboardPage() {
     const todos = sortItems(actionItems.filter(i => i.status === 'open'))
     const inProgress = sortItems(actionItems.filter(i => i.status === 'in_progress'))
     const overdue = actionItems.filter(i => i.status !== 'done' && isOverdue(i.deadline)).length
-    const concerns = brainDumpItems.filter(i => i.category === 'concern').length
+    const blockers = brainDumpItems.filter(i => i.category === 'blocker').length
 
     return {
       todoItems: todos,
       inProgressItems: inProgress,
       overdueCount: overdue,
-      concernsCount: concerns
+      blockersCount: blockers
     }
   }, [actionItems, brainDumpItems])
 
@@ -460,8 +468,8 @@ export default function DashboardPage() {
   if (inProgressItems.length > 0) {
     summaryParts.push(`${inProgressItems.length} in progress`)
   }
-  if (concernsCount > 0) {
-    summaryParts.push(`${concernsCount} concern${concernsCount > 1 ? 's' : ''} flagged`)
+  if (blockersCount > 0) {
+    summaryParts.push(`${blockersCount} blocker${blockersCount > 1 ? 's' : ''} flagged`)
   }
 
   const hasFocusItems = todoItems.length > 0 || inProgressItems.length > 0
@@ -502,7 +510,7 @@ export default function DashboardPage() {
                 {index > 0 && <span className="text-gray-300 mx-1.5">·</span>}
                 <span className={cn(
                   part.includes('overdue') ? 'text-red-600 font-medium' :
-                  part.includes('concern') ? 'text-amber-600' :
+                  part.includes('blocker') ? 'text-amber-600' :
                   'text-gray-600'
                 )}>
                   {part}

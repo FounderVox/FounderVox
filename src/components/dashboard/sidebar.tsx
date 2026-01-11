@@ -51,8 +51,9 @@ const noteCategories = [
 const templates = [
   { label: 'Action Items', icon: CheckSquare, id: 'action_items', href: '/dashboard/action-items' },
   { label: 'Investor Update', icon: Mail, id: 'investor_update', href: '/dashboard/investor-update' },
-  { label: 'Progress Log', icon: TrendingUp, id: 'progress_log', href: '/dashboard/progress-log' },
-  { label: 'Product Ideas', icon: Lightbulb, id: 'product_ideas', href: '/dashboard/product-ideas' },
+  // Hidden for now - uncomment to restore
+  // { label: 'Progress Log', icon: TrendingUp, id: 'progress_log', href: '/dashboard/progress-log' },
+  // { label: 'Product Ideas', icon: Lightbulb, id: 'product_ideas', href: '/dashboard/product-ideas' },
   { label: 'Brain Dump', icon: Zap, id: 'brain_dump', href: '/dashboard/brain-dump' },
 ]
 

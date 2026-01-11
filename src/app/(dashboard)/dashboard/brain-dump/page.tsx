@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
-import { Brain, Users, MessageSquare, HelpCircle, AlertCircle, UserCircle, X, ArrowRight } from 'lucide-react'
+import { Brain, Users, HelpCircle, AlertTriangle, GitBranch, ArrowRightCircle, X, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useSidebar } from '@/components/dashboard/sidebar'
@@ -16,12 +16,12 @@ export const dynamic = 'force-dynamic'
 interface BrainDumpItem {
   id: string
   content: string
-  category: 'meeting' | 'thought' | 'question' | 'concern' | 'personal'
+  category: 'meeting' | 'blocker' | 'decision' | 'question' | 'followup'
   participants: string[] | null
   created_at: string
 }
 
-type CategoryColumn = 'meeting' | 'thought' | 'question' | 'concern' | 'personal'
+type CategoryColumn = 'meeting' | 'blocker' | 'decision' | 'question' | 'followup'
 
 export default function BrainDumpPage() {
   const [profile, setProfile] = useState<any>(null)
@@ -210,7 +210,7 @@ export default function BrainDumpPage() {
     switch (category) {
       case 'meeting':
         return {
-          label: 'Meeting',
+          label: 'Meetings',
           icon: Users,
           bg: 'bg-white',
           border: 'border-gray-200',
@@ -221,10 +221,23 @@ export default function BrainDumpPage() {
           itemBorder: 'border-gray-200',
           accentBorder: 'border-l-blue-500'
         }
-      case 'thought':
+      case 'blocker':
         return {
-          label: 'Thought',
-          icon: MessageSquare,
+          label: 'Blockers',
+          icon: AlertTriangle,
+          bg: 'bg-white',
+          border: 'border-gray-200',
+          headerBg: 'bg-gray-50',
+          text: 'text-gray-900',
+          iconColor: 'text-red-600',
+          itemBg: 'bg-white',
+          itemBorder: 'border-gray-200',
+          accentBorder: 'border-l-red-500'
+        }
+      case 'decision':
+        return {
+          label: 'Decisions',
+          icon: GitBranch,
           bg: 'bg-white',
           border: 'border-gray-200',
           headerBg: 'bg-gray-50',
@@ -236,7 +249,7 @@ export default function BrainDumpPage() {
         }
       case 'question':
         return {
-          label: 'Question',
+          label: 'Questions',
           icon: HelpCircle,
           bg: 'bg-white',
           border: 'border-gray-200',
@@ -247,23 +260,10 @@ export default function BrainDumpPage() {
           itemBorder: 'border-gray-200',
           accentBorder: 'border-l-amber-500'
         }
-      case 'concern':
+      case 'followup':
         return {
-          label: 'Concern',
-          icon: AlertCircle,
-          bg: 'bg-white',
-          border: 'border-gray-200',
-          headerBg: 'bg-gray-50',
-          text: 'text-gray-900',
-          iconColor: 'text-red-600',
-          itemBg: 'bg-white',
-          itemBorder: 'border-gray-200',
-          accentBorder: 'border-l-red-500'
-        }
-      case 'personal':
-        return {
-          label: 'People',
-          icon: UserCircle,
+          label: 'Follow-ups',
+          icon: ArrowRightCircle,
           bg: 'bg-white',
           border: 'border-gray-200',
           headerBg: 'bg-gray-50',
@@ -278,10 +278,10 @@ export default function BrainDumpPage() {
 
   const itemsByCategory = {
     meeting: items.filter(i => i.category === 'meeting'),
-    thought: items.filter(i => i.category === 'thought'),
+    blocker: items.filter(i => i.category === 'blocker'),
+    decision: items.filter(i => i.category === 'decision'),
     question: items.filter(i => i.category === 'question'),
-    concern: items.filter(i => i.category === 'concern'),
-    personal: items.filter(i => i.category === 'personal')
+    followup: items.filter(i => i.category === 'followup')
   }
 
   if (isLoading) {
@@ -324,7 +324,7 @@ export default function BrainDumpPage() {
       {/* Column Layout */}
       {items.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
-          {(['meeting', 'thought', 'question', 'concern', 'personal'] as CategoryColumn[]).map((category) => {
+          {(['meeting', 'blocker', 'decision', 'question', 'followup'] as CategoryColumn[]).map((category) => {
             const config = getCategoryConfig(category)
             const Icon = config.icon
             const categoryItems = itemsByCategory[category]

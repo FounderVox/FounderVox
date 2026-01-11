@@ -15,7 +15,7 @@ export interface ActionItem {
 export interface BrainDumpItem {
   id: string
   content: string
-  category: 'meeting' | 'thought' | 'question' | 'concern' | 'personal'
+  category: 'meeting' | 'blocker' | 'decision' | 'question' | 'followup'
   participants: string[] | null
   created_at: string
   recording_id: string

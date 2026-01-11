@@ -338,16 +338,17 @@ Return format:
 }
 
 export async function extractBrainDump(transcript: string, recordingId: string, userId: string): Promise<void> {
-  const prompt = `Analyze this transcript and extract all unstructured notes, thoughts, and discussions.
+  const prompt = `Analyze this transcript and extract all relevant notes, discussions, and key information.
 
-Categorize each item as:
-1. MEETING: Discussion with others (detect participant names if mentioned)
-2. THOUGHT: Random ideas, observations, reflections
-3. QUESTION: Questions that came up, things to research
-4. CONCERN: Worries, risks, things to watch out for
-5. PERSONAL: Personal notes, reminders, non-work items
+Categorize each item into ONE of these functional categories:
+1. MEETING: Discussions with others, conversations (include participant names if mentioned)
+2. BLOCKER: Obstacles, risks, issues blocking progress, concerns that need addressing
+3. DECISION: Decisions that were made or need to be made, choices and their rationale
+4. QUESTION: Questions to research, ask others, or investigate further
+5. FOLLOWUP: Action items, things to follow up on, reminders, next steps
 
-For meetings, try to identify participant names.
+For meetings, identify participant names when possible.
+Be specific and actionable in your extractions.
 
 Transcript:
 ${transcript}
@@ -356,13 +357,28 @@ Return format:
 {
   "items": [
     {
-      "content": "Discussed Q4 roadmap with Sarah and Mike",
+      "content": "Discussed Q4 roadmap with Sarah and Mike - agreed on 3 main priorities",
       "category": "meeting",
       "participants": ["Sarah", "Mike"]
     },
     {
-      "content": "Need to research competitor pricing models",
+      "content": "Decided to use AWS instead of GCP for the new infrastructure",
+      "category": "decision",
+      "participants": []
+    },
+    {
+      "content": "API rate limits are blocking the integration work",
+      "category": "blocker",
+      "participants": []
+    },
+    {
+      "content": "Need to research competitor pricing models before next meeting",
       "category": "question",
+      "participants": []
+    },
+    {
+      "content": "Follow up with legal team about the contract terms",
+      "category": "followup",
       "participants": []
     }
   ]

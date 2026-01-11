@@ -195,6 +195,19 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
   const [showManualNoteDialog, setShowManualNoteDialog] = useState(false)
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<{ useCase: string; template: string } | null>(null)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+
+  // Listen for search state changes
+  useEffect(() => {
+    const handleSearchStateChanged = (event: CustomEvent<{ isOpen: boolean }>) => {
+      setIsSearchOpen(event.detail.isOpen)
+    }
+
+    window.addEventListener('searchStateChanged', handleSearchStateChanged as EventListener)
+    return () => {
+      window.removeEventListener('searchStateChanged', handleSearchStateChanged as EventListener)
+    }
+  }, [])
 
   const handleRecord = () => {
     setShowRecordingModal(true)
@@ -210,6 +223,33 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
 
   const handleTemplateSelect = (useCase: UseCase, template: string) => {
     setSelectedTemplate({ useCase: useCase.title, template })
+  }
+
+  // Don't render buttons when search is open
+  if (isSearchOpen) {
+    return (
+      <>
+        {/* Dialogs still need to be mounted */}
+        <RecordingModal
+          isOpen={showRecordingModal}
+          onClose={() => setShowRecordingModal(false)}
+          onStop={handleRecordingStop}
+        />
+        <ProcessingModal
+          isOpen={true}
+          onComplete={handleProcessingComplete}
+        />
+        <ManualNoteDialog
+          open={showManualNoteDialog}
+          onOpenChange={setShowManualNoteDialog}
+        />
+        <TemplateSelectorDialog
+          open={showTemplateDialog}
+          onOpenChange={setShowTemplateDialog}
+          onSelectTemplate={handleTemplateSelect}
+        />
+      </>
+    )
   }
 
   return (

@@ -1,17 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Search, ChevronDown, LogOut, Settings, BarChart3, Plug, HelpCircle, Sparkles, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { motion, AnimatePresence } from 'framer-motion'
-
-interface FilterPill {
-  id: string
-  label: string
-  count: number
-}
+import { Search, ChevronDown, LogOut, Settings, Sparkles } from 'lucide-react'
+import { SearchPanel } from './search-panel'
 
 interface FilterBarProps {
   avatarUrl?: string | null
@@ -20,192 +13,11 @@ interface FilterBarProps {
   recordingsCount?: number
 }
 
-interface SearchResult {
-  id: string
-  title: string
-  formatted_content: string | null
-  raw_transcript: string | null
-  created_at: string
-  template_label: string | null
-}
-
 export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }: FilterBarProps) {
-  const [activeFilter, setActiveFilter] = useState('all')
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [filterPills, setFilterPills] = useState<FilterPill[]>([])
-  const searchInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const supabase = createClient()
-
-  // Load note counts and tags from Supabase
-  useEffect(() => {
-    const loadFilterPills = async () => {
-      try {
-        console.log('[FounderNote:FilterBar] Loading filter pills...')
-        
-        // Check if supabase and auth are available
-        if (!supabase || !supabase.auth) {
-          console.error('[FounderNote:FilterBar] Supabase client or auth not available')
-          return
-        }
-        
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
-        if (userError) {
-          console.error('[FounderNote:FilterBar] Error getting user:', userError)
-          return
-        }
-        
-        if (!user) {
-          console.log('[FounderNote:FilterBar] No user found, skipping filter pills')
-          return
-        }
-
-        // First, try to get notes with tags (if column exists)
-        let allNotes: any[] = []
-        let hasTagsColumn = true
-        
-        const { data: notesWithTags, error: tagsError } = await supabase
-          .from('notes')
-          .select('id, template_type, tags')
-          .eq('user_id', user.id)
-
-        if (tagsError) {
-          // Check if error is because tags column doesn't exist
-          if (tagsError.code === '42703' && tagsError.message?.includes('tags')) {
-            console.log('[FounderNote:FilterBar] Tags column does not exist, querying without tags')
-            hasTagsColumn = false
-            
-            // Retry query without tags column
-            const { data: notesWithoutTags, error: noTagsError } = await supabase
-              .from('notes')
-              .select('id, template_type')
-              .eq('user_id', user.id)
-            
-            if (noTagsError) {
-              // Handle specific error codes
-              if (noTagsError.code === 'PGRST116') {
-                // No rows found - that's okay, just use empty array
-                console.log('[FounderNote:FilterBar] No notes found')
-                setFilterPills([{ id: 'all', label: 'All', count: 0 }])
-                return
-              }
-              console.error('[FounderNote:FilterBar] Error loading notes:', noTagsError)
-              setFilterPills([{ id: 'all', label: 'All', count: 0 }])
-              return
-            }
-            
-            allNotes = notesWithoutTags || []
-          } else if (tagsError.code === 'PGRST116') {
-            // No rows found - that's okay, just use empty array
-            console.log('[FounderNote:FilterBar] No notes found')
-            setFilterPills([{ id: 'all', label: 'All', count: 0 }])
-            return
-          } else {
-            console.error('[FounderNote:FilterBar] Error loading notes:', tagsError)
-            setFilterPills([{ id: 'all', label: 'All', count: 0 }])
-            return
-          }
-        } else {
-          allNotes = notesWithTags || []
-        }
-
-        // Count notes by template type
-        const counts: Record<string, number> = {}
-        allNotes.forEach((note: any) => {
-          const type = note.template_type || 'none'
-          counts[type] = (counts[type] || 0) + 1
-        })
-
-        // Extract unique tags and count them (only if tags column exists)
-        const tagCounts: Record<string, number> = {}
-        if (hasTagsColumn) {
-          allNotes.forEach((note: any) => {
-            const tags = note.tags
-            if (tags && Array.isArray(tags)) {
-              tags.forEach((tag: string) => {
-                if (tag && typeof tag === 'string' && tag.trim()) {
-                  tagCounts[tag] = (tagCounts[tag] || 0) + 1
-                }
-              })
-            }
-          })
-        }
-
-        // Build filter pills
-        const pills: FilterPill[] = [
-          { id: 'all', label: 'All', count: allNotes.length }
-        ]
-
-        // Add template-specific filters
-        const templateLabels: Record<string, string> = {
-          'investor': 'Investor',
-          'ideas': 'Ideas',
-          'meeting': 'Meeting',
-          'interview': 'Interview',
-          'pitch': 'Pitch',
-          'braindump': 'Brain Dump',
-          'email': 'Email',
-          'standup': 'Standup',
-          'recording': 'Recording'
-        }
-
-        Object.entries(counts).forEach(([type, count]) => {
-          if (type !== 'none' && count > 0) {
-            pills.push({
-              id: type,
-              label: templateLabels[type] || type,
-              count
-            })
-          }
-        })
-
-        // Add tag pills (sorted by count descending)
-        const tagPills: FilterPill[] = Object.entries(tagCounts)
-          .map(([tag, count]) => ({
-            id: `tag:${tag}`,
-            label: tag,
-            count
-          }))
-          .sort((a, b) => b.count - a.count)
-
-        pills.push(...tagPills)
-
-        console.log('[FounderNote:FilterBar] Filter pills loaded:', {
-          total: pills.length,
-          templates: Object.keys(counts).length,
-          tags: Object.keys(tagCounts).length
-        })
-
-        setFilterPills(pills)
-      } catch (error) {
-        console.error('[FounderNote:FilterBar] Error loading filter pills:', error)
-      }
-    }
-
-    loadFilterPills()
-
-    // Listen for note creation and tag update events to refresh counts
-    const handleNoteCreated = () => {
-      console.log('[FounderNote:FilterBar] Note created event, reloading filter pills...')
-      loadFilterPills()
-    }
-    const handleTagsUpdated = () => {
-      console.log('[FounderNote:FilterBar] Tags updated event, reloading filter pills...')
-      loadFilterPills()
-    }
-
-    window.addEventListener('noteCreated', handleNoteCreated)
-    window.addEventListener('tagsUpdated', handleTagsUpdated)
-
-    return () => {
-      window.removeEventListener('noteCreated', handleNoteCreated)
-      window.removeEventListener('tagsUpdated', handleTagsUpdated)
-    }
-  }, [supabase])
 
   const initials = displayName
     ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -223,199 +35,26 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
 
   const handleSearchClick = () => {
     setIsSearchOpen(true)
-    setTimeout(() => {
-      searchInputRef.current?.focus()
-    }, 100)
-  }
-
-  const handleSearchSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!searchQuery.trim()) return
-
-    setIsSearching(true)
-    console.log('[FounderNote:Dashboard:FilterBar] Searching for:', searchQuery)
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // Search across title, formatted_content, and raw_transcript
-      const { data, error } = await supabase
-        .from('notes')
-        .select('id, title, formatted_content, raw_transcript, created_at, template_label')
-        .eq('user_id', user.id)
-        .or(`title.ilike.%${searchQuery}%,formatted_content.ilike.%${searchQuery}%,raw_transcript.ilike.%${searchQuery}%`)
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      if (error) {
-        console.error('[FounderNote:Dashboard:FilterBar] Search error:', error)
-        setSearchResults([])
-      } else {
-        setSearchResults(data || [])
-      }
-    } catch (error) {
-      console.error('[FounderNote:Dashboard:FilterBar] Unexpected search error:', error)
-      setSearchResults([])
-    } finally {
-      setIsSearching(false)
-    }
+    // Dispatch event to hide recording buttons
+    window.dispatchEvent(new CustomEvent('searchStateChanged', { detail: { isOpen: true } }))
   }
 
   const handleCloseSearch = () => {
     setIsSearchOpen(false)
-    setSearchQuery('')
-    setSearchResults([])
+    // Dispatch event to show recording buttons
+    window.dispatchEvent(new CustomEvent('searchStateChanged', { detail: { isOpen: false } }))
   }
-
-  useEffect(() => {
-    if (isSearchOpen && searchInputRef.current) {
-      searchInputRef.current.focus()
-    }
-  }, [isSearchOpen])
 
   return (
     <>
-      {/* Search Overlay - expands from right */}
-      <AnimatePresence>
-        {isSearchOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[90]"
-              onClick={handleCloseSearch}
-            />
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-full max-w-2xl bg-white/95 backdrop-blur-xl border-l border-gray-200/50 shadow-2xl z-[91] p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <form onSubmit={handleSearchSubmit} className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={handleCloseSearch}
-                  className="p-2 rounded-lg text-black hover:bg-gray-100/80 hover:shadow-sm transition-all duration-200"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-                <div className="flex-1 relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search notes by transcript..."
-                    className="w-full pl-12 pr-4 py-3 rounded-lg bg-white/60 border border-gray-300 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-500"
-                    autoFocus
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-brand text-white rounded-lg hover:opacity-90 transition-colors"
-                >
-                  Search
-                </button>
-              </form>
-              
-              {/* Search Results Area */}
-              <div className="mt-6 overflow-y-auto max-h-[calc(100vh-200px)]">
-                {isSearching ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent" />
-                  </div>
-                ) : searchResults.length > 0 ? (
-                  <div className="space-y-3">
-                    <div className="text-sm text-gray-600 mb-4">
-                      Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &quot;{searchQuery}&quot;
-                    </div>
-                    {searchResults.map((result) => (
-                      <div
-                        key={result.id}
-                        onClick={() => {
-                          console.log('[FounderNote:FilterBar] Navigate to note:', result.id)
-                          // TODO: Navigate to note detail page when implemented
-                          handleCloseSearch()
-                        }}
-                        className="p-4 bg-white shadow-sm border border-gray-200 rounded-xl hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer group"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold text-black truncate">
-                              {result.title || 'Untitled Note'}
-                            </h3>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(result.created_at).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                          </div>
-                          {result.template_label && (
-                            <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full ml-2 flex-shrink-0">
-                              {result.template_label}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 line-clamp-2">
-                          {result.formatted_content?.substring(0, 150) || result.raw_transcript?.substring(0, 150) || 'No content'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : searchQuery.trim() ? (
-                  <div className="text-center py-12">
-                    <div className="text-gray-600 mb-2">No results found for &quot;{searchQuery}&quot;</div>
-                    <div className="text-sm text-gray-500">Try searching with different keywords</div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 text-center py-12">
-                    Start typing to search through your notes
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Search Panel */}
+      <SearchPanel open={isSearchOpen} onClose={handleCloseSearch} />
 
-      {/* Filter Bar */}
+      {/* Top Bar - Search and Profile */}
       <div className="mb-6 px-1">
-        <div className="flex items-center justify-between">
-          {/* Filter Pills */}
-          <div className="flex items-center gap-2 flex-1">
-            {filterPills.map((pill) => (
-              <button
-                key={pill.id}
-                onClick={() => {
-                  setActiveFilter(pill.id)
-                  // Dispatch event to notify other components
-                  window.dispatchEvent(new CustomEvent('filterChanged', { 
-                    detail: { filter: pill.id } 
-                  }))
-                }}
-                className={cn(
-                  'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
-                  activeFilter === pill.id
-                    ? 'bg-brand text-white shadow-md'
-                    : 'bg-white border border-gray-300 text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400'
-                )}
-              >
-                {pill.label} ({pill.count})
-              </button>
-            ))}
-          </div>
-
+        <div className="flex items-center justify-end">
           {/* Right Side Icons */}
-          <div className="flex items-center gap-3 ml-4">
+          <div className="flex items-center gap-3">
             {/* Search Button */}
             <button
               onClick={handleSearchClick}
@@ -423,7 +62,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
             >
               <Search className="h-5 w-5" />
             </button>
-            
+
             {/* Profile Dropdown */}
             <div className="relative">
               <button
@@ -439,7 +78,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                     />
                   </div>
                 ) : (
-                  <div 
+                  <div
                     className="h-8 w-8 rounded-full bg-black text-white flex items-center justify-center text-sm font-medium transition-colors group-hover:bg-[#BD6750]"
                   >
                     {initials}
@@ -509,37 +148,6 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                         <Settings className="h-4 w-4" />
                         Settings
                       </button>
-                      {/* Temporarily disabled - routes not yet implemented */}
-                      {/* <button
-                        onClick={() => {
-                          setIsProfileOpen(false)
-                          router.push('/dashboard/analytics')
-                        }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
-                      >
-                        <BarChart3 className="h-4 w-4" />
-                        Analytics
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsProfileOpen(false)
-                          router.push('/dashboard/integrations')
-                        }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
-                      >
-                        <Plug className="h-4 w-4" />
-                        Integrations
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsProfileOpen(false)
-                          router.push('/dashboard/help')
-                        }}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
-                      >
-                        <HelpCircle className="h-4 w-4" />
-                        Help
-                      </button> */}
                     </div>
 
                     {/* Sign Out */}

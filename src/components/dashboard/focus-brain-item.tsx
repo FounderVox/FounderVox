@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Users, MessageSquare, HelpCircle, AlertCircle, UserCircle } from 'lucide-react'
+import { Users, HelpCircle, AlertTriangle, GitBranch, ArrowRightCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BrainDumpItem } from '@/types/dashboard'
 import Link from 'next/link'
@@ -18,11 +18,17 @@ export function FocusBrainItem({ item }: FocusBrainItemProps) {
       border: 'border-l-blue-500',
       label: 'Meeting'
     },
-    thought: {
-      icon: MessageSquare,
+    blocker: {
+      icon: AlertTriangle,
+      iconColor: 'text-red-600',
+      border: 'border-l-red-500',
+      label: 'Blocker'
+    },
+    decision: {
+      icon: GitBranch,
       iconColor: 'text-purple-600',
       border: 'border-l-purple-500',
-      label: 'Thought'
+      label: 'Decision'
     },
     question: {
       icon: HelpCircle,
@@ -30,17 +36,11 @@ export function FocusBrainItem({ item }: FocusBrainItemProps) {
       border: 'border-l-amber-500',
       label: 'Question'
     },
-    concern: {
-      icon: AlertCircle,
-      iconColor: 'text-red-600',
-      border: 'border-l-red-500',
-      label: 'Concern'
-    },
-    personal: {
-      icon: UserCircle,
+    followup: {
+      icon: ArrowRightCircle,
       iconColor: 'text-emerald-600',
       border: 'border-l-emerald-500',
-      label: 'People'
+      label: 'Follow-up'
     }
   }
 
