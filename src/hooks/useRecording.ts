@@ -359,7 +359,8 @@ export function useRecording() {
 
       const uploadResponse = await fetch('/api/recordings/upload', {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'include' // Ensure cookies are sent
       })
 
       console.log('[FounderNote:Recording] Upload response status:', uploadResponse.status)
@@ -394,7 +395,8 @@ export function useRecording() {
       const processResponse = await fetch('/api/recordings/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recordingId })
+        body: JSON.stringify({ recordingId }),
+        credentials: 'include' // Ensure cookies are sent
       })
 
       console.log('[FounderNote:Recording] Process response status:', processResponse.status)

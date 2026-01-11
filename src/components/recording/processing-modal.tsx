@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRecordingContext } from '@/contexts/recording-context'
+import { X, CheckCircle2 } from 'lucide-react'
 
 interface ProcessingModalProps {
   isOpen: boolean
@@ -10,30 +11,24 @@ interface ProcessingModalProps {
 }
 
 export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
-  // Always call hooks unconditionally
   const context = useRecordingContext()
 
-  // Extract values from context (defaults if context is null)
   const isProcessing = context?.isProcessing ?? false
   const isComplete = context?.isComplete ?? false
   const error = context?.error ?? null
 
-  // Auto-close when complete
   useEffect(() => {
     if (isComplete) {
       console.log('[FounderNote:ProcessingModal] Processing complete, closing...')
       const timer = setTimeout(() => {
         onComplete()
-        // Dispatch event to refresh notes list (no reload needed)
         window.dispatchEvent(new CustomEvent('noteCreated'))
-      }, 1500) // Show success briefly
+      }, 2000)
 
       return () => clearTimeout(timer)
     }
   }, [isComplete, onComplete])
 
-  // Always show when processing or complete, regardless of isOpen prop
-  // This allows the modal to appear even if the recording modal closed
   if (!isProcessing && !isComplete && !error) return null
 
   return (
@@ -43,29 +38,28 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', duration: 0.4 }}
-            className="relative w-full max-w-md bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-3xl shadow-2xl p-8 text-center"
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: 'spring', duration: 0.3 }}
+            className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 text-center"
           >
             {isProcessing && (
               <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-                  className="inline-flex items-center justify-center w-24 h-24 mx-auto mb-6"
-                >
-                  <div className="absolute w-full h-full rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 opacity-20 blur-2xl" />
-                  <div className="relative w-20 h-20 border-4 border-white/20 border-t-white rounded-full" />
-                </motion.div>
-                <h3 className="text-2xl font-bold text-white mb-2">
+                <div className="inline-flex items-center justify-center w-20 h-20 mx-auto mb-6">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+                    className="w-16 h-16 border-4 border-gray-200 border-t-black rounded-full"
+                  />
+                </div>
+                <h3 className="text-lg font-semibold text-black mb-2">
                   Processing your recording
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-gray-600 text-sm">
                   Transcribing audio and creating your note...
                 </p>
               </>
@@ -77,26 +71,14 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', duration: 0.5 }}
-                  className="inline-flex items-center justify-center h-20 w-20 bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-full mb-4"
+                  className="inline-flex items-center justify-center h-16 w-16 bg-green-50 border-2 border-green-200 rounded-full mb-4"
                 >
-                  <svg
-                    className="h-10 w-10 text-green-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                  <CheckCircle2 className="h-8 w-8 text-green-600" />
                 </motion.div>
-                <h3 className="text-2xl font-bold text-white mb-2">
-                  ✅ Note created successfully!
+                <h3 className="text-lg font-semibold text-black mb-2">
+                  Note created successfully!
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-gray-600 text-sm">
                   Your recording has been transcribed and saved.
                 </p>
               </>
@@ -104,30 +86,18 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
 
             {error && (
               <>
-                <div className="inline-flex items-center justify-center h-20 w-20 bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-full mb-4">
-                  <svg
-                    className="h-10 w-10 text-red-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                <div className="inline-flex items-center justify-center h-16 w-16 bg-red-50 border-2 border-red-200 rounded-full mb-4">
+                  <X className="h-8 w-8 text-red-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">
+                <h3 className="text-lg font-semibold text-black mb-2">
                   Processing Error
                 </h3>
-                <p className="text-gray-400 mb-4">
+                <p className="text-gray-600 text-sm mb-6">
                   {error}
                 </p>
                 <button
                   onClick={onComplete}
-                  className="px-6 py-2 bg-white text-black rounded-full hover:bg-gray-100 transition-colors"
+                  className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm font-medium"
                 >
                   Close
                 </button>
@@ -139,4 +109,3 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
     </AnimatePresence>
   )
 }
-

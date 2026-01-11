@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Pause, Square, Trash2 } from 'lucide-react'
+import { X, Pause, Square, Trash2, Mic, Circle } from 'lucide-react'
 import { useRecordingContext } from '@/contexts/recording-context'
 import { Button } from '@/components/ui/button'
-import { VoicePoweredOrb } from '@/components/ui/voice-powered-orb'
+import { cn } from '@/lib/utils'
 
 interface RecordingModalProps {
   isOpen: boolean
@@ -13,13 +13,10 @@ interface RecordingModalProps {
 }
 
 export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps & { onStop?: () => void }) {
-  // Always call hooks unconditionally
   const recordingContext = useRecordingContext()
-
-  // Track if we've started recording for this modal session to prevent multiple calls
   const hasStartedRef = useRef(false)
+  const [waveform, setWaveform] = useState<number[]>([])
 
-  // Extract values from context (with defaults if null)
   const isRecording = recordingContext?.isRecording ?? false
   const isPaused = recordingContext?.isPaused ?? false
   const isProcessing = recordingContext?.isProcessing ?? false
@@ -33,123 +30,80 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps 
   const cancelRecording = recordingContext?.cancelRecording
   const uploadAndProcess = recordingContext?.uploadAndProcess
   const getAnalyserData = recordingContext?.getAnalyserData
-  const reset = recordingContext?.reset
 
-  // Start recording when modal opens
+  // Simple waveform visualization
   useEffect(() => {
-    if (!recordingContext || !startRecording) return
-
-    // Only start if modal just opened and we haven't started yet
-    if (isOpen && !hasStartedRef.current) {
-      hasStartedRef.current = true
-      console.log('[FounderNote:RecordingModal] Modal opened, starting recording...')
-      startRecording()
+    if (!isRecording || isPaused) {
+      setWaveform([])
+      return
     }
 
-    // Reset the flag when modal closes
+    const interval = setInterval(() => {
+      const analyserData = getAnalyserData?.()
+      if (analyserData?.analyser && analyserData?.dataArray) {
+        analyserData.analyser.getByteFrequencyData(analyserData.dataArray as Uint8Array<ArrayBuffer>)
+        const data = Array.from(analyserData.dataArray.slice(0, 20))
+        const normalized = data.map(val => Math.min(val / 255, 1))
+        setWaveform(normalized)
+      } else {
+        // Fallback: random waveform for visual feedback
+        setWaveform(Array(20).fill(0).map(() => Math.random() * 0.5 + 0.3))
+      }
+    }, 100)
+
+    return () => clearInterval(interval)
+  }, [isRecording, isPaused, getAnalyserData])
+
+  useEffect(() => {
+    if (!recordingContext || !startRecording) return
+    if (isOpen && !hasStartedRef.current) {
+      hasStartedRef.current = true
+      startRecording()
+    }
     if (!isOpen) {
       hasStartedRef.current = false
     }
   }, [isOpen, recordingContext, startRecording])
 
-  // Reset when modal closes
   useEffect(() => {
-    if (!recordingContext || !reset) return
+    if (!recordingContext || !recordingContext.reset) return
     if (!isOpen && !isProcessing && !isComplete) {
-      reset()
+      recordingContext.reset()
     }
-  }, [isOpen, isProcessing, isComplete, reset, recordingContext])
+  }, [isOpen, isProcessing, isComplete, recordingContext])
 
-  // Handle modal close
   const handleClose = () => {
     if (isRecording) {
       cancelRecording?.()
     } else {
-      reset?.()
+      recordingContext?.reset?.()
     }
     onClose()
   }
 
-  // Handle stop recording - close modal immediately and process in background
   const handleStop = async () => {
     if (!stopRecording || !uploadAndProcess) return
 
-    console.log('[FounderNote:RecordingModal] Stopping recording...')
-
-    // Stop recording and get blob FIRST, before closing modal
     const blob = await stopRecording()
-
-    if (!blob) {
-      console.error('[FounderNote:RecordingModal] No blob received from stopRecording')
-      // Still close modal and show error via processing modal
+    if (!blob || blob.size === 0) {
       onClose()
       onStop?.()
-      setTimeout(() => {
-        uploadAndProcess() // This will show "No audio to upload" error
-      }, 200)
+      setTimeout(() => uploadAndProcess(blob || undefined), 200)
       return
     }
 
-    if (blob.size === 0) {
-      console.error('[FounderNote:RecordingModal] Blob is empty', {
-        size: blob.size,
-        type: blob.type
-      })
-      // Still close modal and show error via processing modal
-      onClose()
-      onStop?.()
-      setTimeout(() => {
-        uploadAndProcess(blob) // This will show error
-      }, 200)
-      return
-    }
-
-    console.log('[FounderNote:RecordingModal] Blob ready, starting upload...', {
-      size: blob.size,
-      type: blob.type
-    })
-
-    // Close the recording modal and show processing modal
     onClose()
-    onStop?.() // Notify parent to show processing modal
-
-    // Start processing with the blob directly (don't wait for state update)
-    setTimeout(() => {
-      uploadAndProcess(blob)
-    }, 300) // Small delay to ensure modal transition and state update
+    onStop?.()
+    setTimeout(() => uploadAndProcess(blob), 300)
   }
 
-  // Format duration as MM:SS
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  // Get analyser data for the orb
-  const analyserData = getAnalyserData?.() ?? { analyser: null, dataArray: null }
-  const { analyser, dataArray } = analyserData
-
-  // Debug logging
-  useEffect(() => {
-    if (isOpen) {
-      console.log('[FounderNote:RecordingModal] Modal state:', {
-        isRecording,
-        isPaused,
-        isProcessing,
-        isComplete,
-        hasAnalyser: !!analyser,
-        hasDataArray: !!dataArray,
-        error
-      })
-    }
-  }, [isOpen, isRecording, isPaused, isProcessing, isComplete, analyser, dataArray, error])
-
-  // Return null if context is not available (after all hooks are called)
-  if (!recordingContext) {
-    console.error('[FounderNote:RecordingModal] RecordingContext is null')
-    return null
-  }
+  if (!recordingContext) return null
 
   return (
     <AnimatePresence>
@@ -158,128 +112,118 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={handleClose}
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', duration: 0.4 }}
-            className="relative w-full max-w-4xl bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-3xl shadow-2xl p-0 overflow-hidden"
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: 'spring', duration: 0.3 }}
+            className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close button */}
-            <button
-              onClick={handleClose}
-              className="absolute top-6 right-6 z-10 p-2 rounded-full hover:bg-white/10 transition-colors backdrop-blur-sm"
-            >
-              <X className="h-5 w-5 text-white" />
-            </button>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-black">Record Voice Note</h2>
+              <button
+                onClick={handleClose}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-black transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-            {/* Loading State - Before recording starts */}
+            {/* Loading State */}
             {!isRecording && !isProcessing && !isComplete && !error && (
-              <div className="space-y-8 p-12 text-center">
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                  className="inline-flex items-center justify-center w-32 h-32 mx-auto"
-                >
-                  <div className="absolute w-full h-full rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 opacity-20 blur-2xl" />
-                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 flex items-center justify-center">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-                      className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full"
-                    />
-                  </div>
-                </motion.div>
+              <div className="space-y-6 p-12 text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 mx-auto">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+                    className="w-16 h-16 border-4 border-gray-200 border-t-black rounded-full"
+                  />
+                </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    Preparing to record
-                  </h3>
-                  <p className="text-gray-400">
-                    Requesting microphone access...
-                  </p>
+                  <h3 className="text-lg font-semibold text-black mb-2">Preparing to record</h3>
+                  <p className="text-gray-600 text-sm">Requesting microphone access...</p>
                 </div>
               </div>
             )}
 
             {/* Recording State */}
             {isRecording && (
-              <div className="relative min-h-[600px] flex flex-col">
-                {/* Voice Powered Orb Visualization - Main Character */}
-                <div className="relative flex-1 min-h-[500px] w-full overflow-hidden">
-                  <VoicePoweredOrb
-                    enableVoiceControl={isRecording && !isPaused}
-                    analyser={analyser}
-                    dataArray={dataArray}
-                    className="w-full h-full"
-                    hue={120}
-                    voiceSensitivity={2.0}
-                    maxRotationSpeed={1.5}
-                    maxHoverIntensity={1.0}
-                  />
-                  
-                  {/* Overlay with timer and status */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-between p-8 pointer-events-none">
-                    {/* Top: Status badge */}
-                    <motion.div
-                      animate={{ scale: [1, 1.05, 1] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-md border border-white/20 rounded-full"
-                    >
-                      <div className={`h-2 w-2 rounded-full ${isPaused ? 'bg-yellow-400' : 'bg-red-500 animate-pulse'}`} />
-                      <span className="text-sm font-medium text-white">
-                        {isPaused ? 'Paused' : 'Recording'}
-                      </span>
-                    </motion.div>
-
-                    {/* Center: Timer */}
-                    <div className="text-center">
-                      <h2 className="text-7xl font-bold text-white mb-2 font-mono tracking-tight drop-shadow-2xl">
-                        {formatDuration(duration)}
-                      </h2>
-                      <p className="text-gray-300 text-sm">
-                        Speak naturally
-                      </p>
-                    </div>
-
-                    {/* Bottom: Controls */}
-                    <div className="flex items-center justify-center gap-4 pointer-events-auto">
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={pauseRecording}
-                        className="h-14 w-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all flex items-center justify-center"
-                      >
-                        <Pause className="h-6 w-6 text-white" />
-                      </motion.button>
-
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleStop}
-                        className="h-20 w-20 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-2xl shadow-red-500/50 transition-all flex items-center justify-center ring-4 ring-red-500/30"
-                      >
-                        <Square className="h-8 w-8" fill="currentColor" />
-                      </motion.button>
-
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={cancelRecording}
-                        className="h-14 w-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all flex items-center justify-center"
-                      >
-                        <Trash2 className="h-6 w-6 text-white" />
-                      </motion.button>
-                    </div>
+              <div className="p-8">
+                {/* Status Badge */}
+                <div className="flex items-center justify-center mb-8">
+                  <div className={cn(
+                    "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium",
+                    isPaused 
+                      ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                      : "bg-red-50 text-red-700 border border-red-200"
+                  )}>
+                    <div className={cn(
+                      "h-2 w-2 rounded-full",
+                      isPaused ? "bg-yellow-500" : "bg-red-500 animate-pulse"
+                    )} />
+                    <span>{isPaused ? 'Paused' : 'Recording'}</span>
                   </div>
                 </div>
 
+                {/* Timer */}
+                <div className="text-center mb-12">
+                  <h2 className="text-6xl font-bold text-black mb-3 font-mono tracking-tight">
+                    {formatDuration(duration)}
+                  </h2>
+                  <p className="text-gray-500 text-sm">Speak naturally</p>
+                </div>
+
+                {/* Simple Waveform Visualization */}
+                <div className="flex items-center justify-center gap-1 h-24 mb-12">
+                  {waveform.length > 0 ? (
+                    waveform.map((height, i) => (
+                      <motion.div
+                        key={i}
+                        animate={{ height: `${height * 100}%` }}
+                        transition={{ duration: 0.1 }}
+                        className="w-1.5 bg-[#BD6750] rounded-full"
+                        style={{ minHeight: '8px', maxHeight: '80px' }}
+                      />
+                    ))
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full">
+                      <Circle className="h-12 w-12 text-gray-300" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Controls */}
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    onClick={pauseRecording}
+                    className="h-14 w-14 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black transition-all flex items-center justify-center border border-gray-200"
+                  >
+                    <Pause className="h-5 w-5" />
+                  </button>
+
+                  <button
+                    onClick={handleStop}
+                    className="h-20 w-20 rounded-full bg-[#BD6750] hover:bg-[#a55a45] text-white transition-all flex items-center justify-center shadow-lg"
+                  >
+                    <Square className="h-8 w-8" fill="currentColor" />
+                  </button>
+
+                  <button
+                    onClick={cancelRecording}
+                    className="h-14 w-14 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black transition-all flex items-center justify-center border border-gray-200"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+
                 {error && (
-                  <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg backdrop-blur-sm mx-8 mb-8">
-                    <p className="text-sm text-red-300 text-center">{error}</p>
+                  <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-700 text-center">{error}</p>
                   </div>
                 )}
               </div>
@@ -288,26 +232,20 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps 
             {/* Processing State */}
             {isProcessing && (
               <div className="space-y-6 text-center py-12 px-8">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-                  className="inline-flex items-center justify-center w-24 h-24 mx-auto"
-                >
-                  <div className="absolute w-full h-full rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 opacity-20 blur-2xl" />
-                  <div className="relative w-20 h-20 border-4 border-white/20 border-t-white rounded-full" />
-                </motion.div>
-                <div>
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    Processing your recording
-                  </h3>
-                  <p className="text-gray-400">
-                    Transcribing audio and extracting insights...
-                  </p>
+                <div className="inline-flex items-center justify-center w-20 h-20 mx-auto">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+                    className="w-16 h-16 border-4 border-gray-200 border-t-black rounded-full"
+                  />
                 </div>
-
+                <div>
+                  <h3 className="text-lg font-semibold text-black mb-2">Processing your recording</h3>
+                  <p className="text-gray-600 text-sm">Transcribing audio and creating your note...</p>
+                </div>
                 {error && (
-                  <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg backdrop-blur-sm">
-                    <p className="text-sm text-red-300">{error}</p>
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-700">{error}</p>
                   </div>
                 )}
               </div>
@@ -320,10 +258,10 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps 
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', duration: 0.5 }}
-                  className="inline-flex items-center justify-center h-20 w-20 bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-full mb-4"
+                  className="inline-flex items-center justify-center h-16 w-16 bg-green-50 border-2 border-green-200 rounded-full mb-4"
                 >
                   <svg
-                    className="h-10 w-10 text-green-400"
+                    className="h-8 w-8 text-green-600"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -336,69 +274,19 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps 
                     />
                   </svg>
                 </motion.div>
-
                 <div>
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    ✅ Processed your {formatDuration(duration)} update
+                  <h3 className="text-lg font-semibold text-black mb-2">
+                    Note created successfully!
                   </h3>
-                  <p className="text-gray-400 mb-6">
-                    We found:
+                  <p className="text-gray-600 text-sm mb-6">
+                    Your {formatDuration(duration)} recording has been transcribed and saved.
                   </p>
-
-                  <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-                    {extractedData.actionItems > 0 && (
-                      <div className="p-4 bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-300">
-                          {extractedData.actionItems}
-                        </div>
-                        <div className="text-sm text-blue-400">Action items</div>
-                      </div>
-                    )}
-
-                    {extractedData.investorUpdates > 0 && (
-                      <div className="p-4 bg-purple-500/20 backdrop-blur-sm border border-purple-500/30 rounded-lg">
-                        <div className="text-2xl font-bold text-purple-300">
-                          {extractedData.investorUpdates}
-                        </div>
-                        <div className="text-sm text-purple-400">Investor update</div>
-                      </div>
-                    )}
-
-                    {extractedData.progressLogs > 0 && (
-                      <div className="p-4 bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-lg">
-                        <div className="text-2xl font-bold text-green-300">
-                          {extractedData.progressLogs}
-                        </div>
-                        <div className="text-sm text-green-400">Progress log</div>
-                      </div>
-                    )}
-
-                    {extractedData.productIdeas > 0 && (
-                      <div className="p-4 bg-amber-500/20 backdrop-blur-sm border border-amber-500/30 rounded-lg">
-                        <div className="text-2xl font-bold text-amber-300">
-                          {extractedData.productIdeas}
-                        </div>
-                        <div className="text-sm text-amber-400">Product ideas</div>
-                      </div>
-                    )}
-
-                    {extractedData.brainDump > 0 && (
-                      <div className="p-4 bg-pink-500/20 backdrop-blur-sm border border-pink-500/30 rounded-lg">
-                        <div className="text-2xl font-bold text-pink-300">
-                          {extractedData.brainDump}
-                        </div>
-                        <div className="text-sm text-pink-400">Brain dump notes</div>
-                      </div>
-                    )}
-                  </div>
                 </div>
-
                 <Button
                   onClick={handleClose}
-                  size="lg"
-                  className="mt-6 bg-white text-black hover:bg-gray-100"
+                  className="bg-black text-white hover:bg-gray-900"
                 >
-                  View Insights
+                  View Note
                 </Button>
               </div>
             )}
@@ -406,21 +294,16 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps 
             {/* Error State */}
             {error && !isRecording && !isProcessing && !isComplete && (
               <div className="space-y-6 text-center py-12 px-8">
-                <div className="inline-flex items-center justify-center h-20 w-20 bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-full mb-4">
-                  <X className="h-10 w-10 text-red-400" />
+                <div className="inline-flex items-center justify-center h-16 w-16 bg-red-50 border-2 border-red-200 rounded-full mb-4">
+                  <X className="h-8 w-8 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    Recording Error
-                  </h3>
-                  <p className="text-gray-400 mb-6">
-                    {error}
-                  </p>
+                  <h3 className="text-lg font-semibold text-black mb-2">Recording Error</h3>
+                  <p className="text-gray-600 text-sm mb-6">{error}</p>
                 </div>
                 <Button
                   onClick={handleClose}
-                  size="lg"
-                  className="bg-white text-black hover:bg-gray-100"
+                  className="bg-black text-white hover:bg-gray-900"
                 >
                   Close
                 </Button>

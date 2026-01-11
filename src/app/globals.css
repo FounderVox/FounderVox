@@ -43,10 +43,19 @@ html {
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
+    --border: 220 13% 85%;
     --input: 214.3 31.8% 91.4%;
     --ring: 0 0% 50%;
     --radius: 0.75rem;
+
+    /* Brand colors - Terracotta */
+    --brand: 11 50% 53%;
+    --brand-light: 11 50% 95%;
+    --brand-foreground: 0 0% 100%;
+
+    /* Surface variants for depth */
+    --surface-raised: 0 0% 99%;
+    --surface-sunken: 220 14% 96%;
   }
 
   .dark {
@@ -69,6 +78,15 @@ html {
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 263 70% 50%;
+
+    /* Brand colors - Terracotta (dark mode) */
+    --brand: 11 55% 58%;
+    --brand-light: 11 30% 20%;
+    --brand-foreground: 0 0% 100%;
+
+    /* Surface variants for depth (dark mode) */
+    --surface-raised: 222.2 84% 8%;
+    --surface-sunken: 222.2 84% 3%;
   }
 }
 

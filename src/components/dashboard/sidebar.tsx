@@ -25,6 +25,7 @@ import {
   CheckSquare,
   TrendingUp,
 } from 'lucide-react'
+import { getTemplateIconColor } from '@/lib/template-colors'
 
 // Create context to share collapsed state
 export const SidebarContext = createContext<{
@@ -79,7 +80,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
         initial={false}
         animate={{ width: currentWidth }}
         transition={{ duration: 0.2, ease: 'easeInOut' }}
-        className="fixed left-0 top-0 bottom-0 bg-white/95 border-r border-gray-200/50 flex flex-col z-[200] shadow-sm overflow-hidden"
+        className="fixed left-0 top-0 bottom-0 bg-surface-sunken border-r border-gray-200 flex flex-col z-[200] shadow-sm"
         style={{ height: '100vh' }}
       >
         {/* Logo & Collapse Toggle */}
@@ -134,8 +135,8 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                     'flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200',
                     isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5',
                     isActive
-                      ? 'bg-black text-white shadow-sm'
-                      : 'text-black hover:bg-gray-200 hover:shadow-sm'
+                      ? 'bg-brand text-white shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-200 hover:shadow-sm'
                   )}
                 >
                   <Icon className="h-4 w-4 flex-shrink-0" />
@@ -143,9 +144,9 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                 </div>
                 {/* Hover tooltip for collapsed state */}
                 {isCollapsed && (
-                  <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity duration-200">
+                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
                     {item.label}
-                    <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-r-4 border-r-black border-b-4 border-b-transparent"></div>
+                    <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
                   </div>
                 )}
               </Link>
@@ -160,7 +161,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
             <>
               <button
                 onClick={() => setNotesOpen(!notesOpen)}
-                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
+                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-600 hover:bg-gray-200 rounded-lg transition-all duration-200"
               >
                 <span className="flex items-center gap-2">
                   <FolderOpen className="h-3.5 w-3.5" />
@@ -186,8 +187,8 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                             className={cn(
                               'flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all duration-200',
                               isActive
-                                ? 'bg-black text-white shadow-sm'
-                                : 'text-black hover:bg-gray-200 hover:shadow-sm'
+                                ? 'bg-brand text-white shadow-sm'
+                                : 'text-gray-700 hover:bg-gray-200 hover:shadow-sm'
                             )}
                           >
                             <span className="flex items-center gap-3">
@@ -219,16 +220,16 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                       className={cn(
                         'flex items-center justify-center p-2.5 rounded-lg text-sm transition-all duration-200',
                         isActive
-                          ? 'bg-black text-white shadow-sm'
-                          : 'text-black hover:bg-gray-200 hover:shadow-sm'
+                          ? 'bg-brand text-white shadow-sm'
+                          : 'text-gray-700 hover:bg-gray-200 hover:shadow-sm'
                       )}
                     >
                       <Icon className="h-4 w-4" />
                     </div>
                     {/* Hover tooltip */}
-                    <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity duration-200">
+                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
                       {item.label}
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-r-4 border-r-black border-b-4 border-b-transparent"></div>
+                      <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
                     </div>
                   </Link>
                 )
@@ -244,7 +245,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
             <>
               <button
                 onClick={() => setTemplatesOpen(!templatesOpen)}
-                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-black hover:bg-gray-200 rounded-lg transition-all duration-200"
+                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-600 hover:bg-gray-200 rounded-lg transition-all duration-200"
               >
                 <span className="flex items-center gap-2">
                   <FileText className="h-3.5 w-3.5" />
@@ -273,11 +274,11 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                             className={cn(
                               'flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-all duration-200',
                               isActive
-                                ? 'bg-black text-white shadow-sm'
-                                : 'text-black hover:bg-gray-200 hover:shadow-sm'
+                                ? 'bg-brand text-white shadow-sm'
+                                : 'text-gray-700 hover:bg-gray-200 hover:shadow-sm'
                             )}
                           >
-                            <Icon className="h-4 w-4" />
+                            <Icon className={cn("h-4 w-4", !isActive && getTemplateIconColor(template.id))} />
                             {template.label}
                           </div>
                         </Link>
@@ -303,17 +304,17 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                       className={cn(
                         'flex items-center justify-center p-2.5 rounded-lg transition-all duration-200',
                         isActive
-                          ? 'bg-black text-white shadow-sm'
-                          : 'text-black hover:bg-gray-200 hover:shadow-sm'
+                          ? 'bg-brand text-white shadow-sm'
+                          : 'text-gray-700 hover:bg-gray-200 hover:shadow-sm'
                       )}
                       title={template.label}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className={cn("h-4 w-4", !isActive && getTemplateIconColor(template.id))} />
                     </div>
                     {/* Hover tooltip */}
-                    <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity duration-200">
+                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
                       {template.label}
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-t-transparent border-r-4 border-r-black border-b-4 border-b-transparent"></div>
+                      <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
                     </div>
                   </Link>
                 )
@@ -323,25 +324,38 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
         </nav>
 
         {/* Bottom Section */}
-        <div className={cn('border-t border-gray-200/50 space-y-1', isCollapsed ? 'p-2' : 'p-3')}>
-          <Link href="/dashboard/settings" title={isCollapsed ? 'Settings' : undefined}>
+        <div className={cn('border-t border-gray-200 space-y-1', isCollapsed ? 'p-2' : 'p-3')}>
+          <Link href="/dashboard/settings" className={isCollapsed ? "relative group" : ""}>
             <div className={cn(
-              'flex items-center gap-3 rounded-lg text-sm text-black hover:bg-gray-200 hover:shadow-sm transition-all duration-200',
+              'flex items-center gap-3 rounded-lg text-sm text-gray-700 hover:bg-gray-200 hover:shadow-sm transition-all duration-200',
               isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'
             )}>
               <Settings className="h-4 w-4" />
               {!isCollapsed && 'Settings'}
             </div>
+            {/* Hover tooltip for collapsed state */}
+            {isCollapsed && (
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
+                Settings
+                <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
+              </div>
+            )}
           </Link>
           <button
             className={cn(
-              'flex items-center gap-3 w-full rounded-lg text-sm text-black hover:bg-gray-200 hover:shadow-sm transition-all duration-200',
-              isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'
+              'flex items-center gap-3 w-full rounded-lg text-sm text-brand hover:bg-brand-light transition-all duration-200',
+              isCollapsed ? 'justify-center p-2.5 relative group' : 'px-3 py-2.5'
             )}
-            title={isCollapsed ? 'Upgrade to Pro' : undefined}
           >
             <Sparkles className="h-4 w-4" />
             {!isCollapsed && 'Upgrade to Pro'}
+            {/* Hover tooltip for collapsed state */}
+            {isCollapsed && (
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
+                Upgrade to Pro
+                <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
+              </div>
+            )}
           </button>
         </div>
       </motion.aside>

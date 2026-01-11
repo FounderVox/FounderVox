@@ -40,6 +40,15 @@ const config: Config = {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
+        brand: {
+          DEFAULT: 'hsl(var(--brand))',
+          light: 'hsl(var(--brand-light))',
+          foreground: 'hsl(var(--brand-foreground))',
+        },
+        surface: {
+          raised: 'hsl(var(--surface-raised))',
+          sunken: 'hsl(var(--surface-sunken))',
+        },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',

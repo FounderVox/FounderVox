@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, CheckCircle2, XCircle, Loader2, ArrowRight, CheckCircle, AlertCircle, ClipboardList, Briefcase, BarChart3, Rocket, Brain } from 'lucide-react'
+import { Wand2, CheckCircle2, XCircle, Loader2, ArrowRight, CheckCircle, AlertCircle, ClipboardList, Briefcase, BarChart3, Rocket, Brain } from 'lucide-react'
 import Link from 'next/link'
 
 interface SmartifyModalProps {
@@ -131,8 +131,8 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
         >
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2.5 bg-gray-100 rounded-lg">
-              <Sparkles className="h-6 w-6 text-black" />
+            <div className="p-2.5 bg-gray-100 rounded-xl">
+              <Wand2 className="h-6 w-6 text-black" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-black">Smartify Note</h2>
@@ -184,8 +184,8 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
           {preview && showPreview && !isSaving && (
             <div>
               <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full border-2 border-gray-200 mb-4">
-                  <Sparkles className="h-8 w-8 text-black" />
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl border border-gray-200 mb-4 shadow-sm">
+                  <Wand2 className="h-8 w-8 text-gray-800" />
                 </div>
                 <h3 className="text-lg font-semibold text-black mb-2">
                   Preview Extraction

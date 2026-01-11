@@ -1,8 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -33,5 +35,35 @@ export async function createClient() {
         }
       },
     },
+  })
+}
+
+/**
+ * Create a Supabase client with service role key (bypasses RLS)
+ * Use this only for server-side operations that need elevated privileges
+ * This is the recommended approach for API routes to avoid RLS issues
+ */
+export function createServiceRoleClient() {
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL is required')
+  }
+  
+  if (!supabaseServiceRoleKey) {
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY is required for server-side database operations.\n\n' +
+      'To fix this:\n' +
+      '1. Go to your Supabase Dashboard: https://supabase.com/dashboard/project/_/settings/api\n' +
+      '2. Copy the "service_role" key (NOT the anon key)\n' +
+      '3. Add it to your .env.local file:\n' +
+      '   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here\n' +
+      '4. Restart your dev server'
+    )
+  }
+
+  return createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
   })
 }

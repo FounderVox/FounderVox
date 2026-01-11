@@ -352,7 +352,10 @@ export default function AllNotesPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <div className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 cursor-pointer group">
+                      <div
+                        onClick={() => handleViewNote(note.id)}
+                        className="bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl p-4 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                      >
                         {/* Header with time and title */}
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">

@@ -317,7 +317,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                 </div>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors"
+                  className="px-6 py-3 bg-brand text-white rounded-lg hover:opacity-90 transition-colors"
                 >
                   Search
                 </button>
@@ -342,7 +342,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           // TODO: Navigate to note detail page when implemented
                           handleCloseSearch()
                         }}
-                        className="p-4 bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl hover:bg-white/90 hover:border-gray-300 hover:shadow-md transition-all duration-200 cursor-pointer group"
+                        className="p-4 bg-white shadow-sm border border-gray-200 rounded-xl hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer group"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
@@ -405,8 +405,8 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                 className={cn(
                   'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
                   activeFilter === pill.id
-                    ? 'bg-black text-white shadow-md'
-                    : 'bg-white/60 border border-gray-200 text-black hover:bg-gray-100/80 hover:border-gray-300 hover:shadow-sm'
+                    ? 'bg-brand text-white shadow-md'
+                    : 'bg-white border border-gray-300 text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-400'
                 )}
               >
                 {pill.label} ({pill.count})
@@ -491,7 +491,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                           style={{ width: `${Math.min(progressPercentage, 100)}%` }}
                         />
                       </div>
-                      <button className="w-full px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-black/90 hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2">
+                      <button className="w-full px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:opacity-90 hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2">
                         <Sparkles className="h-4 w-4" />
                         Upgrade to Pro
                       </button>

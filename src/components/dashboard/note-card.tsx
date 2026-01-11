@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Clock, MoreVertical, Play, Edit, Trash2, Tag, Sparkles, CheckCircle } from 'lucide-react'
+import { Star, Clock, MoreVertical, Play, Edit, Trash2, Tag, Wand2, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-colors'
+import { getTemplateColor } from '@/lib/template-colors'
 
 interface NoteCardProps {
   title: string
@@ -52,10 +53,16 @@ export function NoteCard({
       onView()
     }
   }
-  
+
+  const templateColor = getTemplateColor(template)
+
   return (
     <motion.div
-      className="group bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-5 hover:bg-white/90 hover:border-gray-300 hover:shadow-lg transition-all duration-200 cursor-pointer"
+      className={cn(
+        "group bg-white shadow-sm border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer",
+        "border-l-4",
+        templateColor.borderLeft
+      )}
       whileHover={{ y: -2, scale: 1.01 }}
       onClick={handleCardClick}
     >
@@ -83,7 +90,7 @@ export function NoteCard({
                 'p-1.5 rounded-lg transition-all duration-200',
                 isStarred
                   ? 'text-amber-500 hover:bg-amber-50 hover:shadow-sm'
-                  : 'text-gray-400 hover:bg-gray-100 hover:text-amber-500'
+                  : 'text-gray-400 hover:bg-gray-100 hover:text-brand'
               )}
             >
               <Star className={cn('h-4 w-4', isStarred && 'fill-current')} />
@@ -159,12 +166,12 @@ export function NoteCard({
                         )}
                         title={!canSmartify && isSmartified ? "Note already smartified. Edit to smartify again." : "Extract structured data from this note"}
                       >
-                        <Sparkles className={cn("h-4 w-4", isSmartified && "text-gray-500")} />
+                        <Wand2 className="h-4 w-4" />
                         <span className="flex-1 text-left">
                           {isSmartified ? "Re-smartify" : "Smartify"}
                         </span>
                         {isSmartified && (
-                          <CheckCircle className="h-4 w-4 text-gray-500" />
+                          <CheckCircle className="h-4 w-4 text-emerald-500" />
                         )}
                       </button>
                     )}
@@ -231,7 +238,7 @@ export function NoteCard({
               e.stopPropagation()
               onPlay()
             }}
-            className="p-2 rounded-full bg-white text-black hover:bg-gray-100 hover:shadow-md transition-all duration-200"
+            className="p-2 rounded-full bg-gray-100 text-gray-700 hover:bg-brand hover:text-white transition-all duration-200"
           >
             <Play className="h-4 w-4" fill="currentColor" />
           </button>

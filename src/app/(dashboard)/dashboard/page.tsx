@@ -337,11 +337,11 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">
-                  <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/60 backdrop-blur-sm border-2 border-gray-200/50 mb-4">
-                    <Mic className="h-8 w-8 text-black" />
+                <div className="bg-white shadow-sm rounded-2xl p-12 text-center border border-gray-200">
+                  <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-brand-light border-2 border-brand/20 mb-4">
+                    <Mic className="h-8 w-8 text-brand" />
                   </div>
-                  <h3 className="text-black font-semibold mb-2">No notes yet</h3>
+                  <h3 className="text-gray-900 font-semibold mb-2">No notes yet</h3>
                   <p className="text-gray-600 text-sm max-w-sm mx-auto">
                     Start recording your first voice note to see it here.
                   </p>
@@ -395,11 +395,11 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/60 backdrop-blur-sm border-2 border-gray-200/50 mb-4">
-              <Mic className="h-8 w-8 text-black" />
+          <div className="bg-white shadow-sm rounded-2xl p-12 text-center border border-gray-200">
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-brand-light border-2 border-brand/20 mb-4">
+              <Mic className="h-8 w-8 text-brand" />
             </div>
-            <h3 className="text-black font-semibold mb-2">No notes yet</h3>
+            <h3 className="text-gray-900 font-semibold mb-2">No notes yet</h3>
             <p className="text-gray-600 text-sm max-w-sm mx-auto">
               Start recording your first voice note to see it here.
             </p>
@@ -410,17 +410,17 @@ export default function DashboardPage() {
       {/* Use Cases Summary */}
       {profile?.use_cases && profile.use_cases.length > 0 && (
         <motion.div
-          className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-200/50"
+          className="bg-white shadow-sm rounded-2xl p-6 border border-gray-200"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <h3 className="text-sm font-medium text-black mb-3">Your Focus Areas</h3>
+          <h3 className="text-sm font-medium text-gray-900 mb-3">Your Focus Areas</h3>
           <div className="flex flex-wrap gap-2">
             {profile.use_cases.map((useCase: string) => (
               <span
                 key={useCase}
-                className="px-3 py-1.5 bg-black text-white text-sm rounded-full hover:bg-gray-900 transition-colors cursor-pointer"
+                className="px-3 py-1.5 bg-brand text-white text-sm rounded-full hover:opacity-90 transition-colors cursor-pointer"
               >
                 {useCase}
               </span>

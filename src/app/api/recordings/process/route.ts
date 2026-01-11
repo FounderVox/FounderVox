@@ -27,14 +27,31 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
 
-    // Get authenticated user
+    // Get authenticated user and session
     const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    
     if (authError || !user) {
+      console.error('[Process] Auth error:', {
+        error: authError,
+        message: authError?.message,
+        hasSession: !!session
+      })
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized', details: authError?.message },
         { status: 401 }
       )
     }
+
+    if (!session) {
+      console.error('[Process] No session found')
+      return NextResponse.json(
+        { error: 'Session not found' },
+        { status: 401 }
+      )
+    }
+
+    console.log('[Process] User authenticated:', user.id)
 
     // Get recording ID from request
     const { recordingId } = await request.json()

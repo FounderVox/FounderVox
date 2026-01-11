@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Edit2, Calendar, Clock, Star, Tag as TagIcon, Sparkles } from 'lucide-react'
+import { X, Save, Edit2, Calendar, Clock, Star, Tag as TagIcon, Wand2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
@@ -272,8 +272,8 @@ export function NoteDetailModal({ open, onOpenChange, noteId }: NoteDetailModalP
                     <Edit2 className="h-5 w-5" />
                   </button>
                   {note.smartified_at && (
-                    <div className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-xs font-medium flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5" />
+                    <div className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium flex items-center gap-1.5 border border-gray-200">
+                      <Wand2 className="h-3.5 w-3.5" />
                       Smartified
                     </div>
                   )}

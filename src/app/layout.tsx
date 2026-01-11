@@ -27,33 +27,8 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Suppress source map errors (non-critical development warnings)
-              const originalError = console.error;
-              console.error = function(...args) {
-                const message = args[0]?.toString() || '';
-                // Filter out source map and WebSocket HMR errors
-                if (
-                  message.includes('Source Map') ||
-                  message.includes('.map') ||
-                  message.includes('webpack-hmr') ||
-                  message.includes('WebSocket connection')
-                ) {
-                  return; // Suppress these non-critical warnings
-                }
-                originalError.apply(console, args);
-              };
-              
-              // Global error handler for unhandled errors (only real errors)
+              // Global error handler for unhandled errors
               window.addEventListener('error', function(event) {
-                // Ignore source map and HMR WebSocket errors
-                if (
-                  event.message?.includes('Source Map') ||
-                  event.message?.includes('.map') ||
-                  event.message?.includes('webpack-hmr') ||
-                  event.message?.includes('WebSocket')
-                ) {
-                  return;
-                }
                 console.error('[FounderNote:Global] Unhandled error:', {
                   message: event.message,
                   filename: event.filename,
@@ -71,19 +46,14 @@ export default function RootLayout({
                 });
               });
               
-              // Log resource loading errors (excluding source maps)
+              // Log resource loading errors
               window.addEventListener('error', function(event) {
                 if (event.target && event.target.tagName) {
-                  const target = event.target;
-                  const src = target.src || target.href || '';
-                  // Ignore source map files
-                  if (src.includes('.map') || src.includes('webpack-hmr')) {
-                    return;
-                  }
+                  const target = event.target as HTMLElement;
                   if (target.tagName === 'SCRIPT' || target.tagName === 'LINK' || target.tagName === 'IMG') {
                     console.error('[FounderNote:Global] Resource loading error:', {
                       tag: target.tagName,
-                      src: src,
+                      src: (target as any).src || (target as any).href,
                       error: event.error
                     });
                   }

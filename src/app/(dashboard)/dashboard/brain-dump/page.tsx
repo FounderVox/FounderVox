@@ -180,61 +180,73 @@ export default function BrainDumpPage() {
   }
 
   const getCategoryConfig = (category: CategoryColumn) => {
+    // Refined, muted color palette for professional aesthetic
+    // Using subtle left border accents instead of saturated backgrounds
     switch (category) {
       case 'meeting':
         return {
           label: 'Meeting',
           icon: Users,
-          bg: 'bg-blue-50',
-          border: 'border-blue-200',
-          text: 'text-blue-700',
+          bg: 'bg-white',
+          border: 'border-gray-200',
+          headerBg: 'bg-gray-50',
+          text: 'text-gray-900',
           iconColor: 'text-blue-600',
-          itemBg: 'bg-blue-50',
-          itemBorder: 'border-blue-200'
+          itemBg: 'bg-white',
+          itemBorder: 'border-gray-200',
+          accentBorder: 'border-l-blue-500'
         }
       case 'thought':
         return {
           label: 'Thought',
           icon: MessageSquare,
-          bg: 'bg-purple-50',
-          border: 'border-purple-200',
-          text: 'text-purple-700',
+          bg: 'bg-white',
+          border: 'border-gray-200',
+          headerBg: 'bg-gray-50',
+          text: 'text-gray-900',
           iconColor: 'text-purple-600',
-          itemBg: 'bg-purple-50',
-          itemBorder: 'border-purple-200'
+          itemBg: 'bg-white',
+          itemBorder: 'border-gray-200',
+          accentBorder: 'border-l-purple-500'
         }
       case 'question':
         return {
           label: 'Question',
           icon: HelpCircle,
-          bg: 'bg-yellow-50',
-          border: 'border-yellow-200',
-          text: 'text-yellow-700',
-          iconColor: 'text-yellow-600',
-          itemBg: 'bg-yellow-50',
-          itemBorder: 'border-yellow-200'
+          bg: 'bg-white',
+          border: 'border-gray-200',
+          headerBg: 'bg-gray-50',
+          text: 'text-gray-900',
+          iconColor: 'text-amber-600',
+          itemBg: 'bg-white',
+          itemBorder: 'border-gray-200',
+          accentBorder: 'border-l-amber-500'
         }
       case 'concern':
         return {
           label: 'Concern',
           icon: AlertCircle,
-          bg: 'bg-red-50',
-          border: 'border-red-200',
-          text: 'text-red-700',
+          bg: 'bg-white',
+          border: 'border-gray-200',
+          headerBg: 'bg-gray-50',
+          text: 'text-gray-900',
           iconColor: 'text-red-600',
-          itemBg: 'bg-red-50',
-          itemBorder: 'border-red-200'
+          itemBg: 'bg-white',
+          itemBorder: 'border-gray-200',
+          accentBorder: 'border-l-red-500'
         }
       case 'personal':
         return {
           label: 'People',
           icon: UserCircle,
-          bg: 'bg-green-50',
-          border: 'border-green-200',
-          text: 'text-green-700',
-          iconColor: 'text-green-600',
-          itemBg: 'bg-green-50',
-          itemBorder: 'border-green-200'
+          bg: 'bg-white',
+          border: 'border-gray-200',
+          headerBg: 'bg-gray-50',
+          text: 'text-gray-900',
+          iconColor: 'text-emerald-600',
+          itemBg: 'bg-white',
+          itemBorder: 'border-gray-200',
+          accentBorder: 'border-l-emerald-500'
         }
     }
   }
@@ -270,15 +282,15 @@ export default function BrainDumpPage() {
       />
 
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 rounded-xl bg-gray-100">
-            <Brain className="h-6 w-6 text-black" />
+      <div className="mb-8">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-white border border-gray-200 shadow-sm">
+            <Brain className="h-6 w-6 text-brand" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-black">Brain Dump</h1>
-            <p className="text-gray-600 text-sm mt-1">
-              {items.length} items • {itemsByCategory.meeting.length} meetings • {itemsByCategory.thought.length} thoughts • {itemsByCategory.question.length} questions
+            <h1 className="text-2xl font-bold text-gray-900">Brain Dump</h1>
+            <p className="text-gray-500 text-sm mt-0.5">
+              {items.length} items across {Object.values(itemsByCategory).filter(arr => arr.length > 0).length} categories
             </p>
           </div>
         </div>
@@ -286,7 +298,7 @@ export default function BrainDumpPage() {
 
       {/* Column Layout */}
       {items.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
           {(['meeting', 'thought', 'question', 'concern', 'personal'] as CategoryColumn[]).map((category) => {
             const config = getCategoryConfig(category)
             const Icon = config.icon
@@ -297,34 +309,27 @@ export default function BrainDumpPage() {
                 key={category}
                 className={cn(
                   "flex-1 min-h-[400px] rounded-xl transition-all duration-200",
-                  dragOverColumn === category && "ring-2 ring-gray-300 ring-offset-2"
+                  dragOverColumn === category && "ring-2 ring-brand/30 ring-offset-2"
                 )}
                 onDragOver={(e) => handleDragOver(e, category)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, category)}
               >
-                {/* Column Header */}
+                {/* Column Header - Clean, minimal design */}
                 <div className={cn(
-                  "flex items-center justify-between mb-4 p-3 rounded-lg",
-                  config.bg,
-                  config.border,
-                  "border"
+                  "flex items-center justify-between mb-4 p-3 rounded-lg border shadow-sm",
+                  config.headerBg,
+                  config.border
                 )}>
                   <div className="flex items-center gap-2">
-                    <Icon className={cn("h-5 w-5", config.iconColor)} />
-                    <h3 className={cn("font-semibold text-sm", config.text)}>
+                    <Icon className={cn("h-4 w-4", config.iconColor)} />
+                    <h3 className="font-semibold text-sm text-gray-900">
                       {config.label}
                     </h3>
-                    <span className={cn(
-                      "px-2 py-0.5 rounded-full text-xs font-medium",
-                      config.bg,
-                      config.text,
-                      "border",
-                      config.border
-                    )}>
-                      {categoryItems.length}
-                    </span>
                   </div>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                    {categoryItems.length}
+                  </span>
                 </div>
 
                 {/* Items List */}
@@ -336,12 +341,13 @@ export default function BrainDumpPage() {
                         draggable
                         onDragStart={(e) => handleDragStart(e, item.id, category, index)}
                         className={cn(
-                          "rounded-xl p-3 cursor-move transition-all duration-200 group border relative",
+                          "rounded-xl p-4 cursor-move transition-all duration-200 group border relative shadow-sm border-l-4",
                           config.itemBg,
                           config.itemBorder,
+                          config.accentBorder,
                           draggedItem?.itemId === item.id && draggedItem?.category === category
                             ? "opacity-50 scale-95"
-                            : "hover:shadow-lg hover:scale-[1.02]"
+                            : "hover:shadow-md hover:border-gray-300"
                         )}
                       >
                         {/* Delete button - top right corner, only on hover */}
@@ -350,19 +356,19 @@ export default function BrainDumpPage() {
                             e.stopPropagation()
                             deleteItem(item.id)
                           }}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded-lg text-red-600 hover:bg-red-100 transition-all z-10"
+                          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all z-10"
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
-                        
-                        <div className="flex items-start gap-2">
+
+                        <div className="flex items-start gap-3">
                           <Icon className={cn("h-4 w-4 mt-0.5 flex-shrink-0", config.iconColor)} />
                           <div className="flex-1 min-w-0 pr-6">
-                            <p className={cn("text-sm whitespace-pre-wrap", config.text)}>
+                            <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
                               {item.content}
                             </p>
                             {item.participants && item.participants.length > 0 && (
-                              <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
+                              <div className="flex items-center gap-1.5 mt-3 text-xs text-gray-500">
                                 <Users className="h-3 w-3" />
                                 <span>{item.participants.join(', ')}</span>
                               </div>
@@ -375,10 +381,7 @@ export default function BrainDumpPage() {
                       </div>
                     ))
                   ) : (
-                    <div className={cn(
-                      "text-xs text-gray-400 italic py-8 text-center border-2 border-dashed rounded-lg",
-                      config.border
-                    )}>
+                    <div className="text-xs text-gray-400 italic py-8 text-center border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50">
                       Drop items here
                     </div>
                   )}
@@ -391,18 +394,18 @@ export default function BrainDumpPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50"
+          className="bg-white shadow-sm rounded-2xl p-12 text-center border border-gray-200"
         >
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/60 backdrop-blur-sm border-2 border-gray-200/50 mb-4">
-            <Brain className="h-8 w-8 text-black" />
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gray-50 border border-gray-200 mb-4">
+            <Brain className="h-8 w-8 text-gray-400" />
           </div>
-          <h3 className="text-black font-semibold mb-2">No brain dump items yet</h3>
-          <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
+          <h3 className="text-gray-900 font-semibold mb-2">No brain dump items yet</h3>
+          <p className="text-gray-500 text-sm max-w-sm mx-auto mb-6">
             Use Smartify on a note to extract thoughts, meetings, and ideas automatically.
           </p>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium shadow-sm"
           >
             Go to Notes
             <ArrowRight className="h-4 w-4" />

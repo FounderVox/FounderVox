@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Save, Sparkles, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Save, Wand2, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { cn } from '@/lib/utils'
@@ -239,20 +239,20 @@ export default function NoteViewPage() {
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                   note.canSmartify
-                    ? "text-black hover:bg-gray-100"
+                    ? "text-gray-700 hover:bg-gray-100 hover:text-black"
                     : "text-gray-400 cursor-not-allowed"
                 )}
                 title={!note.canSmartify && note.smartified_at ? "Note already smartified. Edit to smartify again." : "Extract structured data from this note"}
               >
                 {note.smartified_at ? (
                   <>
-                    <Sparkles className="h-4 w-4 text-gray-500" />
+                    <Wand2 className="h-4 w-4" />
                     <span className="hidden sm:inline">Re-smartify</span>
-                    <CheckCircle className="h-4 w-4 text-gray-500" />
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4" />
+                    <Wand2 className="h-4 w-4" />
                     <span className="hidden sm:inline">Smartify</span>
                   </>
                 )}
