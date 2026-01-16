@@ -61,6 +61,15 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
 
       console.log('[FounderNote:ManualNote] Note saved successfully:', data)
 
+      // Generate embedding for the new note (fire and forget)
+      if (data && data[0]?.id) {
+        fetch('/api/embeddings/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ noteId: data[0].id })
+        }).catch(err => console.error('[FounderNote:ManualNote] Embedding generation failed:', err))
+      }
+
       // Reset form
       setNoteTitle('')
       setNoteContent('')

@@ -182,6 +182,11 @@ export async function POST(request: NextRequest) {
       // Continue even if note creation fails
     } else {
       console.log('[Process] Note created successfully:', note.id)
+
+      // Generate embedding for semantic search (fire and forget)
+      generateEmbeddingAsync(note.id).catch(err =>
+        console.error('[Process] Embedding generation failed:', err)
+      )
     }
 
     console.log('[Process] Processing complete for recording:', recordingId)
@@ -225,6 +230,62 @@ export async function POST(request: NextRequest) {
       { error: 'Processing failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
+  }
+}
+
+// Generate embedding for semantic search (async, non-blocking)
+async function generateEmbeddingAsync(noteId: string): Promise<void> {
+  try {
+    const OpenAI = (await import('openai')).default
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+
+    // Get the note content
+    const dbClient = createServiceRoleClient()
+    const { data: note, error: fetchError } = await dbClient
+      .from('notes')
+      .select('id, title, formatted_content, raw_transcript')
+      .eq('id', noteId)
+      .single()
+
+    if (fetchError || !note) {
+      console.error('[Embedding] Note not found:', noteId)
+      return
+    }
+
+    // Combine text for embedding
+    const textForEmbedding = [
+      note.title || '',
+      note.formatted_content || note.raw_transcript || ''
+    ].filter(Boolean).join('\n\n')
+
+    if (!textForEmbedding.trim()) {
+      console.log('[Embedding] No content to embed for note:', noteId)
+      return
+    }
+
+    // Generate embedding
+    const embeddingResponse = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: textForEmbedding.substring(0, 8000),
+    })
+
+    const embedding = embeddingResponse.data[0].embedding
+    const embeddingString = `[${embedding.join(',')}]`
+
+    // Save embedding
+    const { error: updateError } = await dbClient
+      .from('notes')
+      .update({ embedding: embeddingString })
+      .eq('id', noteId)
+
+    if (updateError) {
+      console.error('[Embedding] Failed to save embedding:', updateError)
+    } else {
+      console.log('[Embedding] Successfully generated embedding for note:', noteId)
+    }
+  } catch (error) {
+    console.error('[Embedding] Error generating embedding:', error)
   }
 }
 

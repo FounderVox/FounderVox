@@ -110,6 +110,13 @@ export function EditNoteDialog({ open, onOpenChange, noteId }: EditNoteDialogPro
 
       console.log('[FounderNote:EditNote] Note saved successfully:', data)
 
+      // Regenerate embedding for updated note (fire and forget)
+      fetch('/api/embeddings/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noteId })
+      }).catch(err => console.error('[FounderNote:EditNote] Embedding regeneration failed:', err))
+
       setIsSaving(false)
       onOpenChange(false)
 

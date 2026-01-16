@@ -55,3 +55,5 @@ If you still see RLS errors after adding the key:
 3. Restart your dev server completely
 4. Check the console logs for detailed error messages
 
+
+
