@@ -9,16 +9,51 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
 
 function LoginContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showResendOption, setShowResendOption] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState(false)
+  const [isResending, setIsResending] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      setError('Please enter your email address first.')
+      return
+    }
+
+    setIsResending(true)
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (resendError) {
+        console.error('[Login] Resend error:', resendError)
+        setError('Failed to resend confirmation email. Please try again.')
+      } else {
+        setResendSuccess(true)
+        setError(null)
+        setTimeout(() => setResendSuccess(false), 5000)
+      }
+    } catch (err) {
+      console.error('[Login] Resend unexpected error:', err)
+      setError('Failed to resend confirmation email.')
+    } finally {
+      setIsResending(false)
+    }
+  }
 
   useEffect(() => {
     // Show success message if coming from signup
@@ -46,14 +81,22 @@ function LoginContent() {
           name: signInError.name
         })
 
-        // Check if it's an email not confirmed error
-        if (signInError.message?.toLowerCase().includes('email not confirmed') ||
-            signInError.message?.toLowerCase().includes('email verification')) {
-          setError('Please verify your email before logging in. Check your inbox for the verification link.')
-        } else if (signInError.message?.toLowerCase().includes('invalid login credentials')) {
-          setError('Invalid email or password. Please check your credentials and try again.')
+        // Check for specific error types
+        const errorMessage = signInError.message?.toLowerCase() || ''
+
+        if (errorMessage.includes('email not confirmed') || errorMessage.includes('email verification')) {
+          setError('Please verify your email before logging in. Check your inbox for the confirmation link.')
+          setShowResendOption(true)
+        } else if (errorMessage.includes('invalid login credentials')) {
+          // This could be wrong email OR wrong password - Supabase doesn't differentiate for security
+          setError('Invalid email or password. If you just signed up, please check your email for the confirmation link first.')
+          setShowResendOption(true)
+        } else if (errorMessage.includes('too many requests')) {
+          setError('Too many login attempts. Please wait a few minutes and try again.')
+        } else if (errorMessage.includes('user not found')) {
+          setError('No account found with this email. Please sign up first.')
         } else {
-          setError(signInError.message || 'Invalid email or password. Please try again.')
+          setError(signInError.message || 'Unable to sign in. Please try again.')
         }
 
         setIsLoading(false)
@@ -62,6 +105,15 @@ function LoginContent() {
 
       if (!data.user) {
         setError('Login failed. Please try again.')
+        setIsLoading(false)
+        return
+      }
+
+      // Explicitly check if email is confirmed
+      if (!data.user.email_confirmed_at) {
+        console.log('[Login] Email not confirmed')
+        setError('Please verify your email before logging in. Check your inbox for the confirmation link.')
+        setShowResendOption(true)
         setIsLoading(false)
         return
       }
@@ -209,14 +261,37 @@ function LoginContent() {
           />
         </div>
 
+        {resendSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-3 rounded-lg bg-green-50 border border-green-100 flex items-start gap-2"
+          >
+            <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-green-600">Confirmation email sent! Please check your inbox.</p>
+          </motion.div>
+        )}
+
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-3 rounded-lg bg-red-50 border border-red-100 flex items-start gap-2"
+            className="p-3 rounded-lg bg-red-50 border border-red-100"
           >
-            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-600">{error}</p>
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+            {showResendOption && (
+              <button
+                type="button"
+                onClick={handleResendConfirmation}
+                disabled={isResending}
+                className="mt-2 ml-7 text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium disabled:opacity-50"
+              >
+                {isResending ? 'Sending...' : "Didn't receive the email? Resend confirmation"}
+              </button>
+            )}
           </motion.div>
         )}
 

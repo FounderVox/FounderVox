@@ -50,6 +50,14 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Block users with unconfirmed emails from protected routes
+  if (isProtectedRoute && user && !user.email_confirmed_at) {
+    console.log('[FounderNote:Middleware] User email not confirmed, redirecting to login')
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('message', 'email_not_confirmed')
+    return NextResponse.redirect(redirectUrl)
+  }
+
   // Check if authenticated user is trying to access auth pages (but not landing/pricing/download)
   const isAuthRoute = ['/login', '/signup'].some((route) =>
     pathname.startsWith(route)

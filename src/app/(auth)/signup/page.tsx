@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, Mail } from 'lucide-react'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -17,7 +17,7 @@ export default function SignupPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -49,7 +49,13 @@ export default function SignupPage() {
 
       if (signUpError) {
         console.error('[Signup] Error:', signUpError)
-        setError(signUpError.message)
+
+        // Handle specific error cases
+        if (signUpError.message?.toLowerCase().includes('user already registered')) {
+          setError('An account with this email already exists. Please sign in instead.')
+        } else {
+          setError(signUpError.message)
+        }
         setIsLoading(false)
         return
       }
@@ -62,51 +68,12 @@ export default function SignupPage() {
 
       console.log('[Signup] User created:', data.user.id)
 
-      // The trigger should automatically create the profile
-      // Wait and check multiple times to give the trigger time to execute
-      let profileExists = false
-      let attempts = 0
-      const maxAttempts = 5
-
-      while (!profileExists && attempts < maxAttempts) {
-        // Wait before checking (longer wait on first attempt)
-        await new Promise(resolve => setTimeout(resolve, attempts === 0 ? 1000 : 500))
-
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', data.user.id)
-          .single()
-
-        if (profile && !profileError) {
-          profileExists = true
-          console.log(`[Signup] Profile found (created by trigger) on attempt ${attempts + 1}`)
-          break
-        }
-
-        attempts++
-        console.log(`[Signup] Profile not found yet, attempt ${attempts}/${maxAttempts}`)
-      }
-
-      // If profile still doesn't exist after all attempts, the trigger might have failed
-      // But that's okay - the user can still log in and we'll handle profile creation then
-      // OR the profile might exist but we couldn't read it due to RLS (unlikely but possible)
-      if (!profileExists) {
-        console.warn('[Signup] Profile not found after all attempts - trigger may have failed')
-        console.warn('[Signup] User can still log in - profile will be created on login if needed')
-        // Don't show error - just proceed to login
-        // The login page will handle profile creation if needed
-      }
-
-      console.log('[Signup] Success! Auto-logging in and redirecting to welcome...')
-      setSuccess(true)
-
-      // Auto-login is already done by signUp (user is authenticated)
-      // Redirect to welcome page after 1.5 seconds
-      // Use window.location.href to ensure cookies are set before redirect
-      setTimeout(() => {
-        window.location.href = '/welcome'
-      }, 1500)
+      // Always require email confirmation - never auto-redirect
+      // This ensures users verify their email before accessing the app
+      console.log('[Signup] User created, requiring email confirmation')
+      setNeedsEmailConfirmation(true)
+      setIsLoading(false)
+      return
     } catch (err) {
       console.error('[Signup] Unexpected error:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -114,7 +81,8 @@ export default function SignupPage() {
     }
   }
 
-  if (success) {
+  // Show email confirmation message
+  if (needsEmailConfirmation) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -127,12 +95,23 @@ export default function SignupPage() {
             animate={{ scale: 1 }}
             className="flex justify-center mb-6"
           >
-            <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle2 className="h-10 w-10 text-green-600" />
+            <div className="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center">
+              <Mail className="h-10 w-10 text-blue-600" />
             </div>
           </motion.div>
-          <h1 className="text-2xl font-bold text-black mb-2">Welcome to FounderNote!</h1>
-          <p className="text-gray-600">Taking you to onboarding...</p>
+          <h1 className="text-2xl font-bold text-black mb-2">Check your email</h1>
+          <p className="text-gray-600 mb-4">
+            We sent a confirmation link to <strong>{email}</strong>
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            Click the link in the email to activate your account, then come back to sign in.
+          </p>
+          <a
+            href="/login"
+            className="inline-flex items-center justify-center px-6 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
+          >
+            Go to Sign In
+          </a>
         </div>
       </motion.div>
     )

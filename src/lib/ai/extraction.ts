@@ -44,12 +44,38 @@ interface ProductIdea {
 
 interface BrainDumpItem {
   content: string
-  category: 'meeting' | 'thought' | 'question' | 'concern' | 'personal'
+  category: 'meeting' | 'blocker' | 'decision' | 'question' | 'followup'
   participants: string[]
 }
 
+/**
+ * Validate that transcript contains meaningful content worth extracting.
+ * Returns false for empty, gibberish, or too-short transcripts.
+ */
+function isTranscriptMeaningful(transcript: string): boolean {
+  if (!transcript) return false
+  // Remove non-alphabetic characters and extra whitespace
+  const cleaned = transcript.replace(/[^a-z\s]/gi, ' ').trim()
+  // Split into words with at least 3 characters
+  const words = cleaned.split(/\s+/).filter(w => w.length > 2)
+  // Require at least 10 meaningful words
+  return words.length >= 10
+}
+
 export async function extractActionItems(transcript: string, recordingId: string, userId: string): Promise<void> {
+  // Validate transcript has meaningful content
+  if (!isTranscriptMeaningful(transcript)) {
+    console.log('[Extraction] Transcript has no meaningful content, skipping action items extraction')
+    return
+  }
+
   const prompt = `Analyze this transcript and extract ALL action items, tasks, and todos.
+
+CRITICAL RULES:
+1. ONLY extract what is EXPLICITLY stated in the transcript
+2. If content is unclear or gibberish, return EMPTY arrays
+3. NEVER fabricate, infer, or hallucinate content
+4. When in doubt, return empty results
 
 For each action item, identify:
 1. The task description (be specific and clear)
@@ -81,7 +107,7 @@ Return format (must be valid JSON object):
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'You are an expert at extracting action items from meeting transcripts. Return only valid JSON in the exact format specified.' },
+        { role: 'system', content: 'You ONLY extract information EXPLICITLY stated. NEVER fabricate content. Return empty results if unsure. Return only valid JSON in the exact format specified.' },
         { role: 'user', content: prompt }
       ],
       temperature: 0.3,
@@ -133,7 +159,20 @@ Return format (must be valid JSON object):
 }
 
 export async function extractInvestorUpdate(transcript: string, recordingId: string, userId: string): Promise<void> {
+  // Validate transcript has meaningful content
+  if (!isTranscriptMeaningful(transcript)) {
+    console.log('[Extraction] Transcript has no meaningful content, skipping investor update extraction')
+    return
+  }
+
   const prompt = `Analyze this transcript and extract information suitable for an investor update email.
+
+CRITICAL RULES:
+1. ONLY extract what is EXPLICITLY stated in the transcript
+2. If content is unclear or gibberish, return EMPTY arrays/objects
+3. NEVER fabricate, infer, or hallucinate content
+4. When in doubt, return empty results
+5. Do NOT generate an email draft if there is no meaningful content
 
 Extract:
 1. WINS: Positive achievements, milestones, successes, good news
@@ -164,7 +203,7 @@ Return format:
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'You are an expert at creating investor updates. Be concise, specific, and professional. Return only valid JSON.' },
+        { role: 'system', content: 'You ONLY extract information EXPLICITLY stated. NEVER fabricate content. Return empty results if unsure. Be concise, specific, and professional. Return only valid JSON.' },
         { role: 'user', content: prompt }
       ],
       temperature: 0.5,
@@ -175,6 +214,18 @@ Return format:
     if (!content) return
 
     const update: InvestorUpdate = JSON.parse(content)
+
+    // Check if there's actually meaningful content before saving
+    const hasContent =
+      (update.wins?.length > 0) ||
+      (Object.keys(update.metrics || {}).length > 0) ||
+      (update.challenges?.length > 0) ||
+      (update.asks?.length > 0)
+
+    if (!hasContent) {
+      console.log('[Extraction] No investor update content found, skipping')
+      return
+    }
 
     // Save to database
     const supabase = await createClient()
@@ -200,7 +251,19 @@ Return format:
 }
 
 export async function extractProgressLog(transcript: string, recordingId: string, userId: string): Promise<void> {
+  // Validate transcript has meaningful content
+  if (!isTranscriptMeaningful(transcript)) {
+    console.log('[Extraction] Transcript has no meaningful content, skipping progress log extraction')
+    return
+  }
+
   const prompt = `Analyze this transcript and extract progress updates categorized into three groups:
+
+CRITICAL RULES:
+1. ONLY extract what is EXPLICITLY stated in the transcript
+2. If content is unclear or gibberish, return EMPTY arrays
+3. NEVER fabricate, infer, or hallucinate content
+4. When in doubt, return empty results
 
 1. COMPLETED: Tasks finished, shipped features, done items (past tense: "shipped", "finished", "completed", "done")
 2. IN PROGRESS: Current work, ongoing tasks (present: "working on", "building", "currently")
@@ -222,7 +285,7 @@ Return format:
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'You are an expert at extracting progress updates from conversations. Return only valid JSON.' },
+        { role: 'system', content: 'You ONLY extract information EXPLICITLY stated. NEVER fabricate content. Return empty results if unsure. Return only valid JSON.' },
         { role: 'user', content: prompt }
       ],
       temperature: 0.3,
@@ -263,7 +326,19 @@ Return format:
 }
 
 export async function extractProductIdeas(transcript: string, recordingId: string, userId: string): Promise<void> {
+  // Validate transcript has meaningful content
+  if (!isTranscriptMeaningful(transcript)) {
+    console.log('[Extraction] Transcript has no meaningful content, skipping product ideas extraction')
+    return
+  }
+
   const prompt = `Analyze this transcript and extract ALL product ideas, feature requests, and improvement suggestions.
+
+CRITICAL RULES:
+1. ONLY extract what is EXPLICITLY stated in the transcript
+2. If content is unclear or gibberish, return EMPTY arrays
+3. NEVER fabricate, infer, or hallucinate content
+4. When in doubt, return empty results
 
 For each idea, identify:
 1. The idea itself (be specific and actionable)
@@ -299,7 +374,7 @@ Return format:
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'You are an expert product manager at extracting and categorizing product ideas. Return only valid JSON.' },
+        { role: 'system', content: 'You ONLY extract information EXPLICITLY stated. NEVER fabricate content. Return empty results if unsure. Return only valid JSON.' },
         { role: 'user', content: prompt }
       ],
       temperature: 0.4,
@@ -338,7 +413,19 @@ Return format:
 }
 
 export async function extractBrainDump(transcript: string, recordingId: string, userId: string): Promise<void> {
+  // Validate transcript has meaningful content
+  if (!isTranscriptMeaningful(transcript)) {
+    console.log('[Extraction] Transcript has no meaningful content, skipping brain dump extraction')
+    return
+  }
+
   const prompt = `Analyze this transcript and extract all relevant notes, discussions, and key information.
+
+CRITICAL RULES:
+1. ONLY extract what is EXPLICITLY stated in the transcript
+2. If content is unclear or gibberish, return EMPTY arrays
+3. NEVER fabricate, infer, or hallucinate content
+4. When in doubt, return empty results
 
 Categorize each item into ONE of these functional categories:
 1. MEETING: Discussions with others, conversations (include participant names if mentioned)
@@ -388,7 +475,7 @@ Return format:
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'You are an expert at organizing unstructured notes and thoughts. Return only valid JSON.' },
+        { role: 'system', content: 'You ONLY extract information EXPLICITLY stated. NEVER fabricate content. Return empty results if unsure. Return only valid JSON.' },
         { role: 'user', content: prompt }
       ],
       temperature: 0.4,
