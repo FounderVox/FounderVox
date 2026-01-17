@@ -5,6 +5,102 @@ All notable changes to FounderNote will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-17
+
+### Added
+
+#### Voice Recording & Transcription System
+- **Complete Audio Pipeline**: End-to-end voice recording with AI transcription
+  - Browser-based recording using Web Audio API and MediaRecorder
+  - Real-time waveform visualization during recording
+  - Audio upload to Supabase Storage
+  - Deepgram Nova-2 transcription with smart formatting
+  - GPT-4o transcript cleanup for polished notes
+  - Automatic embedding generation for semantic search
+
+#### Debug Logging System
+- **Comprehensive Tracing**: Full debug logging throughout recording flow
+  - `[RecordingModal]` - Client-side recording state
+  - `[FounderNote:Recording]` - Upload and processing events
+  - `[Upload]` - Server-side file handling
+  - `[Process]` / `[Process:Deepgram]` - Transcription pipeline
+  - Detailed error logging with stack traces
+
+### Changed
+
+#### Processing Modal UI Overhaul
+- **Modern Design**: Complete redesign of the processing/success modal
+  - Rounded 3xl corners with backdrop blur
+  - Branded spinner with Sparkles icon in terracotta gradient
+  - Animated progress bar during processing
+  - Celebration particles animation on success
+  - "View Note" button with FileText icon
+  - Auto-close indicator showing "Closing automatically..."
+  - Click outside to dismiss (when complete/error)
+  - Auto-closes after 2.5 seconds on success
+
+#### Demo Page UI Improvements
+- **Enhanced Onboarding Experience**: Polished demo page design
+  - Larger card layout with rounded-3xl corners
+  - Success badge showing "Account created"
+  - Rocket icon with brand gradient
+  - Gradient CTA button with arrow animation
+  - Template cards with:
+    - Color-coded gradient icons (blue, amber, emerald, purple)
+    - Descriptive subtitles for each template
+    - Hover animations with lift effect
+    - Selection indicator with checkmark
+  - Improved loading state with Sparkles icon
+  - Skip link with animated arrow on hover
+
+### Fixed
+
+#### Critical: Audio Upload RLS Fix
+- **Supabase Storage RLS**: Fixed Row Level Security blocking audio uploads
+  - Storage bucket operations now use service role client
+  - Database inserts use service role client consistently
+  - File cleanup on error uses service role client
+  - Proper error handling with detailed logging
+
+#### Processing Modal Stuck Issue
+- **Auto-Close Bug**: Fixed modal staying open after successful transcription
+  - Added `context.reset()` call to clear state after close
+  - Proper cleanup of recording context on completion
+  - Event dispatch (`noteCreated`) for dashboard refresh
+
+#### Debug Telemetry Cleanup
+- **Removed Orphaned Debug Code**: Cleaned up auth-context.tsx
+  - Removed ~10 debug `fetch()` calls to non-existent endpoint
+  - Eliminated `ERR_CONNECTION_REFUSED` console errors
+  - Improved auth initialization performance
+
+#### Duplicate Console Logs
+- **React Strict Mode Fix**: Prevented double initialization
+  - Added `initRef` guard to welcome page
+  - Added `initRef` guard to demo page
+  - Logs now appear once instead of twice
+
+### Technical Details
+
+#### Environment Configuration
+- **New Required Variable**: `SUPABASE_SERVICE_ROLE_KEY`
+  - Required for server-side database and storage operations
+  - Bypasses Row Level Security in API routes
+  - Documented in `.env.local.example` with setup instructions
+  - See `SETUP_SERVICE_ROLE_KEY.md` for detailed setup guide
+
+#### API Route Improvements
+- `upload/route.ts`: Uses service role for storage + DB
+- `process/route.ts`: Uses service role for all DB operations
+- Fixed double JSON parse bug in error handler
+- Proper error status updates on failure
+
+#### Recording Hook Enhancements
+- Detailed logging at each pipeline stage
+- Network error handling with clear messages
+- Response header logging for debugging
+- Proper blob validation before upload
+
 ## [0.3.1] - 2026-01-08
 
 ### Fixed

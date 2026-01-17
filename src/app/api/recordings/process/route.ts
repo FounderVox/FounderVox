@@ -17,20 +17,43 @@ export const maxDuration = 300 // 5 minutes max execution time
 let deepgramClient: DeepgramClient | null = null
 
 function getDeepgram(): DeepgramClient {
+  const apiKey = process.env.DEEPGRAM_API_KEY
+  console.log('[Process:Deepgram] Initializing Deepgram client:', {
+    hasApiKey: !!apiKey,
+    keyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : 'MISSING'
+  })
+
+  if (!apiKey) {
+    throw new Error('DEEPGRAM_API_KEY is not configured. Please add it to your .env.local file.')
+  }
+
   if (!deepgramClient) {
-    deepgramClient = createDeepgramClient(process.env.DEEPGRAM_API_KEY!)
+    deepgramClient = createDeepgramClient(apiKey)
   }
   return deepgramClient
 }
 
 export async function POST(request: NextRequest) {
+  // Parse request body first (can only be read once)
+  let recordingId: string | undefined
+  try {
+    const body = await request.json()
+    recordingId = body.recordingId
+  } catch (parseError) {
+    console.error('[Process] Failed to parse request body:', parseError)
+    return NextResponse.json(
+      { error: 'Invalid request body' },
+      { status: 400 }
+    )
+  }
+
   try {
     const supabase = await createClient()
 
     // Get authenticated user and session
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     const { data: { session } } = await supabase.auth.getSession()
-    
+
     if (authError || !user) {
       console.error('[Process] Auth error:', {
         error: authError,
@@ -52,9 +75,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Process] User authenticated:', user.id)
-
-    // Get recording ID from request
-    const { recordingId } = await request.json()
 
     if (!recordingId) {
       return NextResponse.json(
@@ -108,28 +128,71 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to download audio: ${downloadError?.message}`)
     }
 
-    console.log('[Process] Audio downloaded, sending to Deepgram')
+    console.log('[Process] Audio downloaded, preparing for Deepgram')
 
     // Convert Blob to Buffer
     const arrayBuffer = await audioData.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
+    console.log('[Process:Deepgram] Buffer prepared:', {
+      bufferSize: buffer.length,
+      bufferSizeKB: (buffer.length / 1024).toFixed(2) + ' KB',
+      isValidBuffer: Buffer.isBuffer(buffer),
+      firstBytes: buffer.slice(0, 20).toString('hex')
+    })
+
+    if (buffer.length === 0) {
+      throw new Error('Audio buffer is empty - no audio data to transcribe')
+    }
+
     // Transcribe with Deepgram
-    const { result, error: deepgramError } = await getDeepgram().listen.prerecorded.transcribeFile(
-      buffer,
-      {
-        model: 'nova-2',
-        smart_format: true,
-        filler_words: true,
-        paragraphs: true,
-        language: 'en',
-        punctuate: true,
-        diarize: false
-      }
-    )
+    console.log('[Process:Deepgram] Sending to Deepgram for transcription...')
+    let result, deepgramError
+    try {
+      const response = await getDeepgram().listen.prerecorded.transcribeFile(
+        buffer,
+        {
+          model: 'nova-2',
+          smart_format: true,
+          filler_words: true,
+          paragraphs: true,
+          language: 'en',
+          punctuate: true,
+          diarize: false,
+          mimetype: 'audio/webm'
+        }
+      )
+      result = response.result
+      deepgramError = response.error
+      console.log('[Process:Deepgram] Response received:', {
+        hasResult: !!result,
+        hasError: !!deepgramError,
+        resultKeys: result ? Object.keys(result) : [],
+        metadata: result?.metadata
+      })
+    } catch (dgError: any) {
+      console.error('[Process:Deepgram] Exception during transcription:', {
+        message: dgError?.message,
+        name: dgError?.name,
+        code: dgError?.code,
+        status: dgError?.status,
+        stack: dgError?.stack,
+        fullError: JSON.stringify(dgError, null, 2)
+      })
+      throw new Error(`Deepgram transcription failed: ${dgError?.message || 'Unknown error'}`)
+    }
 
     if (deepgramError) {
+      console.error('[Process:Deepgram] Deepgram returned error:', {
+        message: deepgramError.message,
+        fullError: JSON.stringify(deepgramError, null, 2)
+      })
       throw new Error(`Deepgram error: ${deepgramError.message}`)
+    }
+
+    if (!result) {
+      console.error('[Process:Deepgram] No result returned from Deepgram')
+      throw new Error('Deepgram returned no result')
     }
 
     const rawTranscript = result.results?.channels[0]?.alternatives[0]?.transcript
@@ -144,10 +207,17 @@ export async function POST(request: NextRequest) {
     const actualDuration = result.metadata?.duration || recording.duration_seconds
 
     // Generate cleaned transcript using GPT-4o (for display in note)
+    console.log('[Process] Cleaning transcript with GPT-4o...')
     const cleanedTranscript = await generateCleanedTranscript(rawTranscript)
+    console.log('[Process] Transcript cleaned, length:', cleanedTranscript.length)
+
+    // Use service role client for database operations (bypasses RLS)
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const serviceClient = createServiceRoleClient()
 
     // Update recording with transcripts and mark as completed
-    await supabase
+    console.log('[Process] Updating recording with transcripts...')
+    const { error: updateError } = await serviceClient
       .from('recordings')
       .update({
         raw_transcript: rawTranscript,
@@ -157,11 +227,17 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', recordingId)
 
+    if (updateError) {
+      console.error('[Process] Error updating recording:', updateError)
+    } else {
+      console.log('[Process] Recording updated successfully')
+    }
+
     console.log('[Process] Creating note from transcript...')
 
-    // Create a note from the transcript
+    // Create a note from the transcript using service role client
     const noteTitle = `Recording ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-    const { data: note, error: noteError } = await supabase
+    const { data: note, error: noteError } = await serviceClient
       .from('notes')
       .insert({
         user_id: user.id,
@@ -178,7 +254,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (noteError) {
-      console.error('[Process] Error creating note:', noteError)
+      console.error('[Process] Error creating note:', {
+        message: noteError.message,
+        details: noteError.details,
+        hint: noteError.hint,
+        code: noteError.code
+      })
       // Continue even if note creation fails
     } else {
       console.log('[Process] Note created successfully:', note.id)
@@ -210,20 +291,25 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Process] Error:', error)
+    console.error('[Process] Error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      recordingId
+    })
 
-    // Try to update recording status to failed
-    try {
-      const { recordingId } = await request.json()
-      if (recordingId) {
-        const supabase = await createClient()
-        await supabase
+    // Try to update recording status to failed (using recordingId from outer scope)
+    if (recordingId) {
+      try {
+        const { createServiceRoleClient } = await import('@/lib/supabase/server')
+        const serviceClient = createServiceRoleClient()
+        await serviceClient
           .from('recordings')
           .update({ processing_status: 'failed' })
           .eq('id', recordingId)
+        console.log('[Process] Updated recording status to failed:', recordingId)
+      } catch (updateError) {
+        console.error('[Process] Failed to update error status:', updateError)
       }
-    } catch (updateError) {
-      console.error('[Process] Failed to update error status:', updateError)
     }
 
     return NextResponse.json(

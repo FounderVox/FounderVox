@@ -84,16 +84,26 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps 
   const handleStop = async () => {
     if (!stopRecording || !uploadAndProcess) return
 
+    console.log('[RecordingModal] Stopping recording...')
     const blob = await stopRecording()
+
+    console.log('[RecordingModal] Blob received:', {
+      hasBlob: !!blob,
+      blobSize: blob?.size ?? 0,
+      blobType: blob?.type ?? 'none'
+    })
+
     if (!blob || blob.size === 0) {
+      console.error('[RecordingModal] No audio data recorded - blob is empty or null')
+      // Don't try to upload empty blob - show error state instead
       onClose()
       onStop?.()
-      setTimeout(() => uploadAndProcess(blob || undefined), 200)
       return
     }
 
     onClose()
     onStop?.()
+    console.log('[RecordingModal] Starting upload with blob size:', blob.size)
     setTimeout(() => uploadAndProcess(blob), 300)
   }
 

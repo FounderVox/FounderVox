@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export const dynamic = 'force-dynamic'
 import { useRouter } from 'next/navigation'
@@ -16,10 +16,15 @@ export default function WelcomePage() {
   const [firstName, setFirstName] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const initRef = useRef(false)
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
+    // Prevent double initialization from React Strict Mode
+    if (initRef.current) return
+    initRef.current = true
+
     const loadUser = async () => {
       console.log('[FounderNote:Onboarding] Loading user for welcome page...')
       const { data: { user }, error } = await supabase.auth.getUser()

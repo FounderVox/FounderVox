@@ -59,6 +59,9 @@ npm install
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
    NEXT_PUBLIC_SITE_URL=http://localhost:3000
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   DEEPGRAM_API_KEY=your_deepgram_key
+   OPENAI_API_KEY=your_openai_key
    ```
 
 ### 3. Set Up Database
@@ -145,6 +148,24 @@ src/
 - Founder Mode (pitch notes, investor updates)
 - Learning & Research
 
+### Voice Recording & Transcription (v0.4.0)
+- **Complete Audio Pipeline**
+  - Browser-based recording with Web Audio API
+  - Real-time waveform visualization
+  - Audio upload to Supabase Storage
+  - Deepgram Nova-2 AI transcription
+  - GPT-4o transcript cleanup
+  - Automatic embedding generation for search
+- **Modern Processing Modal**
+  - Branded spinner with progress indicator
+  - Celebration animation on success
+  - Auto-close after completion
+  - Click outside to dismiss
+- **Enhanced Demo Page**
+  - Polished onboarding experience
+  - Color-coded template cards
+  - Animated interactions
+
 ### Dashboard & Note Management (v0.3.0)
 - **Tag Management System**
   - Create and assign tags to organize notes
@@ -222,6 +243,9 @@ npm run lint     # Run ESLint
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | Yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anonymous key | Yes |
 | `NEXT_PUBLIC_SITE_URL` | Your site URL (for OAuth redirects) | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (for server-side operations) | Yes |
+| `DEEPGRAM_API_KEY` | Deepgram API key (for audio transcription) | Yes |
+| `OPENAI_API_KEY` | OpenAI API key (for AI processing) | Yes |
 
 ## Deployment
 

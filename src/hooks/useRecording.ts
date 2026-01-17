@@ -357,13 +357,29 @@ export function useRecording() {
       const formData = new FormData()
       formData.append('audio', audioBlob, `recording-${Date.now()}.webm`)
 
-      const uploadResponse = await fetch('/api/recordings/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include' // Ensure cookies are sent
-      })
+      console.log('[FounderNote:Recording] Sending fetch request to /api/recordings/upload...')
+      let uploadResponse: Response
+      try {
+        uploadResponse = await fetch('/api/recordings/upload', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include' // Ensure cookies are sent
+        })
+      } catch (fetchError: any) {
+        console.error('[FounderNote:Recording] Network error during upload:', {
+          message: fetchError?.message,
+          name: fetchError?.name,
+          stack: fetchError?.stack
+        })
+        throw new Error(`Network error: ${fetchError?.message || 'Failed to connect to server'}`)
+      }
 
-      console.log('[FounderNote:Recording] Upload response status:', uploadResponse.status)
+      console.log('[FounderNote:Recording] Upload response received:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        ok: uploadResponse.ok,
+        headers: Object.fromEntries(uploadResponse.headers.entries())
+      })
 
       if (!uploadResponse.ok) {
         let errorMessage = 'Upload failed'
@@ -371,9 +387,11 @@ export function useRecording() {
           const errorData = await uploadResponse.json()
           errorMessage = errorData.error || errorData.details || 'Upload failed'
           console.error('[FounderNote:Recording] Upload error details:', {
+            status: uploadResponse.status,
             error: errorData.error,
             details: errorData.details,
             code: errorData.code,
+            instructions: errorData.instructions,
             fullError: errorData
           })
         } catch (e) {
@@ -390,20 +408,48 @@ export function useRecording() {
 
       setState(prev => ({ ...prev, recordingId }))
 
-      // Step 2: Process recording
-      console.log('[FounderNote:Recording] Starting AI processing...')
-      const processResponse = await fetch('/api/recordings/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recordingId }),
-        credentials: 'include' // Ensure cookies are sent
+      // Step 2: Process recording (transcription with Deepgram)
+      console.log('[FounderNote:Recording] Starting AI processing (Deepgram transcription)...')
+      let processResponse: Response
+      try {
+        processResponse = await fetch('/api/recordings/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recordingId }),
+          credentials: 'include' // Ensure cookies are sent
+        })
+      } catch (fetchError: any) {
+        console.error('[FounderNote:Recording] Network error during processing:', {
+          message: fetchError?.message,
+          name: fetchError?.name,
+          stack: fetchError?.stack
+        })
+        throw new Error(`Network error during processing: ${fetchError?.message || 'Failed to connect'}`)
+      }
+
+      console.log('[FounderNote:Recording] Process response received:', {
+        status: processResponse.status,
+        statusText: processResponse.statusText,
+        ok: processResponse.ok
       })
 
-      console.log('[FounderNote:Recording] Process response status:', processResponse.status)
-
       if (!processResponse.ok) {
-        const errorData = await processResponse.json()
-        throw new Error(errorData.error || 'Processing failed')
+        let errorMessage = 'Processing failed'
+        try {
+          const errorData = await processResponse.json()
+          errorMessage = errorData.error || errorData.details || 'Processing failed'
+          console.error('[FounderNote:Recording] Process error details:', {
+            status: processResponse.status,
+            error: errorData.error,
+            details: errorData.details,
+            fullError: errorData
+          })
+        } catch (e) {
+          const errorText = await processResponse.text()
+          console.error('[FounderNote:Recording] Process error (non-JSON):', errorText)
+          errorMessage = errorText || 'Processing failed'
+        }
+        throw new Error(errorMessage)
       }
 
       const processData = await processResponse.json()

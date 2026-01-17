@@ -107,17 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, loadProfile])
 
   useEffect(() => {
-    // #region agent log
-    const effectId = Math.random().toString(36).slice(2, 8)
-    const effectStart = Date.now()
-    fetch('http://127.0.0.1:7242/ingest/d4d21b9d-6b84-4d67-a5bd-a632341af48c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth-context.tsx:useEffect',message:'Effect started',data:{effectId,isLoading,initializedRefValue:initializedRef.current},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H2'})}).catch(()=>{});
-    // #endregion
-
     // Prevent double initialization - NEVER reset this flag
     if (initializedRef.current) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d4d21b9d-6b84-4d67-a5bd-a632341af48c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth-context.tsx:useEffect',message:'Skipping - already initialized',data:{effectId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
       console.log('[AuthContext] Already initialized, skipping')
       return
     }
@@ -127,10 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initAuth = async () => {
       try {
-        // #region agent log
-        const getUserStart = Date.now()
-        fetch('http://127.0.0.1:7242/ingest/d4d21b9d-6b84-4d67-a5bd-a632341af48c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth-context.tsx:initAuth',message:'Starting getUser with timeout',data:{effectId,elapsed:Date.now()-effectStart},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-        // #endregion
         console.log('[AuthContext] Initializing auth...')
         
         // Add 5-second timeout to getUser() to prevent hanging
@@ -149,16 +136,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           userError = result.error
         } catch (e) {
           // getUser timed out - try getSession as fallback
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/d4d21b9d-6b84-4d67-a5bd-a632341af48c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth-context.tsx:initAuth',message:'getUser timed out, trying getSession',data:{effectId,elapsed:Date.now()-effectStart},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-          // #endregion
+          console.log('[AuthContext] getUser timed out, trying getSession as fallback')
           const { data: { session } } = await supabaseClient.auth.getSession()
           currentUser = session?.user ?? null
         }
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d4d21b9d-6b84-4d67-a5bd-a632341af48c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth-context.tsx:initAuth',message:'getUser completed',data:{effectId,getUserDuration:Date.now()-getUserStart,hasUser:!!currentUser,error:userError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-        // #endregion
 
         // Don't abort on unmount - React Strict Mode causes remounts, we should complete initialization
         if (userError || !currentUser) {
@@ -174,14 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('[AuthContext] User found:', currentUser.id)
         setUser(currentUser)
 
-        // #region agent log
-        const profileStart = Date.now()
-        fetch('http://127.0.0.1:7242/ingest/d4d21b9d-6b84-4d67-a5bd-a632341af48c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth-context.tsx:initAuth',message:'Starting loadProfile',data:{effectId,elapsed:Date.now()-effectStart},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-        // #endregion
         const profileData = await loadProfile(currentUser)
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d4d21b9d-6b84-4d67-a5bd-a632341af48c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth-context.tsx:initAuth',message:'loadProfile completed',data:{effectId,profileDuration:Date.now()-profileStart,hasProfile:!!profileData},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-        // #endregion
 
         // Always update state - React handles unmounted component state updates safely
         // This is necessary for Strict Mode where the first mount's async work completes after cleanup
@@ -210,9 +184,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         console.log('[AuthContext] Auth initialization complete')
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d4d21b9d-6b84-4d67-a5bd-a632341af48c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth-context.tsx:initAuth',message:'Init complete - setting isLoading false',data:{effectId,totalDuration:Date.now()-effectStart,mounted},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
         setIsLoading(false)
       } catch (err) {
         console.error('[AuthContext] Init error:', err)
@@ -224,9 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth()
 
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d4d21b9d-6b84-4d67-a5bd-a632341af48c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth-context.tsx:onAuthStateChange',message:'Auth state changed',data:{effectId,event,hasSession:!!session},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
-      // #endregion
+      console.log('[AuthContext] Auth state changed:', event)
       if (event === 'SIGNED_OUT') {
         setUser(null)
         setProfile(null)
@@ -241,9 +210,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d4d21b9d-6b84-4d67-a5bd-a632341af48c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth-context.tsx:cleanup',message:'Cleanup running',data:{effectId,elapsed:Date.now()-effectStart},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
       mounted = false
       if (subscription) {
         subscription.unsubscribe()
