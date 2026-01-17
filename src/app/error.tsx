@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 
 export default function Error({
@@ -10,6 +11,8 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const router = useRouter()
+
   useEffect(() => {
     console.error('[FounderNote:Error] Error caught:', {
       message: error.message,
@@ -29,7 +32,7 @@ export default function Error({
             Try again
           </Button>
           <Button
-            onClick={() => (window.location.href = '/dashboard')}
+            onClick={() => router.push('/dashboard')}
             variant="outline"
             className="w-full"
           >

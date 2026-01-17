@@ -2,7 +2,7 @@
 
 import { useState, createContext, useContext } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/shared/logo'
@@ -65,6 +65,7 @@ interface SidebarProps {
 
 export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [templatesOpen, setTemplatesOpen] = useState(true)
   const [notesOpen, setNotesOpen] = useState(true)
   const { isCollapsed, setIsCollapsed } = useSidebar()
@@ -128,7 +129,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
                     e.preventDefault()
                     setIsCollapsed(false)
                     setTimeout(() => {
-                      window.location.href = item.href
+                      router.push(item.href)
                     }, 200)
                   }
                 }}

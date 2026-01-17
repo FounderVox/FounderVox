@@ -21,41 +21,61 @@ interface AuthContextType {
   profile: Profile | null
   isLoading: boolean
   error: string | null
-  supabase: ReturnType<typeof createClient>
+  supabase: ReturnType<typeof createClient> | null
   refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // Create a singleton Supabase client outside the component
-// If this fails, the app won't work anyway, so we let it throw
-let supabaseClient: ReturnType<typeof createClient>
+// If this fails, we handle it gracefully instead of crashing
+let supabaseClient: ReturnType<typeof createClient> | null = null
+let supabaseInitError: string | null = null
 
 try {
   supabaseClient = createClient()
 } catch (error) {
   console.error('[AuthContext] Failed to create Supabase client:', error)
-  // Re-throw to prevent app from running with invalid config
-  throw error
+  supabaseInitError = 'Configuration Error: Authentication service is not properly configured. Please contact support.'
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(supabaseInitError)
   const router = useRouter()
   const pathname = usePathname()
   const initializedRef = useRef(false)
 
+  // If Supabase failed to initialize, stop loading and show error
+  useEffect(() => {
+    if (supabaseInitError) {
+      setIsLoading(false)
+    }
+  }, [])
+
   const loadProfile = useCallback(async (currentUser: User): Promise<Profile | null> => {
+    if (!supabaseClient) {
+      console.error('[AuthContext] Cannot load profile: Supabase client not initialized')
+      return null
+    }
     try {
       console.log('[AuthContext] Loading profile for user:', currentUser.id)
-      const { data, error: profileError } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single()
+
+      // Add 5-second timeout to profile query to prevent hanging
+      const profileQueryWithTimeout = Promise.race([
+        supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single(),
+        new Promise<{ data: null; error: { code: string; message: string } }>((_, reject) =>
+          setTimeout(() => reject(new Error('Profile query timeout after 5s')), 5000)
+        )
+      ])
+
+      const { data, error: profileError } = await profileQueryWithTimeout
 
       if (profileError) {
         console.log('[AuthContext] Profile error:', profileError.code, profileError.message)
@@ -117,9 +137,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true
 
     const initAuth = async () => {
+      // Skip initialization if Supabase client failed to initialize
+      if (!supabaseClient) {
+        console.error('[AuthContext] Skipping auth init: Supabase client not available')
+        return
+      }
+
       try {
         console.log('[AuthContext] Initializing auth...')
-        
+
         // Add 5-second timeout to getUser() to prevent hanging
         const getUserWithTimeout = Promise.race([
           supabaseClient.auth.getUser(),
@@ -135,10 +161,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           currentUser = result.data.user
           userError = result.error
         } catch (e) {
-          // getUser timed out - try getSession as fallback
+          // getUser timed out - try getSession as fallback with its own timeout
           console.log('[AuthContext] getUser timed out, trying getSession as fallback')
-          const { data: { session } } = await supabaseClient.auth.getSession()
-          currentUser = session?.user ?? null
+          try {
+            const getSessionWithTimeout = Promise.race([
+              supabaseClient.auth.getSession(),
+              new Promise<{ data: { session: null } }>((_, reject) =>
+                setTimeout(() => reject(new Error('getSession timeout after 3s')), 3000)
+              )
+            ])
+            const { data: { session } } = await getSessionWithTimeout
+            currentUser = session?.user ?? null
+          } catch (sessionError) {
+            console.error('[AuthContext] getSession also timed out:', sessionError)
+            throw new Error('AUTH_TIMEOUT')
+          }
         }
 
         // Don't abort on unmount - React Strict Mode causes remounts, we should complete initialization
@@ -187,27 +224,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false)
       } catch (err) {
         console.error('[AuthContext] Init error:', err)
-        setError('Failed to initialize authentication')
+        // Provide specific error messages based on error type
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        if (errorMessage === 'AUTH_TIMEOUT') {
+          setError('Authentication timed out. Please check your network connection and try again.')
+        } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+          setError('Network error. Please check your internet connection and try again.')
+        } else if (errorMessage.includes('config') || errorMessage.includes('Configuration')) {
+          setError('Configuration Error: Authentication service is not properly configured. Please contact support.')
+        } else {
+          setError('Failed to initialize authentication. Please refresh the page or try again later.')
+        }
         setIsLoading(false)
       }
     }
 
     initAuth()
 
-    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      console.log('[AuthContext] Auth state changed:', event)
-      if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setProfile(null)
-        router.push('/login')
-      } else if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user)
-        const profileData = await loadProfile(session.user)
-        if (profileData) {
-          setProfile(profileData)
+    // Only set up auth state change listener if Supabase client is available
+    let subscription: { unsubscribe: () => void } | null = null
+    if (supabaseClient) {
+      const { data } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        console.log('[AuthContext] Auth state changed:', event)
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setProfile(null)
+          router.push('/login')
+        } else if (event === 'SIGNED_IN' && session?.user) {
+          setUser(session.user)
+          const profileData = await loadProfile(session.user)
+          if (profileData) {
+            setProfile(profileData)
+          }
         }
-      }
-    })
+      })
+      subscription = data.subscription
+    }
 
     return () => {
       mounted = false

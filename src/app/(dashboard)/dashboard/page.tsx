@@ -22,9 +22,45 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { ActionItem, BrainDumpItem, isOverdue, formatDeadline, dispatchActionItemEvent } from '@/types/dashboard'
 import { createClient } from '@/lib/supabase/client'
+
+// Skeleton loading component for note cards
+function NoteCardSkeleton() {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
+      <div className="flex items-start justify-between mb-3">
+        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div className="h-4 w-4 bg-gray-200 rounded"></div>
+      </div>
+      <div className="space-y-2 mb-4">
+        <div className="h-3 bg-gray-100 rounded w-full"></div>
+        <div className="h-3 bg-gray-100 rounded w-5/6"></div>
+        <div className="h-3 bg-gray-100 rounded w-4/6"></div>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-5 bg-gray-100 rounded-full w-16"></div>
+        <div className="h-5 bg-gray-100 rounded-full w-12"></div>
+      </div>
+    </div>
+  )
+}
+
+// Skeleton loading component for focus items
+function FocusItemSkeleton() {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4 border-l-[3px] border-l-gray-300 animate-pulse">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+          <div className="h-3 bg-gray-100 rounded w-1/3"></div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // Get time-aware greeting
 function getGreeting(): string {
@@ -51,6 +87,7 @@ function getFirstName(displayName: string | null | undefined): string {
 
 export default function DashboardPage() {
   const { user, profile, supabase } = useAuth()
+  const router = useRouter()
   const [notes, setNotes] = useState<any[]>([])
   const [filteredNotes, setFilteredNotes] = useState<any[]>([])
   const [activeFilter, setActiveFilter] = useState('all')
@@ -72,11 +109,14 @@ export default function DashboardPage() {
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedNoteForDelete, setSelectedNoteForDelete] = useState<{id: string, title: string} | null>(null)
+  const [isLoadingNotes, setIsLoadingNotes] = useState(true)
+  const [isLoadingFocus, setIsLoadingFocus] = useState(true)
 
   const loadNotes = useCallback(async () => {
-    if (!user) return
+    if (!user || !supabase) return
 
     try {
+      setIsLoadingNotes(true)
       const { data, error } = await supabase
         .from('notes')
         .select('*')
@@ -94,13 +134,16 @@ export default function DashboardPage() {
       applyFilter(notesData, activeFilter)
     } catch (error) {
       console.error('[Dashboard] Unexpected error loading notes:', error)
+    } finally {
+      setIsLoadingNotes(false)
     }
   }, [user, supabase, activeFilter])
 
   const loadFocusItems = useCallback(async () => {
-    if (!user) return
+    if (!user || !supabase) return
 
     try {
+      setIsLoadingFocus(true)
       const { data: recordings } = await supabase
         .from('recordings')
         .select('id')
@@ -142,6 +185,8 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('[Dashboard] Unexpected error loading focus items:', error)
+    } finally {
+      setIsLoadingFocus(false)
     }
   }, [user, supabase])
 
@@ -310,7 +355,7 @@ export default function DashboardPage() {
   }
 
   const toggleStar = async (noteId: string) => {
-    if (!user) return
+    if (!user || !supabase) return
 
     const note = notes.find(n => n.id === noteId)
     if (!note) return
@@ -350,7 +395,7 @@ export default function DashboardPage() {
   }
 
   const confirmDeleteNote = async () => {
-    if (!user || !selectedNoteForDelete) return
+    if (!user || !supabase || !selectedNoteForDelete) return
 
     const noteId = selectedNoteForDelete.id
     const originalNotes = notes
@@ -398,7 +443,7 @@ export default function DashboardPage() {
   }
 
   const handleViewNote = (noteId: string) => {
-    window.location.href = `/dashboard/notes/${noteId}`
+    router.push(`/dashboard/notes/${noteId}`)
   }
 
   const displayNotes = activeFilter === 'all' ? notes : filteredNotes
@@ -522,7 +567,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Today's Focus - Two Column Layout */}
-      {hasFocusItems && (
+      {(hasFocusItems || isLoadingFocus) && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -542,6 +587,26 @@ export default function DashboardPage() {
             </Link>
           </div>
 
+          {isLoadingFocus ? (
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-medium text-gray-900">To Do</h3>
+                </div>
+                <div className="space-y-2">
+                  {[...Array(3)].map((_, i) => <FocusItemSkeleton key={i} />)}
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-medium text-gray-900">In Progress</h3>
+                </div>
+                <div className="space-y-2">
+                  {[...Array(2)].map((_, i) => <FocusItemSkeleton key={i} />)}
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="grid lg:grid-cols-2 gap-6">
             {/* To Do Column */}
             <div>
@@ -810,6 +875,7 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+          )}
         </motion.div>
       )}
 
@@ -835,7 +901,13 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {displayNotes.length > 0 ? (
+        {isLoadingNotes ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, index) => (
+              <NoteCardSkeleton key={index} />
+            ))}
+          </div>
+        ) : displayNotes.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {displayNotes.map((note: any, index: number) => (
               <motion.div

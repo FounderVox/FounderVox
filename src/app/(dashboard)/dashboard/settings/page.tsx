@@ -50,7 +50,7 @@ export default function SettingsPage() {
   }, [profile, user])
 
   const handleSaveProfile = async () => {
-    if (!user) return
+    if (!user || !supabase) return
 
     setIsLoading(true)
     setSaveStatus('saving')
@@ -88,7 +88,7 @@ export default function SettingsPage() {
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !user) return
+    if (!file || !user || !supabase) return
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -148,7 +148,7 @@ export default function SettingsPage() {
   }
 
   const handleExportData = async () => {
-    if (!user) return
+    if (!user || !supabase) return
 
     setIsLoading(true)
     try {
@@ -188,7 +188,7 @@ export default function SettingsPage() {
   }
 
   const handleRemoveAvatar = async () => {
-    if (!user) return
+    if (!user || !supabase) return
 
     setIsLoading(true)
     try {
@@ -213,7 +213,7 @@ export default function SettingsPage() {
   }
 
   const handleDeleteAccount = async () => {
-    if (!user) return
+    if (!user || !supabase) return
 
     const confirmed = window.confirm(
       'Are you sure you want to permanently delete your account? This will immediately and irreversibly delete:\n\n' +

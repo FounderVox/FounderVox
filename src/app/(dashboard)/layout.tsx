@@ -73,7 +73,7 @@ function DashboardContent({
   const { supabase, user } = useAuth()
 
   const loadCounts = async () => {
-    if (!user) return
+    if (!user || !supabase) return
 
     try {
       // Load total notes count

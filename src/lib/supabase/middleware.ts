@@ -36,9 +36,21 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Add 3-second timeout to prevent blocking all page navigation indefinitely
+  let user = null
+  try {
+    const getUserWithTimeout = Promise.race([
+      supabase.auth.getUser(),
+      new Promise<{ data: { user: null } }>((_, reject) =>
+        setTimeout(() => reject(new Error('getUser timeout after 3s')), 3000)
+      )
+    ])
+    const result = await getUserWithTimeout
+    user = result.data.user
+  } catch (e) {
+    console.warn('[FounderNote:Middleware] getUser timed out, treating as unauthenticated:', e)
+    // Graceful fallback: treat as unauthenticated, user can retry navigation
+  }
 
   console.log('[FounderNote:Middleware] User:', user ? user.email : 'Not authenticated')
 

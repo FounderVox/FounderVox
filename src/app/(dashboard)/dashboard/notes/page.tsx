@@ -79,7 +79,7 @@ export default function AllNotesPage() {
   }, [])
 
   const loadNotes = useCallback(async () => {
-    if (!user) return
+    if (!user || !supabase) return
 
     try {
       const { data: notesData, error: notesError } = await supabase
@@ -165,7 +165,7 @@ export default function AllNotesPage() {
   }, [loadNotes])
 
   const toggleStar = async (noteId: string) => {
-    if (!user) return
+    if (!user || !supabase) return
 
     const note = notes.find(n => n.id === noteId)
     if (!note) return
@@ -221,7 +221,7 @@ export default function AllNotesPage() {
   }
 
   const confirmDeleteNote = async () => {
-    if (!user || !selectedNoteForDelete) return
+    if (!user || !supabase || !selectedNoteForDelete) return
 
     const noteId = selectedNoteForDelete.id
     const originalNotes = notes

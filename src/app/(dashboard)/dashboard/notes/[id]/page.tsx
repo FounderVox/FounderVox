@@ -58,7 +58,7 @@ export default function NoteViewPage() {
   }, [editedTitle, editedContent, note])
 
   const loadNote = async () => {
-    if (!noteId || !user) return
+    if (!noteId || !user || !supabase) return
 
     try {
       setIsLoading(true)
@@ -94,7 +94,7 @@ export default function NoteViewPage() {
   }
 
   const handleSave = async () => {
-    if (!noteId || !user || !editedContent.trim()) return
+    if (!noteId || !user || !supabase || !editedContent.trim()) return
 
     try {
       setIsSaving(true)
