@@ -669,6 +669,51 @@ html {
   animation: micPulse 2s ease-in-out infinite;
 }
 
+/* Premium sound wave animation */
+@keyframes soundWave {
+  0%, 100% {
+    transform: scaleY(0.4);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-sound-wave {
+  animation: soundWave 0.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Premium ripple effect */
+@keyframes premiumRipple {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.animate-premium-ripple {
+  animation: premiumRipple 2.5s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+}
+
+/* Breathing glow for mic button */
+@keyframes breathingGlow {
+  0%, 100% {
+    box-shadow: 0 8px 32px rgba(189, 103, 80, 0.35);
+  }
+  50% {
+    box-shadow: 0 12px 40px rgba(189, 103, 80, 0.5);
+  }
+}
+
+.animate-breathing-glow {
+  animation: breathingGlow 2s ease-in-out infinite;
+}
+
 /* Export fan animation */
 @keyframes fanOut {
   from {

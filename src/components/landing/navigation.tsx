@@ -61,7 +61,7 @@ export default function Navigation() {
   }
 
   const navLinks = [
-    { href: '/pricing', label: 'Pricing' },
+    { href: '/beta', label: 'Pricing' },
     { href: '/download', label: 'Download' },
     { href: '/#features', label: 'Features' },
   ]

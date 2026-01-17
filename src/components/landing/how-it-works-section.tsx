@@ -5,6 +5,51 @@ import { useInView } from 'framer-motion'
 import { useRef } from 'react'
 import { Mic, Cpu, Check, Circle } from 'lucide-react'
 
+// Premium sound wave bar component
+const SoundWaveBar = ({ delay, isInView }: { delay: number; isInView: boolean }) => (
+  <motion.div
+    className="w-[3px] rounded-full"
+    style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+    initial={{ height: 8 }}
+    animate={isInView ? {
+      height: [8, 20, 12, 24, 8, 16, 8],
+    } : { height: 8 }}
+    transition={{
+      duration: 1.4,
+      repeat: Infinity,
+      ease: 'easeInOut',
+      delay: delay,
+    }}
+  />
+)
+
+// Premium circular ripple component
+const PremiumRipple = ({ delay, isInView, size }: { delay: number; isInView: boolean; size: number }) => (
+  <motion.div
+    className="absolute rounded-full"
+    style={{
+      width: 80,
+      height: 80,
+      left: '50%',
+      top: '50%',
+      marginLeft: -40,
+      marginTop: -40,
+      border: '1.5px solid rgba(189, 103, 80, 0.4)',
+    }}
+    initial={{ scale: 1, opacity: 0 }}
+    animate={isInView ? {
+      scale: [1, size],
+      opacity: [0.6, 0],
+    } : {}}
+    transition={{
+      duration: 2.5,
+      repeat: Infinity,
+      ease: [0.25, 0.1, 0.25, 1],
+      delay: delay,
+    }}
+  />
+)
+
 export default function HowItWorksSection() {
   const sectionRef = useRef(null)
   const isInView = useInView(sectionRef, { once: true, margin: '-100px' })
@@ -21,65 +66,77 @@ export default function HowItWorksSection() {
       title: 'Tap & Speak',
       description: 'Hit record and speak naturally. Share ideas, tasks, or notes as they come to you.',
       illustration: (
-        <div className="relative w-full h-48 flex items-center justify-center">
-          {/* Mic button - static, no scale animation to avoid jitter */}
-          <div className="relative">
-            <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg relative z-10"
-              style={{ backgroundColor: '#BD6750' }}
-            >
-              <Mic className="w-8 h-8 text-white" />
-            </div>
-
-            {/* Smooth pulse rings using CSS-style animation */}
-            <motion.div
-              className="absolute inset-0 rounded-2xl"
-              style={{ border: '2px solid #BD6750' }}
-              initial={{ scale: 1, opacity: 0.6 }}
-              animate={isInView ? {
-                scale: [1, 1.6],
-                opacity: [0.5, 0]
-              } : {}}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: [0.4, 0, 0.2, 1], // Custom cubic-bezier for smooth feel
-                repeatDelay: 0
-              }}
-            />
-            <motion.div
-              className="absolute inset-0 rounded-2xl"
-              style={{ border: '2px solid #BD6750' }}
-              initial={{ scale: 1, opacity: 0.4 }}
-              animate={isInView ? {
-                scale: [1, 1.9],
-                opacity: [0.4, 0]
-              } : {}}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: [0.4, 0, 0.2, 1],
-                delay: 0.6,
-                repeatDelay: 0
-              }}
-            />
-            <motion.div
-              className="absolute inset-0 rounded-2xl"
-              style={{ border: '1px solid #BD6750' }}
-              initial={{ scale: 1, opacity: 0.3 }}
-              animate={isInView ? {
-                scale: [1, 2.2],
-                opacity: [0.3, 0]
-              } : {}}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: [0.4, 0, 0.2, 1],
-                delay: 1.2,
-                repeatDelay: 0
-              }}
-            />
+        <div className="relative w-full h-44 flex items-center justify-center -mt-4">
+          {/* Premium ripple container */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none -translate-y-1">
+            <PremiumRipple delay={0} isInView={isInView} size={2.2} />
+            <PremiumRipple delay={0.8} isInView={isInView} size={2.5} />
+            <PremiumRipple delay={1.6} isInView={isInView} size={2.8} />
           </div>
+
+          {/* Mic button with premium styling */}
+          <motion.div
+            className="relative z-10"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={isInView ? { scale: 1, opacity: 1 } : {}}
+            transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            {/* Soft glow behind button */}
+            <div
+              className="absolute inset-0 rounded-full blur-xl"
+              style={{
+                background: 'radial-gradient(circle, rgba(189, 103, 80, 0.3) 0%, transparent 70%)',
+                transform: 'scale(1.8)',
+              }}
+            />
+
+            {/* Main mic button */}
+            <motion.div
+              className="w-20 h-20 rounded-full flex items-center justify-center relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(145deg, #c97a5d 0%, #BD6750 50%, #a85842 100%)',
+                boxShadow: '0 8px 32px rgba(189, 103, 80, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+              }}
+              animate={isInView ? {
+                boxShadow: [
+                  '0 8px 32px rgba(189, 103, 80, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+                  '0 12px 40px rgba(189, 103, 80, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+                  '0 8px 32px rgba(189, 103, 80, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+                ]
+              } : {}}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+            >
+              {/* Sound wave visualization inside button */}
+              <div className="flex items-center justify-center gap-[3px] h-8">
+                <SoundWaveBar delay={0} isInView={isInView} />
+                <SoundWaveBar delay={0.15} isInView={isInView} />
+                <SoundWaveBar delay={0.3} isInView={isInView} />
+                <SoundWaveBar delay={0.45} isInView={isInView} />
+                <SoundWaveBar delay={0.6} isInView={isInView} />
+              </div>
+            </motion.div>
+
+            {/* Recording indicator dot */}
+            <motion.div
+              className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+              initial={{ scale: 0 }}
+              animate={isInView ? { scale: 1 } : {}}
+              transition={{ delay: 0.3, type: 'spring', stiffness: 400, damping: 15 }}
+            >
+              <motion.div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: '#ef4444' }}
+                animate={isInView ? { opacity: [1, 0.4, 1] } : {}}
+                transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </motion.div>
+          </motion.div>
+
         </div>
       )
     },
