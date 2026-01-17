@@ -9,11 +9,12 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react'
 
 function LoginContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showResendOption, setShowResendOption] = useState(false)
@@ -130,7 +131,7 @@ function LoginContent() {
 
       if (profileError) {
         console.error('[Login] Profile error:', profileError)
-        
+
         // If profile doesn't exist, create it
         if (profileError.code === 'PGRST116') {
           console.log('[Login] Profile not found, creating it...')
@@ -173,10 +174,10 @@ function LoginContent() {
       if (refreshError) {
         console.error('[Login] Error refreshing session:', refreshError)
       }
-      
+
       // Wait for cookies to be set in the response
       await new Promise(resolve => setTimeout(resolve, 200))
-      
+
       // Use window.location for full page reload to ensure cookies are read by middleware
       // But first verify the session is set
       const { data: { session } } = await supabase.auth.getSession()
@@ -186,7 +187,7 @@ function LoginContent() {
         setIsLoading(false)
         return
       }
-      
+
       // Redirect based on onboarding status
       if (profile?.onboarding_completed) {
         if (profile.demo_completed) {
@@ -209,26 +210,26 @@ function LoginContent() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4 }}
-      className="glass-card-light p-8 md:p-10 shadow-xl w-full"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-[#f0ebe6] w-full"
     >
       <div className="text-center mb-8">
         <div className="flex justify-center mb-6">
           <Logo size="lg" />
         </div>
-        <h1 className="text-2xl font-bold mb-2">
-          Sign in to <span className="text-black">Founder</span> <span className="text-black">Note</span>
+        <h1 className="text-2xl font-semibold font-body text-[#1a1a1a] mb-2">
+          Welcome back
         </h1>
-        <p className="text-gray-600">
-          Enter your email and password to continue
+        <p className="text-[#666] font-body">
+          Sign in to continue to FounderNote
         </p>
       </div>
 
       <form onSubmit={handleLogin} className="space-y-5 mb-8">
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-black font-medium">Email address</Label>
+          <Label htmlFor="email" className="text-[#1a1a1a] font-medium font-body">Email address</Label>
           <Input
             id="email"
             type="email"
@@ -237,38 +238,51 @@ function LoginContent() {
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={isLoading}
-            className="h-12 bg-white/60 border-gray-300 text-black placeholder:text-gray-400 focus:border-gray-500 focus:ring-2 focus:ring-gray-300 focus:ring-offset-0"
+            className="h-12 bg-[#faf8f6] border-[#e5e0db] text-[#1a1a1a] placeholder:text-[#999] focus:border-[#BD6750] focus:ring-2 focus:ring-[#BD6750]/20 focus:ring-offset-0 rounded-xl font-body"
             autoFocus
           />
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-black font-medium">Password</Label>
-            <a href="/forgot-password" className="text-sm text-black hover:underline font-medium">
+            <Label htmlFor="password" className="text-[#1a1a1a] font-medium font-body">Password</Label>
+            <a href="/forgot-password" className="text-sm text-[#BD6750] hover:underline font-medium font-body">
               Forgot password?
             </a>
           </div>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={isLoading}
-            className="h-12 bg-white/60 border-gray-300 text-black placeholder:text-gray-400 focus:border-gray-500 focus:ring-2 focus:ring-gray-300 focus:ring-offset-0"
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={isLoading}
+              className="h-12 bg-[#faf8f6] border-[#e5e0db] text-[#1a1a1a] placeholder:text-[#999] focus:border-[#BD6750] focus:ring-2 focus:ring-[#BD6750]/20 focus:ring-offset-0 rounded-xl font-body pr-12"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#1a1a1a] transition-colors"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
+            </button>
+          </div>
         </div>
 
         {resendSuccess && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-3 rounded-lg bg-green-50 border border-green-100 flex items-start gap-2"
+            className="p-3 rounded-xl bg-green-50 border border-green-100 flex items-start gap-2"
           >
             <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-green-600">Confirmation email sent! Please check your inbox.</p>
+            <p className="text-sm text-green-600 font-body">Confirmation email sent! Please check your inbox.</p>
           </motion.div>
         )}
 
@@ -276,18 +290,18 @@ function LoginContent() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-3 rounded-lg bg-red-50 border border-red-100"
+            className="p-3 rounded-xl bg-red-50 border border-red-100"
           >
             <div className="flex items-start gap-2">
               <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm text-red-600 font-body">{error}</p>
             </div>
             {showResendOption && (
               <button
                 type="button"
                 onClick={handleResendConfirmation}
                 disabled={isResending}
-                className="mt-2 ml-7 text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium disabled:opacity-50"
+                className="mt-2 ml-7 text-sm text-[#BD6750] hover:underline font-medium disabled:opacity-50 font-body"
               >
                 {isResending ? 'Sending...' : "Didn't receive the email? Resend confirmation"}
               </button>
@@ -298,7 +312,8 @@ function LoginContent() {
         <Button
           type="submit"
           size="xl"
-          className="w-full bg-black hover:bg-black text-white shadow-lg backdrop-blur-sm border border-black/10"
+          className="w-full rounded-xl font-semibold transition-all duration-300 hover:shadow-lg font-body"
+          style={{ backgroundColor: '#BD6750', color: 'white' }}
           disabled={isLoading || !email || !password}
         >
           {isLoading ? (
@@ -312,10 +327,10 @@ function LoginContent() {
       <div>
         <div className="relative mb-6">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-200" />
+            <span className="w-full border-t border-[#e5e0db]" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-4 text-gray-500 font-medium">
+            <span className="bg-white px-4 text-[#888] font-medium font-body">
               or continue with
             </span>
           </div>
@@ -323,7 +338,7 @@ function LoginContent() {
         <SocialAuthButtons mode="login" />
       </div>
 
-      <p className="text-center text-sm text-gray-600 mt-8">
+      <p className="text-center text-sm text-[#666] mt-8 font-body">
         Don&apos;t have an account?{' '}
         <a href="/signup" className="hover:underline font-semibold" style={{ color: '#BD6750' }}>Sign up</a>
       </p>
@@ -334,8 +349,8 @@ function LoginContent() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="glass-card-light p-8 md:p-10 shadow-xl w-full">
-        <div className="h-8 w-8 mx-auto animate-spin rounded-full border-4 border-black border-t-transparent" />
+      <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-[#f0ebe6] w-full">
+        <div className="h-8 w-8 mx-auto animate-spin rounded-full border-4 border-[#BD6750] border-t-transparent" />
       </div>
     }>
       <LoginContent />
