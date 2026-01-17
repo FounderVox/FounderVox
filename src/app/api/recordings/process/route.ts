@@ -235,8 +235,11 @@ export async function POST(request: NextRequest) {
 
     console.log('[Process] Creating note from transcript...')
 
+    // Generate a meaningful title using GPT-4o
+    console.log('[Process] Generating note title...')
+    const noteTitle = await generateNoteTitle(cleanedTranscript)
+
     // Create a note from the transcript using service role client
-    const noteTitle = `Recording ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
     const { data: note, error: noteError } = await serviceClient
       .from('notes')
       .insert({
@@ -399,6 +402,68 @@ async function generateCleanedTranscript(rawTranscript: string): Promise<string>
   } catch (error) {
     console.error('[Process] Error cleaning transcript:', error)
     return rawTranscript // Return raw if cleaning fails
+  }
+}
+
+async function generateNoteTitle(transcript: string): Promise<string> {
+  const fallbackTitle = `Recording ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+
+  // Don't try to generate title for very short transcripts
+  if (!transcript || transcript.trim().length < 20) {
+    return fallbackTitle
+  }
+
+  try {
+    const OpenAI = (await import('openai')).default
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: `You generate concise, descriptive titles for voice note transcripts.
+
+RULES:
+1. Create a short title (3-7 words max) that captures the main topic
+2. Use sentence case (capitalize first word only, unless proper nouns)
+3. Do NOT use quotes or punctuation at the end
+4. If the content is unclear or gibberish, respond with exactly: UNTITLED
+5. Focus on the key topic, decision, or action mentioned
+6. Be specific, not generic
+
+Examples of good titles:
+- Team sync on Q4 roadmap
+- Product pricing discussion
+- Bug fix for login flow
+- Meeting notes with Sarah
+- Ideas for onboarding redesign`
+        },
+        {
+          role: 'user',
+          content: `Generate a title for this transcript:\n\n${transcript.substring(0, 1000)}`
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 50
+    })
+
+    const generatedTitle = response.choices[0]?.message?.content?.trim()
+
+    // Use fallback if no title generated or marked as untitled
+    if (!generatedTitle || generatedTitle === 'UNTITLED' || generatedTitle.length < 3) {
+      console.log('[Process] Using fallback title - content unclear')
+      return fallbackTitle
+    }
+
+    // Remove any quotes that GPT might add
+    const cleanTitle = generatedTitle.replace(/^["']|["']$/g, '').trim()
+
+    console.log('[Process] Generated note title:', cleanTitle)
+    return cleanTitle
+  } catch (error) {
+    console.error('[Process] Error generating title:', error)
+    return fallbackTitle
   }
 }
 
