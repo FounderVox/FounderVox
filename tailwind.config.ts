@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        display: ['var(--font-display)', 'Georgia', 'serif'],
+        body: ['var(--font-body)', 'system-ui', 'sans-serif'],
+      },
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

@@ -2,7 +2,6 @@
 
 import Navigation from './navigation'
 import Hero from './hero'
-import FeatureBentoGrid from './feature-bento-grid'
 import FeaturesSection from './features-section'
 import HowItWorksSection from './how-it-works-section'
 import StatsSection from './stats-section'
@@ -12,10 +11,12 @@ import Footer from './footer'
 
 export default function LandingPage() {
   return (
-    <div className="bg-white min-h-screen">
+    <div className="min-h-screen relative">
+      {/* Grain texture overlay for editorial feel */}
+      <div className="grain-overlay" />
+
       <Navigation />
       <Hero />
-      <FeatureBentoGrid />
       <FeaturesSection />
       <HowItWorksSection />
       <StatsSection />
@@ -25,4 +26,3 @@ export default function LandingPage() {
     </div>
   )
 }
-

@@ -2,25 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Mic, LogOut } from 'lucide-react'
+import { Menu, X, Mic } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const Logo = ({ variant = 'dark' }: { variant?: 'dark' | 'light' }) => (
   <div className="flex items-center gap-2.5">
-    <div 
+    <div
       className={`relative w-9 h-9 rounded-xl flex items-center justify-center ${
         variant === 'dark' ? '' : 'bg-white'
-      }`} 
+      }`}
       style={variant === 'dark' ? { backgroundColor: '#BD6750' } : {}}
     >
       <Mic className={`w-4 h-4 ${variant === 'dark' ? 'text-white' : 'text-black'}`} />
     </div>
-    <span className={`text-lg font-semibold tracking-tight ${
-      variant === 'dark' ? 'text-black' : 'text-white'
+    <span className={`text-lg font-semibold tracking-tight font-body ${
+      variant === 'dark' ? 'text-gray-900' : 'text-white'
     }`}>
-      Founder Note
+      FounderNote
     </span>
   </div>
 )
@@ -30,7 +30,6 @@ export default function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const pathname = usePathname()
-  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
@@ -46,7 +45,6 @@ export default function Navigation() {
     }
     checkAuth()
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session?.user)
     })
@@ -85,8 +83,8 @@ export default function Navigation() {
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled 
-            ? 'py-3 bg-white/90 backdrop-blur-xl border-b border-black/5' 
+          isScrolled
+            ? 'py-3 bg-white/80 backdrop-blur-xl border-b border-gray-100'
             : 'py-4 bg-transparent'
         }`}
       >
@@ -102,10 +100,10 @@ export default function Navigation() {
                   key={i}
                   href={link.href}
                   onClick={link.href === '/#features' ? handleFeaturesClick : undefined}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 font-body ${
                     pathname === link.href.split('#')[0]
-                      ? 'text-black bg-black/5' 
-                      : 'text-gray-600 hover:text-black hover:bg-black/5'
+                      ? 'text-gray-900 bg-gray-100'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
                   {link.label}
@@ -118,13 +116,13 @@ export default function Navigation() {
                 <>
                   <Link
                     href="/dashboard"
-                    className="text-gray-600 hover:text-black px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:bg-black/5"
+                    className="text-gray-600 hover:text-gray-900 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:bg-gray-50 font-body"
                   >
                     Dashboard
                   </Link>
                   <button
                     onClick={handleSignOut}
-                    className="text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-300"
+                    className="text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 terracotta-glow-sm hover:scale-105 font-body"
                     style={{ backgroundColor: '#BD6750' }}
                   >
                     Sign Out
@@ -133,7 +131,7 @@ export default function Navigation() {
               ) : (
                 <Link
                   href="/login"
-                  className="text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-300"
+                  className="text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 terracotta-glow-sm hover:scale-105 font-body"
                   style={{ backgroundColor: '#BD6750' }}
                 >
                   Get Started
@@ -142,7 +140,7 @@ export default function Navigation() {
             </div>
 
             <button
-              className="md:hidden p-2 rounded-lg hover:bg-black/5 transition-colors"
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -181,7 +179,7 @@ export default function Navigation() {
                       }
                     }
                   }}
-                  className="text-xl font-medium text-black py-3 px-4 rounded-lg hover:bg-black/5"
+                  className="text-xl font-medium text-gray-900 py-3 px-4 rounded-xl hover:bg-gray-50 font-body"
                 >
                   {link.label}
                 </Link>
@@ -190,7 +188,7 @@ export default function Navigation() {
                 <>
                   <Link
                     href="/dashboard"
-                    className="text-black py-3 px-4 rounded-lg text-lg font-medium hover:bg-black/5"
+                    className="text-gray-900 py-3 px-4 rounded-xl text-lg font-medium hover:bg-gray-50 font-body"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Dashboard
@@ -200,7 +198,7 @@ export default function Navigation() {
                       setMobileMenuOpen(false)
                       handleSignOut()
                     }}
-                    className="text-white px-6 py-3 rounded-lg text-lg font-medium text-center mt-4"
+                    className="text-white px-6 py-3 rounded-xl text-lg font-medium text-center mt-4 font-body"
                     style={{ backgroundColor: '#BD6750' }}
                   >
                     Sign Out
@@ -209,7 +207,7 @@ export default function Navigation() {
               ) : (
                 <Link
                   href="/login"
-                  className="text-white px-6 py-3 rounded-lg text-lg font-medium text-center mt-4"
+                  className="text-white px-6 py-3 rounded-xl text-lg font-medium text-center mt-4 font-body"
                   style={{ backgroundColor: '#BD6750' }}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -223,5 +221,3 @@ export default function Navigation() {
     </>
   )
 }
-
-

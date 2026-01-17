@@ -3,219 +3,196 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Monitor, Smartphone, Check } from 'lucide-react'
+import { Check, Zap, Sparkles, MessageSquare, Code, Headphones, X } from 'lucide-react'
 import Navigation from '@/components/landing/navigation'
 import Footer from '@/components/landing/footer'
 
 export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
-  const [platform, setPlatform] = useState('desktop')
 
-  const desktopPlans = [
+  const plans = [
     {
       name: 'Starter',
       price: { monthly: 'Free', yearly: 'Free' },
-      description: 'Essential features to get started.',
+      description: 'Perfect for trying out Founder Note.',
       features: [
-        '5 voice notes per day',
-        'Basic AI categorization',
-        'Email formatting',
-        'Single language',
-        '7-day history'
+        { text: '30 minutes audio/month', included: true, icon: null },
+        { text: '10 notes', included: true, icon: null },
+        { text: '1 language', included: true, icon: null },
+        { text: '7-day history', included: true, icon: null },
+        { text: 'Basic AI categorization', included: true, icon: null },
+        { text: 'Email export only', included: true, icon: null },
+        { text: 'AI Ask', included: false, icon: null },
+        { text: 'Cross-Note AI', included: false, icon: null },
+        { text: 'API access', included: false, icon: null },
       ],
       cta: 'Start Free',
-      popular: false
+      popular: false,
+      support: 'Community'
     },
     {
       name: 'Pro',
-      price: { monthly: '$19', yearly: '$15' },
+      price: { monthly: '$19', yearly: '$17' },
       period: '/ month',
-      description: 'Unlimited power for individuals.',
+      description: 'For founders who capture ideas daily.',
       features: [
-        'Unlimited voice notes',
-        'Advanced AI organization',
-        'All export formats',
-        '12+ languages',
-        'Unlimited history',
-        'Task collaboration',
-        'Desktop shortcuts',
-        'Priority support'
+        { text: '300 minutes audio/month', included: true, icon: null },
+        { text: 'Unlimited notes', included: true, icon: null },
+        { text: '31+ languages', included: true, icon: null },
+        { text: 'Unlimited history', included: true, icon: null },
+        { text: 'Advanced AI categorization', included: true, icon: null },
+        { text: 'All export formats', included: true, icon: null },
+        { text: 'AI Ask', included: true, icon: <Zap className="w-3.5 h-3.5" /> },
+        { text: 'Cross-Note AI', included: false, icon: null },
+        { text: 'API access', included: false, icon: null },
       ],
       cta: 'Start Trial',
-      popular: true
+      popular: true,
+      support: 'Priority'
     },
     {
-      name: 'Team',
-      price: { monthly: '$49', yearly: '$39' },
+      name: 'Plus',
+      price: { monthly: '$29', yearly: '$26' },
       period: '/ month',
-      description: 'For teams that move together.',
+      description: 'Unlimited power for power users.',
       features: [
-        'Everything in Pro',
-        'Unlimited members',
-        'Shared workspaces',
-        'Team analytics',
-        'Admin controls',
-        'API access',
-        'SSO integration',
-        'Dedicated support'
+        { text: 'Unlimited audio', included: true, icon: null },
+        { text: 'Unlimited notes', included: true, icon: null },
+        { text: '31+ languages', included: true, icon: null },
+        { text: 'Unlimited history', included: true, icon: null },
+        { text: 'Advanced AI categorization', included: true, icon: null },
+        { text: 'All export formats', included: true, icon: null },
+        { text: 'AI Ask', included: true, icon: <Zap className="w-3.5 h-3.5" /> },
+        { text: 'Cross-Note AI', included: true, icon: <Sparkles className="w-3.5 h-3.5" /> },
+        { text: 'API access', included: true, icon: <Code className="w-3.5 h-3.5" /> },
       ],
-      cta: 'Contact Sales',
-      popular: false
+      cta: 'Start Trial',
+      popular: false,
+      support: 'Premium'
     }
   ]
 
-  const mobilePlans = [
-    {
-      name: 'Starter',
-      price: { monthly: 'Free', yearly: 'Free' },
-      description: 'Capture ideas on the go.',
-      features: [
-        '3 voice notes per day',
-        'Basic transcription',
-        'Notes sync',
-        'Single language',
-        '3-day history'
-      ],
-      cta: 'Start Free',
-      popular: false
-    },
-    {
-      name: 'Pro',
-      price: { monthly: '$9', yearly: '$7' },
-      period: '/ month',
-      description: 'Full mobile experience.',
-      features: [
-        'Unlimited voice notes',
-        'Offline recording',
-        'Quick capture widget',
-        '12+ languages',
-        'Unlimited history',
-        'Apple Watch app',
-        'Siri shortcuts',
-        'Priority support'
-      ],
-      cta: 'Start Trial',
-      popular: true
-    },
-    {
-      name: 'Pro + Desktop',
-      price: { monthly: '$24', yearly: '$19' },
-      period: '/ month',
-      description: 'Mobile + Desktop bundle.',
-      features: [
-        'Everything in Mobile Pro',
-        'Full desktop access',
-        'Cross-device sync',
-        'Team collaboration',
-        'All export formats',
-        'Desktop shortcuts',
-        'API access',
-        'Priority support'
-      ],
-      cta: 'Start Trial',
-      popular: false
-    }
+  const comparisonFeatures = [
+    { feature: 'Audio Input', starter: '30 min/mo', pro: '300 min/mo', plus: 'Unlimited' },
+    { feature: 'Notes', starter: '10', pro: 'Unlimited', plus: 'Unlimited' },
+    { feature: 'Languages', starter: '1', pro: '31+', plus: '31+' },
+    { feature: 'History', starter: '7 days', pro: 'Unlimited', plus: 'Unlimited' },
+    { feature: 'AI Categorization', starter: 'Basic', pro: 'Advanced', plus: 'Advanced' },
+    { feature: 'Export Formats', starter: 'Email only', pro: 'All formats', plus: 'All formats' },
+    { feature: 'AI Ask', starter: false, pro: true, plus: true },
+    { feature: 'Cross-Note AI', starter: false, pro: false, plus: true },
+    { feature: 'Future Integrations', starter: false, pro: false, plus: true },
+    { feature: 'API Access', starter: false, pro: false, plus: true },
+    { feature: 'Support', starter: 'Community', pro: 'Priority', plus: 'Premium' },
   ]
-
-  const plans = platform === 'desktop' ? desktopPlans : mobilePlans
 
   return (
     <div className="bg-white min-h-screen">
       <Navigation />
-      <section className="min-h-screen pt-28 pb-24 px-6 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-10">
-            <h1 className="text-3xl md:text-5xl font-bold text-black mb-4">
+
+      {/* Hero Section with Warm Gradient */}
+      <section className="relative min-h-screen pt-28 pb-24 px-6 overflow-hidden">
+        {/* Warm cream gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#FDF8F4] via-[#FAF6F1] to-white" />
+
+        {/* Grain overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          }}
+        />
+
+        <div className="relative max-w-7xl mx-auto">
+          {/* Header */}
+          <motion.div
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h1 className="text-4xl md:text-6xl font-display text-[#1a1a1a] mb-4">
               Simple, transparent pricing
             </h1>
-            <p className="text-lg text-gray-600">
-              Start free. Upgrade when you&apos;re ready.
+            <p className="text-lg md:text-xl text-[#666] font-body max-w-2xl mx-auto">
+              Start free, upgrade when you&apos;re ready. No hidden fees.
             </p>
-          </div>
-
-          {/* Platform Toggle */}
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex bg-white rounded-xl p-1 shadow-sm border border-gray-100">
-              <button
-                onClick={() => setPlatform('desktop')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  platform === 'desktop' ? 'bg-black text-white' : 'text-gray-600 hover:text-black'
-                }`}
-              >
-                <Monitor className="w-4 h-4" />
-                Desktop
-              </button>
-              <button
-                onClick={() => setPlatform('mobile')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  platform === 'mobile' ? 'bg-black text-white' : 'text-gray-600 hover:text-black'
-                }`}
-              >
-                <Smartphone className="w-4 h-4" />
-                Mobile
-              </button>
-            </div>
-          </div>
+          </motion.div>
 
           {/* Billing Toggle */}
-          <div className="flex justify-center items-center gap-3 mb-12">
-            <span className={`text-sm font-medium ${billingPeriod === 'monthly' ? 'text-black' : 'text-gray-400'}`}>Monthly</span>
+          <motion.div
+            className="flex justify-center items-center gap-4 mb-12"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            <span className={`text-sm font-medium font-body ${billingPeriod === 'monthly' ? 'text-[#1a1a1a]' : 'text-[#999]'}`}>
+              Monthly
+            </span>
             <button
               onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
-              className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
-                billingPeriod === 'yearly' ? 'bg-green-600' : 'bg-gray-300'
-              }`}
+              className="relative w-14 h-7 rounded-full transition-colors duration-300"
+              style={{ backgroundColor: billingPeriod === 'yearly' ? '#BD6750' : '#e5e5e5' }}
             >
               <motion.div
-                animate={{ x: billingPeriod === 'yearly' ? 24 : 2 }}
+                animate={{ x: billingPeriod === 'yearly' ? 28 : 2 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
+                className="absolute top-1 w-5 h-5 bg-white rounded-full shadow-md"
               />
             </button>
-            <span className={`text-sm font-medium ${billingPeriod === 'yearly' ? 'text-black' : 'text-gray-400'}`}>
-              Yearly <span className="text-green-600 font-medium">-20%</span>
+            <span className={`text-sm font-medium font-body ${billingPeriod === 'yearly' ? 'text-[#1a1a1a]' : 'text-[#999]'}`}>
+              Yearly <span className="text-[#BD6750] font-semibold">-10%</span>
             </span>
-          </div>
+          </motion.div>
 
           {/* Pricing Cards */}
-          <div className="grid md:grid-cols-3 gap-6 mb-16">
+          <div className="grid md:grid-cols-3 gap-6 mb-20">
             {plans.map((plan, index) => (
-              <div
+              <motion.div
                 key={index}
-                className={`relative rounded-2xl p-6 md:p-8 card-hover ${
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.15 * index }}
+                className={`relative rounded-3xl p-8 ${
                   plan.popular
-                    ? 'bg-black text-white shadow-premium-xl'
-                    : 'bg-white shadow-premium border border-gray-100'
+                    ? 'text-white shadow-2xl'
+                    : 'bg-white shadow-xl border border-[#f0ebe6]'
                 }`}
+                style={plan.popular ? {
+                  background: 'linear-gradient(135deg, #BD6750 0%, #a85845 100%)',
+                } : {}}
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <div className="bg-green-600 text-white text-xs font-medium px-3 py-1 rounded-full">
+                    <div className="bg-white text-[#BD6750] text-xs font-semibold px-4 py-1.5 rounded-full shadow-lg font-body">
                       Most Popular
                     </div>
                   </div>
                 )}
-                
-                <h3 className="text-xl font-semibold mb-1">{plan.name}</h3>
-                <p className={`text-sm mb-6 ${plan.popular ? 'text-gray-400' : 'text-gray-500'}`}>
+
+                <h3 className="text-2xl font-display mb-1">{plan.name}</h3>
+                <p className={`text-sm mb-6 font-body ${plan.popular ? 'text-white/70' : 'text-[#888]'}`}>
                   {plan.description}
                 </p>
-                
+
                 <div className="mb-6">
-                  <span className="text-4xl font-bold">{plan.price[billingPeriod]}</span>
+                  <span className="text-5xl font-display">{plan.price[billingPeriod]}</span>
                   {plan.period && (
-                    <span className={plan.popular ? 'text-gray-400' : 'text-gray-500'}>{plan.period}</span>
+                    <span className={`font-body ${plan.popular ? 'text-white/70' : 'text-[#888]'}`}>{plan.period}</span>
                   )}
                 </div>
 
                 <Link
                   href="/login"
-                  className={`w-full py-3 rounded-xl font-medium mb-6 transition-all duration-200 flex items-center justify-center ${
+                  className={`w-full py-3.5 rounded-xl font-semibold mb-8 transition-all duration-300 flex items-center justify-center font-body ${
                     plan.popular
-                      ? 'bg-white text-black hover:bg-gray-100'
-                      : 'text-white hover:opacity-90'
+                      ? 'bg-white text-[#BD6750] hover:bg-white/90 shadow-lg'
+                      : 'text-white hover:opacity-90 shadow-lg'
                   }`}
-                  style={!plan.popular ? { backgroundColor: '#BD6750' } : {}}
+                  style={!plan.popular ? {
+                    backgroundColor: '#BD6750',
+                    boxShadow: '0 4px 20px rgba(189, 103, 80, 0.3)'
+                  } : {}}
                 >
                   {plan.cta}
                 </Link>
@@ -223,83 +200,119 @@ export default function PricingPage() {
                 <ul className="space-y-3">
                   {plan.features.map((feature, fIndex) => (
                     <li key={fIndex} className="flex items-start gap-3">
-                      <Check className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                        plan.popular ? 'text-green-400' : 'text-green-600'
-                      }`} />
-                      <span className={`text-sm ${plan.popular ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {feature}
+                      {feature.included ? (
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          plan.popular ? 'bg-white/20' : 'bg-[#BD6750]/10'
+                        }`}>
+                          {feature.icon || <Check className={`w-3 h-3 ${plan.popular ? 'text-white' : 'text-[#BD6750]'}`} />}
+                          {feature.icon && <span className={plan.popular ? 'text-white' : 'text-[#BD6750]'}>{feature.icon}</span>}
+                        </div>
+                      ) : (
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          plan.popular ? 'bg-white/10' : 'bg-gray-100'
+                        }`}>
+                          <X className={`w-3 h-3 ${plan.popular ? 'text-white/40' : 'text-gray-300'}`} />
+                        </div>
+                      )}
+                      <span className={`text-sm font-body ${
+                        feature.included
+                          ? (plan.popular ? 'text-white' : 'text-[#444]')
+                          : (plan.popular ? 'text-white/40' : 'text-gray-400')
+                      }`}>
+                        {feature.text}
                       </span>
                     </li>
                   ))}
                 </ul>
-              </div>
+
+                <div className={`mt-6 pt-4 border-t ${plan.popular ? 'border-white/20' : 'border-[#f0ebe6]'}`}>
+                  <div className="flex items-center gap-2">
+                    <Headphones className={`w-4 h-4 ${plan.popular ? 'text-white/70' : 'text-[#888]'}`} />
+                    <span className={`text-sm font-body ${plan.popular ? 'text-white/70' : 'text-[#888]'}`}>
+                      {plan.support} support
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
             ))}
           </div>
 
-          {/* Feature Comparison */}
-          <div className="bg-white rounded-2xl shadow-premium overflow-hidden border border-gray-100">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-semibold text-black">Compare all features</h2>
+          {/* Feature Comparison Table */}
+          <motion.div
+            className="bg-white rounded-3xl shadow-xl overflow-hidden border border-[#f0ebe6]"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="p-8 border-b border-[#f0ebe6]">
+              <h2 className="text-2xl font-display text-[#1a1a1a]">Compare all features</h2>
+              <p className="text-[#888] font-body mt-1">Find the perfect plan for your needs</p>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left p-4 font-medium text-gray-500">Feature</th>
-                    <th className="p-4 font-medium">Starter</th>
-                    <th className="p-4 font-medium bg-gray-50">Pro</th>
-                    <th className="p-4 font-medium">{platform === 'desktop' ? 'Team' : 'Pro + Desktop'}</th>
+                  <tr className="border-b border-[#f0ebe6]">
+                    <th className="text-left p-6 font-display text-[#666] text-lg">Feature</th>
+                    <th className="p-6 font-display text-lg text-[#1a1a1a]">Starter</th>
+                    <th className="p-6 font-display text-lg" style={{ backgroundColor: 'rgba(189, 103, 80, 0.1)' }}>
+                      <span className="text-[#BD6750]">Pro</span>
+                    </th>
+                    <th className="p-6 font-display text-lg text-[#1a1a1a]">Plus</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(platform === 'desktop' ? [
-                    { feature: 'Voice notes', starter: '5/day', pro: 'Unlimited', team: 'Unlimited' },
-                    { feature: 'Languages', starter: '1', pro: '12+', team: '12+' },
-                    { feature: 'History', starter: '7 days', pro: 'Unlimited', team: 'Unlimited' },
-                    { feature: 'Export formats', starter: 'Email', pro: 'All', team: 'All + API' },
-                    { feature: 'Collaboration', starter: false, pro: true, team: true },
-                    { feature: 'Support', starter: 'Community', pro: 'Priority', team: 'Dedicated' },
-                  ] : [
-                    { feature: 'Voice notes', starter: '3/day', pro: 'Unlimited', team: 'Unlimited' },
-                    { feature: 'Languages', starter: '1', pro: '12+', team: '12+' },
-                    { feature: 'History', starter: '3 days', pro: 'Unlimited', team: 'Unlimited' },
-                    { feature: 'Offline mode', starter: false, pro: true, team: true },
-                    { feature: 'Desktop access', starter: false, pro: false, team: true },
-                    { feature: 'Support', starter: 'Community', pro: 'Priority', team: 'Priority' },
-                  ]).map((row, i) => (
-                    <tr key={i} className="border-b border-gray-50">
-                      <td className="p-4 text-gray-700">{row.feature}</td>
-                      <td className="p-4 text-center">
-                        {typeof row.starter === 'boolean' 
-                          ? row.starter 
-                            ? <Check className="w-4 h-4 mx-auto text-green-600" /> 
+                  {comparisonFeatures.map((row, i) => (
+                    <tr key={i} className="border-b border-[#f8f5f2] last:border-0">
+                      <td className="p-6 text-[#444] font-body text-base">{row.feature}</td>
+                      <td className="p-6 text-center font-body text-base">
+                        {typeof row.starter === 'boolean'
+                          ? row.starter
+                            ? <Check className="w-5 h-5 mx-auto text-[#BD6750]" />
                             : <span className="text-gray-300">—</span>
-                          : row.starter}
+                          : <span className="text-[#666]">{row.starter}</span>}
                       </td>
-                      <td className="p-4 text-center bg-gray-50">
+                      <td className="p-6 text-center font-body text-base" style={{ backgroundColor: 'rgba(189, 103, 80, 0.05)' }}>
                         {typeof row.pro === 'boolean'
                           ? row.pro
-                            ? <Check className="w-4 h-4 mx-auto text-green-600" />
+                            ? <Check className="w-5 h-5 mx-auto text-[#BD6750]" />
                             : <span className="text-gray-300">—</span>
-                          : row.pro}
+                          : <span className="text-[#666] font-medium">{row.pro}</span>}
                       </td>
-                      <td className="p-4 text-center">
-                        {typeof row.team === 'boolean'
-                          ? row.team
-                            ? <Check className="w-4 h-4 mx-auto text-green-600" />
+                      <td className="p-6 text-center font-body text-base">
+                        {typeof row.plus === 'boolean'
+                          ? row.plus
+                            ? <Check className="w-5 h-5 mx-auto text-[#BD6750]" />
                             : <span className="text-gray-300">—</span>
-                          : row.team}
+                          : <span className="text-[#666]">{row.plus}</span>}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
+          </motion.div>
+
+          {/* FAQ CTA */}
+          <motion.div
+            className="text-center mt-16"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <p className="text-[#888] font-body mb-4">Have questions?</p>
+            <Link
+              href="/#faq"
+              className="inline-flex items-center gap-2 text-[#BD6750] font-semibold font-body hover:underline"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Check our FAQ
+            </Link>
+          </motion.div>
         </div>
       </section>
       <Footer />
     </div>
   )
 }
-
