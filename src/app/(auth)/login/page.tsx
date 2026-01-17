@@ -61,6 +61,25 @@ function LoginContent() {
     if (searchParams.get('signup') === 'success') {
       // Could show a success message here
     }
+
+    // Handle OAuth callback errors
+    const error = searchParams.get('error')
+    const message = searchParams.get('message')
+    if (error) {
+      if (error === 'no_code') {
+        setError('Authentication was cancelled or failed. Please try again.')
+      } else if (error === 'access_denied') {
+        setError('Access was denied. Please try again or use a different sign-in method.')
+      } else if (error === 'exchange_failed') {
+        setError(message ? decodeURIComponent(message) : 'Failed to complete authentication. Please try again.')
+      } else if (error === 'callback_error') {
+        setError('An error occurred during sign-in. Please try again.')
+      } else if (message) {
+        setError(decodeURIComponent(message))
+      } else {
+        setError('Authentication failed. Please try again.')
+      }
+    }
   }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
