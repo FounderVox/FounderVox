@@ -111,11 +111,9 @@ async function extractPreview(transcript: string) {
   const prompt = `Analyze this transcript and estimate what structured data could be extracted.
 
 Return a JSON object with estimated counts for:
-- actionItems: number of action items/tasks/todos
+- actionItems: number of action items/tasks/todos found
 - investorUpdates: 1 if investor update content found, 0 otherwise
-- progressLogs: 1 if progress log content found, 0 otherwise  
-- productIdeas: number of product ideas/features
-- brainDump: number of brain dump items/thoughts
+- brainDump: number of brain dump items/thoughts/meeting notes
 
 Transcript:
 ${transcript.substring(0, 4000)}${transcript.length > 4000 ? '...' : ''}
@@ -124,9 +122,7 @@ Return format:
 {
   "actionItems": 3,
   "investorUpdates": 1,
-  "progressLogs": 0,
-  "productIdeas": 2,
-  "brainDump": 1
+  "brainDump": 2
 }`
 
   try {
@@ -145,8 +141,6 @@ Return format:
       return {
         actionItems: 0,
         investorUpdates: 0,
-        progressLogs: 0,
-        productIdeas: 0,
         brainDump: 0
       }
     }
@@ -155,8 +149,6 @@ Return format:
     return {
       actionItems: parsed.actionItems || 0,
       investorUpdates: parsed.investorUpdates || 0,
-      progressLogs: parsed.progressLogs || 0,
-      productIdeas: parsed.productIdeas || 0,
       brainDump: parsed.brainDump || 0
     }
   } catch (error) {
@@ -164,8 +156,6 @@ Return format:
     return {
       actionItems: 0,
       investorUpdates: 0,
-      progressLogs: 0,
-      productIdeas: 0,
       brainDump: 0
     }
   }

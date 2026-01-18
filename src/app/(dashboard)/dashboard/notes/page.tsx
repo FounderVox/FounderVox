@@ -34,12 +34,16 @@ interface GroupedNotes {
   [key: string]: Note[]
 }
 
+const NOTES_PAGE_SIZE = 50
+
 export default function AllNotesPage() {
   const { user, profile, supabase } = useAuth()
   const [notes, setNotes] = useState<Note[]>([])
   const [filteredNotes, setFilteredNotes] = useState<Note[]>([])
   const [groupedNotes, setGroupedNotes] = useState<GroupedNotes>({})
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
   const [viewMode, setViewMode] = useState<'list' | 'tiles'>('list')
   const [activeFilter, setActiveFilter] = useState('all')
   const [showTagDialog, setShowTagDialog] = useState(false)
@@ -78,30 +82,6 @@ export default function AllNotesPage() {
     return grouped
   }, [])
 
-  const loadNotes = useCallback(async () => {
-    if (!user || !supabase) return
-
-    try {
-      const { data: notesData, error: notesError } = await supabase
-        .from('notes')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (notesError) {
-        console.error('[FounderNote:AllNotes] Error loading notes:', notesError)
-        return
-      }
-
-      setNotes(notesData || [])
-      applyFilter(notesData || [], activeFilter)
-    } catch (error) {
-      console.error('[FounderNote:AllNotes] Unexpected error:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [user, supabase])
-
   const applyFilter = useCallback((notesData: Note[], filter: string) => {
     let filtered = notesData
 
@@ -120,6 +100,67 @@ export default function AllNotesPage() {
     setFilteredNotes(filtered)
     setGroupedNotes(groupNotesByDate(filtered))
   }, [groupNotesByDate])
+
+  const loadNotes = useCallback(async (reset = true) => {
+    if (!user || !supabase) return
+
+    try {
+      if (reset) {
+        setIsLoading(true)
+      }
+
+      const { data: notesData, error: notesError } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(NOTES_PAGE_SIZE)
+
+      if (notesError) {
+        console.error('[FounderNote:AllNotes] Error loading notes:', notesError)
+        return
+      }
+
+      const fetchedNotes = notesData || []
+      setNotes(fetchedNotes)
+      setHasMore(fetchedNotes.length === NOTES_PAGE_SIZE)
+      applyFilter(fetchedNotes, activeFilter)
+    } catch (error) {
+      console.error('[FounderNote:AllNotes] Unexpected error:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user, supabase, activeFilter, applyFilter])
+
+  const loadMoreNotes = useCallback(async () => {
+    if (!user || !supabase || isLoadingMore || !hasMore) return
+
+    try {
+      setIsLoadingMore(true)
+
+      const { data: notesData, error: notesError } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(notes.length, notes.length + NOTES_PAGE_SIZE - 1)
+
+      if (notesError) {
+        console.error('[FounderNote:AllNotes] Error loading more notes:', notesError)
+        return
+      }
+
+      const fetchedNotes = notesData || []
+      const allNotes = [...notes, ...fetchedNotes]
+      setNotes(allNotes)
+      setHasMore(fetchedNotes.length === NOTES_PAGE_SIZE)
+      applyFilter(allNotes, activeFilter)
+    } catch (error) {
+      console.error('[FounderNote:AllNotes] Unexpected error loading more:', error)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [user, supabase, notes, isLoadingMore, hasMore, activeFilter, applyFilter])
 
   // Listen for filter changes
   useEffect(() => {
@@ -441,6 +482,26 @@ export default function AllNotesPage() {
               )}
             </div>
           ))}
+
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="flex justify-center mt-8">
+              <button
+                onClick={loadMoreNotes}
+                disabled={isLoadingMore}
+                className="px-6 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                    Loading...
+                  </>
+                ) : (
+                  'Load More Notes'
+                )}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-gray-200/50">

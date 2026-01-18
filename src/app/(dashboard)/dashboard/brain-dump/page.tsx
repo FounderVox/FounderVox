@@ -87,12 +87,6 @@ export default function BrainDumpPage() {
     }
   }
 
-  // Get supabase client for drag handlers
-  const getSupabase = () => {
-    if (typeof window === 'undefined') return null
-    return createClient()
-  }
-
   useEffect(() => {
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -129,36 +123,51 @@ export default function BrainDumpPage() {
       return
     }
 
+    // Store values before clearing draggedItem to avoid race conditions
+    const itemId = draggedItem.itemId
+    const originalCategory = draggedItem.category
+
+    // Clear drag state immediately
+    setDraggedItem(null)
+
     // Update state optimistically
     setItems(prevItems =>
       prevItems.map(i =>
-        i.id === draggedItem.itemId
+        i.id === itemId
           ? { ...i, category: targetCategory }
           : i
       )
     )
 
-    // Update database
+    // Update database using existing supabase client
     try {
-      const supabase = getSupabase()
-      if (!supabase) return
-      
       const { error } = await supabase
         .from('brain_dump')
         .update({ category: targetCategory })
-        .eq('id', draggedItem.itemId)
+        .eq('id', itemId)
 
       if (error) {
         console.error('[BrainDump] Error updating category:', error)
         // Revert optimistic update on error
-        loadData()
+        setItems(prevItems =>
+          prevItems.map(i =>
+            i.id === itemId
+              ? { ...i, category: originalCategory }
+              : i
+          )
+        )
       }
     } catch (error) {
       console.error('[BrainDump] Unexpected error updating category:', error)
-      loadData()
+      // Revert optimistic update on error
+      setItems(prevItems =>
+        prevItems.map(i =>
+          i.id === itemId
+            ? { ...i, category: originalCategory }
+            : i
+        )
+      )
     }
-
-    setDraggedItem(null)
   }
 
   const handleDeleteClick = (itemId: string) => {
@@ -170,9 +179,6 @@ export default function BrainDumpPage() {
 
     setIsDeleting(true)
     try {
-      const supabase = getSupabase()
-      if (!supabase) return
-
       const { error } = await supabase
         .from('brain_dump')
         .delete()

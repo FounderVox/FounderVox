@@ -1,19 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Sidebar, useSidebar, SidebarContext } from '@/components/dashboard/sidebar'
 import { motion } from 'framer-motion'
-import { Mic, FileText, Wand2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Mic, FileText } from 'lucide-react'
 import { ManualNoteDialog } from '@/components/dashboard/manual-note-dialog'
-import { TemplateSelectorDialog } from '@/components/dashboard/template-selector-dialog'
 import { RecordingModal } from '@/components/recording/recording-modal'
 import { ProcessingModal } from '@/components/recording/processing-modal'
 import { RecordingProvider } from '@/contexts/recording-context'
 import { AuthProvider, useAuth } from '@/contexts/auth-context'
-import { UseCase } from '@/lib/constants/use-cases'
+import { MenuProvider } from '@/contexts/menu-context'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { usePathname } from 'next/navigation'
+import { useDebouncedEventListeners } from '@/hooks/useDebouncedEventListener'
 
 export default function DashboardLayout({
   children,
@@ -45,16 +44,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent relative z-10" />
-      </div>
-    )
-  }
-
+  // Show layout shell immediately while auth loads - better perceived performance
   return (
-    <DashboardContent profile={profile}>
+    <DashboardContent profile={profile} isAuthLoading={isLoading}>
       {children}
     </DashboardContent>
   )
@@ -62,10 +54,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
 function DashboardContent({
   children,
-  profile
+  profile,
+  isAuthLoading = false
 }: {
   children: React.ReactNode
   profile: { display_name: string | null; avatar_url: string | null; email: string | null; recordings_count?: number } | null
+  isAuthLoading?: boolean
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [notesCount, setNotesCount] = useState(0)
@@ -76,65 +70,63 @@ function DashboardContent({
     if (!user || !supabase) return
 
     try {
-      // Load total notes count
-      const { count, error } = await supabase
-        .from('notes')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
+      // Run both COUNT queries in parallel for faster loading
+      const [totalResult, starredResult] = await Promise.all([
+        supabase
+          .from('notes')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id),
+        supabase
+          .from('notes')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('is_starred', true)
+      ])
 
-      if (!error && count !== null) {
-        setNotesCount(count)
+      if (!totalResult.error && totalResult.count !== null) {
+        setNotesCount(totalResult.count)
       }
 
-      // Load starred notes count
-      const { count: starredCountResult, error: starredError } = await supabase
-        .from('notes')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_starred', true)
-
-      if (!starredError && starredCountResult !== null) {
-        setStarredCount(starredCountResult)
+      if (!starredResult.error && starredResult.count !== null) {
+        setStarredCount(starredResult.count)
       }
     } catch (error) {
       console.error('[FounderNote:Dashboard:Layout] Error loading counts:', error)
     }
   }
 
-  // Load notes count and starred count for sidebar
+  // Memoize loadCounts for use in debounced listener
+  const memoizedLoadCounts = useCallback(() => {
+    loadCounts()
+  }, [loadCounts])
+
+  // Load notes count on mount
   useEffect(() => {
     loadCounts()
-
-    // Listen for note events to refresh counts
-    const handleNoteEvent = () => loadCounts()
-
-    window.addEventListener('noteCreated', handleNoteEvent)
-    window.addEventListener('noteUpdated', handleNoteEvent)
-    window.addEventListener('noteDeleted', handleNoteEvent)
-    window.addEventListener('tagsUpdated', handleNoteEvent)
-    window.addEventListener('starToggled', handleNoteEvent)
-
-    return () => {
-      window.removeEventListener('noteCreated', handleNoteEvent)
-      window.removeEventListener('noteUpdated', handleNoteEvent)
-      window.removeEventListener('noteDeleted', handleNoteEvent)
-      window.removeEventListener('tagsUpdated', handleNoteEvent)
-      window.removeEventListener('starToggled', handleNoteEvent)
-    }
   }, [user])
+
+  // Listen for note events with debouncing to prevent event storms
+  // Multiple rapid events (e.g., during Smartify) will only trigger one reload
+  useDebouncedEventListeners(
+    ['noteCreated', 'noteUpdated', 'noteDeleted', 'tagsUpdated', 'starToggled'],
+    memoizedLoadCounts,
+    300 // 300ms debounce - batches rapid events together
+  )
 
   return (
     <ErrorBoundary>
       <RecordingProvider>
-        <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
-          {/* Sidebar - fixed on left */}
-          <Sidebar notesCount={notesCount} starredCount={starredCount} />
+        <MenuProvider>
+          <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
+            {/* Sidebar - fixed on left */}
+            <Sidebar notesCount={notesCount} starredCount={starredCount} />
 
-          {/* Main Content - fixed on right */}
-          <SidebarContent profile={profile}>
-            {children}
-          </SidebarContent>
-        </SidebarContext.Provider>
+            {/* Main Content - fixed on right */}
+            <SidebarContent profile={profile} isAuthLoading={isAuthLoading}>
+              {children}
+            </SidebarContent>
+          </SidebarContext.Provider>
+        </MenuProvider>
       </RecordingProvider>
     </ErrorBoundary>
   )
@@ -142,10 +134,12 @@ function DashboardContent({
 
 function SidebarContent({
   children,
-  profile
+  profile,
+  isAuthLoading = false
 }: {
   children: React.ReactNode
   profile: { display_name: string | null; avatar_url: string | null; email: string | null; recordings_count?: number } | null
+  isAuthLoading?: boolean
 }) {
   const { isCollapsed } = useSidebar()
   const pathname = usePathname()
@@ -156,6 +150,34 @@ function SidebarContent({
   const isNoteDetailPage = pathname?.match(/^\/dashboard\/notes\/[^/]+$/)
   const showRecordingButtons = (pathname === '/dashboard' || pathname === '/dashboard/notes') && !isNoteDetailPage
 
+  // Show skeleton content while auth is loading - layout shell is visible immediately
+  const contentToRender = isAuthLoading ? (
+    <div className="animate-pulse p-6">
+      {/* Header skeleton */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 bg-gray-200 rounded-full" />
+          <div className="h-4 w-24 bg-gray-200 rounded" />
+        </div>
+      </div>
+      {/* Content skeleton */}
+      <div className="space-y-4">
+        <div className="h-6 w-32 bg-gray-200 rounded" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl p-5 border border-gray-200">
+              <div className="space-y-3">
+                <div className="h-5 w-3/4 bg-gray-200 rounded" />
+                <div className="h-4 w-full bg-gray-200 rounded" />
+                <div className="h-4 w-2/3 bg-gray-200 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  ) : children
+
   // For note detail page, render with sidebar offset but full width content
   if (isNoteDetailPage) {
     return (
@@ -164,10 +186,10 @@ function SidebarContent({
           className="fixed top-0 bottom-0 right-0 transition-[left] duration-200 z-10"
           style={{ left: sidebarWidth }}
         >
-          {children}
+          {contentToRender}
         </div>
         {/* Floating Record Button - visible on note detail page */}
-        <FloatingRecordButton sidebarWidth={sidebarWidth} />
+        {!isAuthLoading && <FloatingRecordButton sidebarWidth={sidebarWidth} />}
       </>
     )
   }
@@ -180,12 +202,12 @@ function SidebarContent({
       >
         {/* Main Content Area - scrollable */}
         <main className="h-full w-full overflow-y-auto p-6 pb-24">
-          {children}
+          {contentToRender}
         </main>
       </div>
 
       {/* Floating Record Button - Bottom Center (only on dashboard and all notes pages) */}
-      {showRecordingButtons && <FloatingRecordButton sidebarWidth={sidebarWidth} />}
+      {showRecordingButtons && !isAuthLoading && <FloatingRecordButton sidebarWidth={sidebarWidth} />}
     </>
   )
 }
@@ -193,8 +215,6 @@ function SidebarContent({
 function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
   const [showRecordingModal, setShowRecordingModal] = useState(false)
   const [showManualNoteDialog, setShowManualNoteDialog] = useState(false)
-  const [showTemplateDialog, setShowTemplateDialog] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState<{ useCase: string; template: string } | null>(null)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
 
   // Listen for search state changes
@@ -221,10 +241,6 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
     // Processing modal handles its own closing
   }
 
-  const handleTemplateSelect = (useCase: UseCase, template: string) => {
-    setSelectedTemplate({ useCase: useCase.title, template })
-  }
-
   // Don't render buttons when search is open
   if (isSearchOpen) {
     return (
@@ -242,11 +258,6 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
         <ManualNoteDialog
           open={showManualNoteDialog}
           onOpenChange={setShowManualNoteDialog}
-        />
-        <TemplateSelectorDialog
-          open={showTemplateDialog}
-          onOpenChange={setShowTemplateDialog}
-          onSelectTemplate={handleTemplateSelect}
         />
       </>
     )
@@ -292,24 +303,6 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
           Tap to record
         </motion.button>
 
-        {/* Right Button - Template Selector */}
-        <motion.button
-          onClick={() => setShowTemplateDialog(true)}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className={cn(
-            'h-14 w-14 rounded-full shadow-xl flex items-center justify-center border-2 transition-colors group',
-            selectedTemplate
-              ? 'bg-black text-white border-black'
-              : 'bg-white text-gray-700 border-gray-200 hover:border-black'
-          )}
-          title={selectedTemplate ? `Template: ${selectedTemplate.template}` : 'Select recording template'}
-        >
-          <Wand2 className={cn(
-            'h-5 w-5 transition-colors',
-            selectedTemplate ? 'text-white' : 'text-gray-700 group-hover:text-black'
-          )} />
-        </motion.button>
       </div>
 
       {/* Dialogs */}
@@ -326,11 +319,6 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
       <ManualNoteDialog
         open={showManualNoteDialog}
         onOpenChange={setShowManualNoteDialog}
-      />
-      <TemplateSelectorDialog
-        open={showTemplateDialog}
-        onOpenChange={setShowTemplateDialog}
-        onSelectTemplate={handleTemplateSelect}
       />
     </>
   )

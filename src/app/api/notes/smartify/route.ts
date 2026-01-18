@@ -3,8 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   extractActionItems,
   extractInvestorUpdate,
-  extractProgressLog,
-  extractProductIdeas,
   extractBrainDump
 } from '@/lib/ai/extraction'
 
@@ -122,20 +120,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Run all extraction functions in parallel
+    // Run extraction functions in parallel (only action items, investor updates, and brain dump)
     if (recordingId) {
       console.log('[Smartify] Running extraction with recording ID:', recordingId)
       const results = await Promise.allSettled([
         extractActionItems(transcript, recordingId, user.id),
         extractInvestorUpdate(transcript, recordingId, user.id),
-        extractProgressLog(transcript, recordingId, user.id),
-        extractProductIdeas(transcript, recordingId, user.id),
         extractBrainDump(transcript, recordingId, user.id)
       ])
-      
+
       // Log any failures
       results.forEach((result, index) => {
-        const names = ['ActionItems', 'InvestorUpdate', 'ProgressLog', 'ProductIdeas', 'BrainDump']
+        const names = ['ActionItems', 'InvestorUpdate', 'BrainDump']
         if (result.status === 'rejected') {
           console.error(`[Smartify] ${names[index]} extraction failed:`, result.reason)
         } else {
@@ -151,8 +147,6 @@ export async function POST(request: NextRequest) {
     const counts = recordingId ? await getExtractionCounts(supabase, recordingId) : {
       actionItems: 0,
       investorUpdates: 0,
-      progressLogs: 0,
-      productIdeas: 0,
       brainDump: 0
     }
 
@@ -181,19 +175,15 @@ export async function POST(request: NextRequest) {
 }
 
 async function getExtractionCounts(supabase: any, recordingId: string) {
-  const [actionItems, investorUpdates, progressLogs, productIdeas, brainDump] = await Promise.all([
+  const [actionItems, investorUpdates, brainDump] = await Promise.all([
     supabase.from('action_items').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId),
     supabase.from('investor_updates').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId),
-    supabase.from('progress_logs').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId),
-    supabase.from('product_ideas').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId),
     supabase.from('brain_dump').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId)
   ])
 
   return {
     actionItems: actionItems.count || 0,
     investorUpdates: investorUpdates.count || 0,
-    progressLogs: progressLogs.count || 0,
-    productIdeas: productIdeas.count || 0,
     brainDump: brainDump.count || 0
   }
 }

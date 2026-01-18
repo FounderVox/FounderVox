@@ -59,6 +59,7 @@ export default function ActionItemsPage() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingTaskText, setEditingTaskText] = useState('')
   const [priorityDropdownId, setPriorityDropdownId] = useState<string | null>(null)
+  const [priorityDropdownPosition, setPriorityDropdownPosition] = useState<{ top: number; left: number } | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [toast, setToast] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({ open: false, message: '', variant: 'success' })
@@ -66,7 +67,6 @@ export default function ActionItemsPage() {
   const { setIsCollapsed } = useSidebar()
 
   const editTextareaRef = useRef<HTMLTextAreaElement>(null)
-  const priorityDropdownRef = useRef<HTMLDivElement>(null)
   const sortDropdownRef = useRef<HTMLDivElement>(null)
 
   // Collapse sidebar when page loads
@@ -85,12 +85,9 @@ export default function ActionItemsPage() {
     }
   }, [editingTaskId])
 
-  // Close dropdowns when clicking outside
+  // Close sort dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (priorityDropdownRef.current && !priorityDropdownRef.current.contains(event.target as Node)) {
-        setPriorityDropdownId(null)
-      }
       if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
         setSortDropdownOpen(false)
       }
@@ -98,6 +95,39 @@ export default function ActionItemsPage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Handle priority dropdown position updates and Escape key
+  useEffect(() => {
+    if (!priorityDropdownId || !priorityDropdownPosition) return
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setPriorityDropdownId(null)
+        setPriorityDropdownPosition(null)
+      }
+    }
+
+    const updatePosition = () => {
+      const button = document.querySelector(`[data-priority-button="${priorityDropdownId}"]`) as HTMLElement
+      if (button) {
+        const rect = button.getBoundingClientRect()
+        setPriorityDropdownPosition({
+          top: rect.bottom + 4,
+          left: rect.left
+        })
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
+    }
+  }, [priorityDropdownId, priorityDropdownPosition])
 
   const loadData = async () => {
     if (typeof window === 'undefined') return
@@ -208,7 +238,13 @@ export default function ActionItemsPage() {
       return
     }
 
+    // Store original values for rollback on error
+    const originalStatus = item.status
+    const originalCompletedAt = item.completed_at
+
     const completedAt = targetStatus === 'done' ? new Date().toISOString() : null
+
+    // Optimistic update - immediately update UI
     setActionItems(prevItems =>
       prevItems.map(i =>
         i.id === draggedItem.itemId
@@ -231,11 +267,32 @@ export default function ActionItemsPage() {
 
       if (error) {
         console.error('[ActionItems] Error updating status:', error)
-        loadData()
+        // Revert optimistic update on error instead of full reload
+        setActionItems(prevItems =>
+          prevItems.map(i =>
+            i.id === draggedItem.itemId
+              ? { ...i, status: originalStatus, completed_at: originalCompletedAt }
+              : i
+          )
+        )
+        setToast({ open: true, message: 'Failed to update task status', variant: 'error' })
+      } else {
+        // Dispatch event for cross-page sync (e.g., dashboard)
+        window.dispatchEvent(new CustomEvent('actionItemUpdated', {
+          detail: { itemId: draggedItem.itemId, status: targetStatus }
+        }))
       }
     } catch (error) {
       console.error('[ActionItems] Unexpected error updating status:', error)
-      loadData()
+      // Revert optimistic update on error instead of full reload
+      setActionItems(prevItems =>
+        prevItems.map(i =>
+          i.id === draggedItem.itemId
+            ? { ...i, status: originalStatus, completed_at: originalCompletedAt }
+            : i
+        )
+      )
+      setToast({ open: true, message: 'Failed to update task status', variant: 'error' })
     }
 
     setDraggedItem(null)
@@ -293,10 +350,14 @@ export default function ActionItemsPage() {
       return
     }
 
+    const originalTask = originalItem.task
+    const newTask = editingTaskText.trim()
+    const itemId = editingTaskId
+
     // Optimistic update
     setActionItems(prevItems =>
       prevItems.map(i =>
-        i.id === editingTaskId ? { ...i, task: editingTaskText.trim() } : i
+        i.id === itemId ? { ...i, task: newTask } : i
       )
     )
 
@@ -306,16 +367,33 @@ export default function ActionItemsPage() {
 
       const { error } = await supabase
         .from('action_items')
-        .update({ task: editingTaskText.trim() })
-        .eq('id', editingTaskId)
+        .update({ task: newTask })
+        .eq('id', itemId)
 
       if (error) {
         console.error('[ActionItems] Error updating task:', error)
-        loadData()
+        // Revert optimistic update on error
+        setActionItems(prevItems =>
+          prevItems.map(i =>
+            i.id === itemId ? { ...i, task: originalTask } : i
+          )
+        )
+        setToast({ open: true, message: 'Failed to update task', variant: 'error' })
+      } else {
+        // Dispatch event for cross-page sync
+        window.dispatchEvent(new CustomEvent('actionItemUpdated', {
+          detail: { itemId, task: newTask }
+        }))
       }
     } catch (error) {
       console.error('[ActionItems] Unexpected error updating task:', error)
-      loadData()
+      // Revert optimistic update on error
+      setActionItems(prevItems =>
+        prevItems.map(i =>
+          i.id === itemId ? { ...i, task: originalTask } : i
+        )
+      )
+      setToast({ open: true, message: 'Failed to update task', variant: 'error' })
     }
 
     setEditingTaskId(null)
@@ -332,6 +410,8 @@ export default function ActionItemsPage() {
 
     const item = actionItems.find(i => i.id === itemId)
     if (!item || item.priority === newPriority) return
+
+    const originalPriority = item.priority
 
     // Optimistic update
     setActionItems(prevItems =>
@@ -351,11 +431,28 @@ export default function ActionItemsPage() {
 
       if (error) {
         console.error('[ActionItems] Error updating priority:', error)
-        loadData()
+        // Revert optimistic update on error
+        setActionItems(prevItems =>
+          prevItems.map(i =>
+            i.id === itemId ? { ...i, priority: originalPriority } : i
+          )
+        )
+        setToast({ open: true, message: 'Failed to update priority', variant: 'error' })
+      } else {
+        // Dispatch event for cross-page sync
+        window.dispatchEvent(new CustomEvent('actionItemUpdated', {
+          detail: { itemId, priority: newPriority }
+        }))
       }
     } catch (error) {
       console.error('[ActionItems] Unexpected error updating priority:', error)
-      loadData()
+      // Revert optimistic update on error
+      setActionItems(prevItems =>
+        prevItems.map(i =>
+          i.id === itemId ? { ...i, priority: originalPriority } : i
+        )
+      )
+      setToast({ open: true, message: 'Failed to update priority', variant: 'error' })
     }
   }
 
@@ -989,11 +1086,23 @@ export default function ActionItemsPage() {
                               <div className="flex items-center justify-between gap-2 mt-3">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {/* Priority Badge - Clickable Dropdown */}
-                                  <div className="relative" ref={showPriorityDropdown ? priorityDropdownRef : null}>
+                                  <div className="relative">
                                     <button
+                                      data-priority-button={item.id}
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        setPriorityDropdownId(showPriorityDropdown ? null : item.id)
+                                        const button = e.currentTarget
+                                        const rect = button.getBoundingClientRect()
+                                        if (showPriorityDropdown) {
+                                          setPriorityDropdownId(null)
+                                          setPriorityDropdownPosition(null)
+                                        } else {
+                                          setPriorityDropdownId(item.id)
+                                          setPriorityDropdownPosition({
+                                            top: rect.bottom + 4,
+                                            left: rect.left
+                                          })
+                                        }
                                       }}
                                       className={cn(
                                         "inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide border transition-all",
@@ -1008,54 +1117,11 @@ export default function ActionItemsPage() {
                                     >
                                       <PriorityIcon className="h-3 w-3" />
                                       {item.priority}
-                                      <ChevronDown className="h-2.5 w-2.5 ml-0.5" />
+                                      <ChevronDown className={cn(
+                                        "h-2.5 w-2.5 ml-0.5 transition-transform duration-200",
+                                        showPriorityDropdown && "rotate-180"
+                                      )} />
                                     </button>
-
-                                    {/* Priority Dropdown - Opens downward with portal-like positioning */}
-                                    <AnimatePresence>
-                                      {showPriorityDropdown && (
-                                        <motion.div
-                                          initial={{ opacity: 0, y: -4, scale: 0.96 }}
-                                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                                          exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                                          transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-                                          className="fixed z-[9999] bg-white rounded-xl border border-gray-200/80 py-1 min-w-[130px]"
-                                          style={{
-                                            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08)',
-                                            marginTop: '4px',
-                                            left: priorityDropdownRef.current?.getBoundingClientRect().left ?? 0,
-                                            top: (priorityDropdownRef.current?.getBoundingClientRect().bottom ?? 0)
-                                          }}
-                                        >
-                                          {(['high', 'medium', 'low'] as const).map((p, idx) => {
-                                            const pConfig = getPriorityConfig(p)
-                                            return (
-                                              <button
-                                                key={p}
-                                                onClick={(e) => {
-                                                  e.stopPropagation()
-                                                  updatePriority(item.id, p)
-                                                }}
-                                                className={cn(
-                                                  "w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors",
-                                                  item.priority === p
-                                                    ? "bg-gray-50"
-                                                    : "hover:bg-gray-50",
-                                                  idx === 0 && "rounded-t-lg",
-                                                  idx === 2 && "rounded-b-lg"
-                                                )}
-                                              >
-                                                <span className={cn("w-2 h-2 rounded-full flex-shrink-0", pConfig.dot)} />
-                                                <span className={cn("font-medium flex-1 text-left", pConfig.text)}>{pConfig.label}</span>
-                                                {item.priority === p && (
-                                                  <Check className="h-3.5 w-3.5 text-gray-400" />
-                                                )}
-                                              </button>
-                                            )
-                                          })}
-                                        </motion.div>
-                                      )}
-                                    </AnimatePresence>
                                   </div>
 
                                   {/* Assignee */}
@@ -1159,6 +1225,70 @@ export default function ActionItemsPage() {
           )}
         </motion.div>
       )}
+
+      {/* Priority Dropdown - Fixed positioned outside overflow container */}
+      <AnimatePresence>
+        {priorityDropdownId && priorityDropdownPosition && (
+          <>
+            {/* Invisible backdrop to close dropdown */}
+            <div
+              className="fixed inset-0 z-[99998]"
+              onClick={(e) => {
+                e.stopPropagation()
+                setPriorityDropdownId(null)
+                setPriorityDropdownPosition(null)
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              className="fixed z-[99999] bg-white rounded-xl border border-gray-200 py-1 min-w-[130px]"
+              style={{
+                top: `${priorityDropdownPosition.top}px`,
+                left: `${priorityDropdownPosition.left}px`,
+                boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {(() => {
+                const item = actionItems.find(item => item.id === priorityDropdownId)
+                if (!item) return null
+                return (['high', 'medium', 'low'] as const).map((p, idx) => {
+                  const pConfig = getPriorityConfig(p)
+                  return (
+                    <button
+                      key={p}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        updatePriority(item.id, p)
+                        setPriorityDropdownId(null)
+                        setPriorityDropdownPosition(null)
+                      }}
+                      className={cn(
+                        "w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors",
+                        item.priority === p
+                          ? "bg-gray-50"
+                          : "hover:bg-gray-50",
+                        idx === 0 && "rounded-t-lg",
+                        idx === 2 && "rounded-b-lg"
+                      )}
+                    >
+                      <span className={cn("w-2 h-2 rounded-full flex-shrink-0", pConfig.dot)} />
+                      <span className={cn("font-medium flex-1 text-left", pConfig.text)}>{pConfig.label}</span>
+                      {item.priority === p && (
+                        <Check className="h-3.5 w-3.5 text-gray-400" />
+                      )}
+                    </button>
+                  )
+                })
+              })()}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

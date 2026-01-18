@@ -157,31 +157,31 @@ export default function DashboardPage() {
 
       const recordingIds = recordings.map(r => r.id)
 
-      // Load all open and in_progress action items
-      const { data: actionData, error: actionError } = await supabase
-        .from('action_items')
-        .select('*')
-        .in('recording_id', recordingIds)
-        .in('status', ['open', 'in_progress'])
-        .order('created_at', { ascending: false })
+      // Load action items and brain dump items in parallel for faster loading
+      const [actionResult, brainResult] = await Promise.all([
+        supabase
+          .from('action_items')
+          .select('*')
+          .in('recording_id', recordingIds)
+          .in('status', ['open', 'in_progress'])
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('brain_dump')
+          .select('*')
+          .in('recording_id', recordingIds)
+          .order('created_at', { ascending: false })
+      ])
 
-      if (actionError) {
-        console.error('[Dashboard] Error loading action items:', actionError)
+      if (actionResult.error) {
+        console.error('[Dashboard] Error loading action items:', actionResult.error)
       } else {
-        setActionItems(actionData || [])
+        setActionItems(actionResult.data || [])
       }
 
-      // Load brain dump items (for blockers count)
-      const { data: brainData, error: brainError } = await supabase
-        .from('brain_dump')
-        .select('*')
-        .in('recording_id', recordingIds)
-        .order('created_at', { ascending: false })
-
-      if (brainError) {
-        console.error('[Dashboard] Error loading brain dump:', brainError)
+      if (brainResult.error) {
+        console.error('[Dashboard] Error loading brain dump:', brainResult.error)
       } else {
-        setBrainDumpItems(brainData || [])
+        setBrainDumpItems(brainResult.data || [])
       }
     } catch (error) {
       console.error('[Dashboard] Unexpected error loading focus items:', error)

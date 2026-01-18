@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Wand2, CheckCircle2, XCircle, Loader2, ArrowRight, CheckCircle, AlertCircle, ClipboardList, Briefcase, BarChart3, Rocket, Brain } from 'lucide-react'
-import Link from 'next/link'
+import { Wand2, CheckCircle2, XCircle, Loader2, CheckCircle, AlertCircle, ClipboardList, Briefcase, Brain } from 'lucide-react'
 
 interface SmartifyModalProps {
   open: boolean
@@ -15,9 +14,10 @@ interface SmartifyModalProps {
 interface ExtractionPreview {
   actionItems: number
   investorUpdates: number
-  progressLogs: number
-  productIdeas: number
   brainDump: number
+  // Legacy fields (ignored but kept for API compatibility)
+  progressLogs?: number
+  productIdeas?: number
 }
 
 export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: SmartifyModalProps) {
@@ -61,7 +61,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
 
       const data = await response.json()
       console.log('[FounderNote:SmartifyModal] Preview received:', data.preview)
-      
+
       setPreview(data.preview)
       setIsProcessing(false)
       setShowPreview(true)
@@ -93,7 +93,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
 
       const data = await response.json()
       console.log('[FounderNote:SmartifyModal] Smartify saved:', data.extracted)
-      
+
       // Show success briefly, then close
       setTimeout(() => {
         onOpenChange(false)
@@ -108,7 +108,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
   }
 
   const totalExtracted = preview
-    ? preview.actionItems + preview.investorUpdates + preview.progressLogs + preview.productIdeas + preview.brainDump
+    ? preview.actionItems + preview.investorUpdates + preview.brainDump
     : 0
 
   if (!open) return null
@@ -129,35 +129,54 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
           onClick={(e) => e.stopPropagation()}
           className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-8 mx-4 max-h-[90vh] overflow-y-auto"
         >
-          {/* Header */}
+          {/* Header - Brand themed */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2.5 bg-gray-100 rounded-xl">
-              <Wand2 className="h-6 w-6 text-black" />
+            <div className="p-2.5 bg-brand-light rounded-xl border border-brand/20">
+              <Wand2 className="h-6 w-6 text-brand" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-black">Smartify Note</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Smartify Note</h2>
               <p className="text-sm text-gray-600">
                 {noteTitle || 'Extracting structured insights from your note...'}
               </p>
             </div>
           </div>
 
-          {/* Processing State */}
+          {/* Processing State - Brand themed spinner */}
           {isProcessing && !showPreview && (
             <div className="py-12 text-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-                className="inline-flex items-center justify-center w-16 h-16 mb-4"
-              >
-                <Loader2 className="h-16 w-16 text-black" />
-              </motion.div>
+              <div className="relative inline-flex items-center justify-center w-20 h-20 mx-auto mb-6">
+                {/* Outer spinning ring */}
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                  className="absolute inset-0 w-20 h-20 border-4 border-brand-light border-t-brand rounded-full"
+                />
+                {/* Inner icon */}
+                <div className="relative z-10 w-12 h-12 bg-brand rounded-full flex items-center justify-center shadow-lg">
+                  <Wand2 className="h-6 w-6 text-white" />
+                </div>
+              </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Analyzing your note...
               </h3>
               <p className="text-gray-600">
                 Using AI to identify what can be extracted from your note.
               </p>
+              {/* Progress indicator */}
+              <div className="mt-6 h-1.5 bg-brand-light rounded-full overflow-hidden max-w-xs mx-auto">
+                <motion.div
+                  initial={{ width: '0%' }}
+                  animate={{ width: '100%' }}
+                  transition={{
+                    duration: 6,
+                    ease: [0.4, 0, 0.2, 1],
+                    repeat: Infinity,
+                    repeatType: 'loop'
+                  }}
+                  className="h-full bg-brand rounded-full"
+                />
+              </div>
             </div>
           )}
 
@@ -173,7 +192,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
               <p className="text-gray-600 mb-6">{error}</p>
               <button
                 onClick={() => onOpenChange(false)}
-                className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                className="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors font-medium"
               >
                 Close
               </button>
@@ -184,99 +203,65 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
           {preview && showPreview && !isSaving && (
             <div>
               <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-50 rounded-2xl border border-gray-200 mb-4 shadow-sm">
-                  <Wand2 className="h-8 w-8 text-gray-800" />
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-light rounded-2xl border border-brand/20 mb-4 shadow-sm">
+                  <Wand2 className="h-8 w-8 text-brand" />
                 </div>
-                <h3 className="text-lg font-semibold text-black mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Preview Extraction
                 </h3>
                 <p className="text-gray-600">
-                  We found <span className="font-semibold text-black">{totalExtracted}</span> items that can be extracted. Review and confirm to create them.
+                  We found <span className="font-semibold text-brand">{totalExtracted}</span> items that can be extracted. Review and confirm to create them.
                 </p>
               </div>
 
-              {/* Preview Grid */}
+              {/* Preview Grid - Brand accented */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 {preview.actionItems > 0 && (
-                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
+                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-brand/40 hover:shadow-sm transition-all duration-200">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-gray-100">
-                        <ClipboardList className="h-4 w-4 text-black" />
+                      <div className="p-2 rounded-lg bg-brand-light">
+                        <ClipboardList className="h-4 w-4 text-brand" />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-black">Action Items</span>
-                          <span className="text-lg font-bold text-black">{preview.actionItems}</span>
+                          <span className="text-sm font-medium text-gray-900">Action Items</span>
+                          <span className="text-lg font-bold text-brand">{preview.actionItems}</span>
                         </div>
-                        <p className="text-xs text-gray-600">Tasks and todos</p>
+                        <p className="text-xs text-gray-500">Tasks and todos</p>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {preview.investorUpdates > 0 && (
-                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
+                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-brand/40 hover:shadow-sm transition-all duration-200">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-gray-100">
-                        <Briefcase className="h-4 w-4 text-black" />
+                      <div className="p-2 rounded-lg bg-brand-light">
+                        <Briefcase className="h-4 w-4 text-brand" />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-black">Investor Updates</span>
-                          <span className="text-lg font-bold text-black">{preview.investorUpdates}</span>
+                          <span className="text-sm font-medium text-gray-900">Investor Updates</span>
+                          <span className="text-lg font-bold text-brand">{preview.investorUpdates}</span>
                         </div>
-                        <p className="text-xs text-gray-600">Update drafts</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {preview.progressLogs > 0 && (
-                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-gray-100">
-                        <BarChart3 className="h-4 w-4 text-black" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-black">Progress Logs</span>
-                          <span className="text-lg font-bold text-black">{preview.progressLogs}</span>
-                        </div>
-                        <p className="text-xs text-gray-600">Weekly progress</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {preview.productIdeas > 0 && (
-                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-gray-100">
-                        <Rocket className="h-4 w-4 text-black" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-black">Product Ideas</span>
-                          <span className="text-lg font-bold text-black">{preview.productIdeas}</span>
-                        </div>
-                        <p className="text-xs text-gray-600">Feature ideas</p>
+                        <p className="text-xs text-gray-500">Update drafts</p>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {preview.brainDump > 0 && (
-                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200 col-span-2">
+                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-brand/40 hover:shadow-sm transition-all duration-200 col-span-2">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-gray-100">
-                        <Brain className="h-4 w-4 text-black" />
+                      <div className="p-2 rounded-lg bg-brand-light">
+                        <Brain className="h-4 w-4 text-brand" />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-black">Brain Dump Notes</span>
-                          <span className="text-lg font-bold text-black">{preview.brainDump}</span>
+                          <span className="text-sm font-medium text-gray-900">Brain Dump Notes</span>
+                          <span className="text-lg font-bold text-brand">{preview.brainDump}</span>
                         </div>
-                        <p className="text-xs text-gray-600">Thoughts and insights</p>
+                        <p className="text-xs text-gray-500">Thoughts and insights</p>
                       </div>
                     </div>
                   </div>
@@ -292,18 +277,18 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
                 </div>
               )}
 
-              {/* Actions */}
+              {/* Actions - Brand primary button */}
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => onOpenChange(false)}
-                  className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium"
                 >
                   Cancel
                 </button>
                 {totalExtracted > 0 && (
                   <button
                     onClick={handleConfirm}
-                    className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2"
+                    className="px-6 py-2.5 bg-brand text-white rounded-xl hover:opacity-90 transition-all flex items-center gap-2 font-medium shadow-sm"
                   >
                     <CheckCircle className="h-4 w-4" />
                     Create {totalExtracted} Item{totalExtracted !== 1 ? 's' : ''}
@@ -313,30 +298,49 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
             </div>
           )}
 
-          {/* Saving State */}
+          {/* Saving State - Brand themed spinner */}
           {isSaving && (
             <div className="py-12 text-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-                className="inline-flex items-center justify-center w-16 h-16 mb-4"
-              >
-                <Loader2 className="h-16 w-16 text-black" />
-              </motion.div>
+              <div className="relative inline-flex items-center justify-center w-20 h-20 mx-auto mb-6">
+                {/* Outer spinning ring */}
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                  className="absolute inset-0 w-20 h-20 border-4 border-brand-light border-t-brand rounded-full"
+                />
+                {/* Inner icon */}
+                <div className="relative z-10 w-12 h-12 bg-brand rounded-full flex items-center justify-center shadow-lg">
+                  <Wand2 className="h-6 w-6 text-white" />
+                </div>
+              </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Creating items...
               </h3>
               <p className="text-gray-600">
                 Saving extracted data to your dashboard.
               </p>
+              {/* Progress indicator */}
+              <div className="mt-6 h-1.5 bg-brand-light rounded-full overflow-hidden max-w-xs mx-auto">
+                <motion.div
+                  initial={{ width: '0%' }}
+                  animate={{ width: '100%' }}
+                  transition={{
+                    duration: 4,
+                    ease: [0.4, 0, 0.2, 1],
+                    repeat: Infinity,
+                    repeatType: 'loop'
+                  }}
+                  className="h-full bg-brand rounded-full"
+                />
+              </div>
             </div>
           )}
 
           {/* Success State (briefly shown before closing) */}
           {!isSaving && !isProcessing && !error && !showPreview && preview && (
             <div className="py-12 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
+                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Items Created Successfully!

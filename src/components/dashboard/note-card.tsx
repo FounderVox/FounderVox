@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Star, Clock, MoreVertical, Play, Edit, Trash2, Tag, Wand2, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-colors'
 import { getTemplateColor } from '@/lib/template-colors'
+import { useMenu } from '@/contexts/menu-context'
 
 interface NoteCardProps {
   title: string
@@ -27,7 +28,7 @@ interface NoteCardProps {
   isSmartified?: boolean
 }
 
-export function NoteCard({
+export const NoteCard = memo(function NoteCard({
   title,
   preview,
   createdAt,
@@ -47,9 +48,39 @@ export function NoteCard({
   isSmartified = false,
 }: NoteCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { isAnyMenuOpen, openMenu, closeMenu } = useMenu()
+  
+  // Update global menu state when this menu opens/closes
+  useEffect(() => {
+    if (isMenuOpen) {
+      openMenu()
+    } else {
+      closeMenu()
+    }
+  }, [isMenuOpen, openMenu, closeMenu])
+  
+  // Close menu on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMenuOpen) {
+        setIsMenuOpen(false)
+      }
+    }
+    
+    if (isMenuOpen) {
+      document.addEventListener('keydown', handleEscape)
+      // Prevent body scroll when menu is open
+      document.body.style.overflow = 'hidden'
+    }
+    
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.body.style.overflow = ''
+    }
+  }, [isMenuOpen])
   
   const handleCardClick = () => {
-    if (onView) {
+    if (!isMenuOpen && onView) {
       onView()
     }
   }
@@ -59,11 +90,15 @@ export function NoteCard({
   return (
     <motion.div
       className={cn(
-        "group bg-white shadow-sm border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer",
+        "group bg-white shadow-sm border border-gray-200 rounded-2xl p-5 transition-all duration-200 cursor-pointer",
         "border-l-4",
-        templateColor.borderLeft
+        templateColor.borderLeft,
+        // Disable hover effects when any menu is open (except on the card with the open menu)
+        isAnyMenuOpen && !isMenuOpen
+          ? ""
+          : "hover:shadow-md hover:border-gray-300"
       )}
-      whileHover={{ y: -2, scale: 1.01 }}
+      whileHover={isAnyMenuOpen && !isMenuOpen ? undefined : { y: -2, scale: 1.01 }}
       onClick={handleCardClick}
     >
       {/* Header */}
@@ -73,14 +108,21 @@ export function NoteCard({
         </div>
         <div className="flex items-center gap-1 transition-opacity relative">
           {/* Show star when starred, even without hover */}
-          {isStarred && (
+          {isStarred && !isMenuOpen && (
             <div className="group-hover:hidden">
               <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
             </div>
           )}
 
-          {/* Show interactive buttons on hover */}
-          <div className={cn("flex items-center gap-1", isStarred ? "hidden group-hover:flex" : "opacity-0 group-hover:opacity-100 transition-opacity duration-200")}>
+          {/* Show interactive buttons on hover or when menu is open */}
+          <div className={cn(
+            "flex items-center gap-1", 
+            isStarred && !isMenuOpen 
+              ? "hidden group-hover:flex" 
+              : isMenuOpen 
+                ? "flex" 
+                : "opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          )}>
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -95,102 +137,112 @@ export function NoteCard({
             >
               <Star className={cn('h-4 w-4', isStarred && 'fill-current')} />
             </button>
-          <div className="relative">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsMenuOpen(!isMenuOpen)
-              }}
-              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-black transition-all duration-200"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
+            <div className="relative z-[10000]">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsMenuOpen(!isMenuOpen)
+                }}
+                className={cn(
+                  "p-1.5 rounded-lg transition-all duration-200",
+                  isMenuOpen
+                    ? "text-black bg-gray-100"
+                    : "text-gray-400 hover:bg-gray-100 hover:text-black"
+                )}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
 
-            {/* Dropdown Menu */}
-            <AnimatePresence>
-              {isMenuOpen && (
-                <>
-                  {/* Backdrop to close menu */}
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setIsMenuOpen(false)
-                    }}
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-20"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
+              {/* Dropdown Menu */}
+              <AnimatePresence>
+                {isMenuOpen && (
+                  <>
+                    {/* Backdrop to close menu */}
+                    <div
+                      className="fixed inset-0 z-[99998]"
                       onClick={(e) => {
                         e.stopPropagation()
                         setIsMenuOpen(false)
-                        onEdit?.()
                       }}
-                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-200 transition-all duration-200"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Edit Note
-                    </button>
-                    <button
-                      onClick={(e) => {
+                      onMouseDown={(e) => {
                         e.stopPropagation()
-                        setIsMenuOpen(false)
-                        onAddTag?.()
                       }}
-                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-200 transition-all duration-200"
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[99999]"
+                      style={{ boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1)' }}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
                     >
-                      <Tag className="h-4 w-4" />
-                      Add Tag
-                    </button>
-                    {onSmartify && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           setIsMenuOpen(false)
-                          if (canSmartify) {
-                            onSmartify?.()
-                          }
+                          onEdit?.()
                         }}
-                        disabled={!canSmartify}
-                        className={cn(
-                          "flex items-center gap-2 w-full px-4 py-2.5 text-sm transition-all duration-200",
-                          canSmartify
-                            ? "text-black hover:bg-gray-200 hover:shadow-sm"
-                            : "text-gray-400 cursor-not-allowed"
-                        )}
-                        title={!canSmartify && isSmartified ? "Note already smartified. Edit to smartify again." : "Extract structured data from this note"}
+                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-200 transition-all duration-200"
                       >
-                        <Wand2 className="h-4 w-4" />
-                        <span className="flex-1 text-left">
-                          {isSmartified ? "Re-smartify" : "Smartify"}
-                        </span>
-                        {isSmartified && (
-                          <CheckCircle className="h-4 w-4 text-emerald-500" />
-                        )}
+                        <Edit className="h-4 w-4" />
+                        Edit Note
                       </button>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setIsMenuOpen(false)
-                        onDelete?.()
-                      }}
-                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-100 hover:shadow-sm transition-all duration-200"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete Note
-                    </button>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setIsMenuOpen(false)
+                          onAddTag?.()
+                        }}
+                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-200 transition-all duration-200"
+                      >
+                        <Tag className="h-4 w-4" />
+                        Add Tag
+                      </button>
+                      {onSmartify && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setIsMenuOpen(false)
+                            if (canSmartify) {
+                              onSmartify?.()
+                            }
+                          }}
+                          disabled={!canSmartify}
+                          className={cn(
+                            "flex items-center gap-2 w-full px-4 py-2.5 text-sm transition-all duration-200",
+                            canSmartify
+                              ? "text-black hover:bg-gray-200 hover:shadow-sm"
+                              : "text-gray-400 cursor-not-allowed"
+                          )}
+                          title={!canSmartify && isSmartified ? "Note already smartified. Edit to smartify again." : "Extract structured data from this note"}
+                        >
+                          <Wand2 className="h-4 w-4" />
+                          <span className="flex-1 text-left">
+                            {isSmartified ? "Re-smartify" : "Smartify"}
+                          </span>
+                          {isSmartified && (
+                            <CheckCircle className="h-4 w-4 text-emerald-500" />
+                          )}
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setIsMenuOpen(false)
+                          onDelete?.()
+                        }}
+                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-100 hover:shadow-sm transition-all duration-200"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Note
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>
@@ -246,4 +298,4 @@ export function NoteCard({
       </div>
     </motion.div>
   )
-}
+})

@@ -1,56 +1,61 @@
 'use client'
 
+import { memo, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Users, HelpCircle, AlertTriangle, GitBranch, ArrowRightCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BrainDumpItem } from '@/types/dashboard'
 import Link from 'next/link'
 
+// Move config outside component to prevent recreation on each render
+const CATEGORY_CONFIG = {
+  meeting: {
+    icon: Users,
+    iconColor: 'text-blue-600',
+    border: 'border-l-blue-500',
+    label: 'Meeting'
+  },
+  blocker: {
+    icon: AlertTriangle,
+    iconColor: 'text-red-600',
+    border: 'border-l-red-500',
+    label: 'Blocker'
+  },
+  decision: {
+    icon: GitBranch,
+    iconColor: 'text-purple-600',
+    border: 'border-l-purple-500',
+    label: 'Decision'
+  },
+  question: {
+    icon: HelpCircle,
+    iconColor: 'text-amber-600',
+    border: 'border-l-amber-500',
+    label: 'Question'
+  },
+  followup: {
+    icon: ArrowRightCircle,
+    iconColor: 'text-emerald-600',
+    border: 'border-l-emerald-500',
+    label: 'Follow-up'
+  }
+} as const
+
 interface FocusBrainItemProps {
   item: BrainDumpItem
 }
 
-export function FocusBrainItem({ item }: FocusBrainItemProps) {
-  const categoryConfig = {
-    meeting: {
-      icon: Users,
-      iconColor: 'text-blue-600',
-      border: 'border-l-blue-500',
-      label: 'Meeting'
-    },
-    blocker: {
-      icon: AlertTriangle,
-      iconColor: 'text-red-600',
-      border: 'border-l-red-500',
-      label: 'Blocker'
-    },
-    decision: {
-      icon: GitBranch,
-      iconColor: 'text-purple-600',
-      border: 'border-l-purple-500',
-      label: 'Decision'
-    },
-    question: {
-      icon: HelpCircle,
-      iconColor: 'text-amber-600',
-      border: 'border-l-amber-500',
-      label: 'Question'
-    },
-    followup: {
-      icon: ArrowRightCircle,
-      iconColor: 'text-emerald-600',
-      border: 'border-l-emerald-500',
-      label: 'Follow-up'
-    }
-  }
-
-  const config = categoryConfig[item.category]
+export const FocusBrainItem = memo(function FocusBrainItem({ item }: FocusBrainItemProps) {
+  const config = CATEGORY_CONFIG[item.category]
   const Icon = config.icon
 
-  // Truncate content for preview
-  const truncatedContent = item.content.length > 100
-    ? item.content.substring(0, 100) + '...'
-    : item.content
+  // Memoize truncated content
+  const truncatedContent = useMemo(() =>
+    item.content.length > 100
+      ? item.content.substring(0, 100) + '...'
+      : item.content,
+    [item.content]
+  )
 
   return (
     <Link href="/dashboard/brain-dump">
@@ -111,4 +116,4 @@ export function FocusBrainItem({ item }: FocusBrainItemProps) {
       </motion.div>
     </Link>
   )
-}
+})

@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
   const next = searchParams.get('next') ?? '/welcome'
+  const type = searchParams.get('type')
 
   // Handle OAuth errors from provider
   if (error) {
@@ -30,6 +31,12 @@ export async function GET(request: Request) {
       return NextResponse.redirect(
         `${origin}/login?error=exchange_failed&message=${encodeURIComponent(exchangeError.message)}`
       )
+    }
+
+    // Handle password recovery flow - redirect to reset password page
+    if (next === '/reset-password' || type === 'recovery') {
+      console.log('[Auth Callback] Password recovery flow, redirecting to reset password')
+      return NextResponse.redirect(`${origin}/reset-password`)
     }
 
     // Get user and check onboarding status

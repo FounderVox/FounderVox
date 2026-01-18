@@ -274,23 +274,13 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
         noteId 
       })
 
-      // Dispatch event to notify other components
-      window.dispatchEvent(new CustomEvent('tagsUpdated', { 
-        detail: { noteId, tags: tagsToSave } 
-      }))
-      window.dispatchEvent(new CustomEvent('noteUpdated', { 
-        detail: { noteId } 
+      // Dispatch event to notify other components (noteUpdated covers tag changes too)
+      window.dispatchEvent(new CustomEvent('noteUpdated', {
+        detail: { noteId, tags: tagsToSave }
       }))
 
       setIsSaving(false)
       onOpenChange(false)
-      
-      // Force a small delay to ensure events are processed
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('tagsUpdated', { 
-          detail: { noteId, tags: tagsToSave } 
-        }))
-      }, 100)
     } catch (error) {
       console.error('[FounderNote:AddTag] Unexpected error:', error)
       setIsSaving(false)

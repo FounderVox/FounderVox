@@ -63,14 +63,14 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
             {isProcessing && (
               <div className="p-8 text-center">
                 <div className="relative inline-flex items-center justify-center w-20 h-20 mx-auto mb-6">
-                  {/* Outer spinning ring */}
+                  {/* Outer spinning ring - brand terracotta color */}
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-                    className="absolute inset-0 w-20 h-20 border-4 border-gray-100 border-t-[#BD6750] rounded-full"
+                    transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                    className="absolute inset-0 w-20 h-20 border-4 border-brand-light border-t-brand rounded-full"
                   />
-                  {/* Inner icon */}
-                  <div className="relative z-10 w-12 h-12 bg-gradient-to-br from-[#BD6750] to-[#a55a45] rounded-full flex items-center justify-center">
+                  {/* Inner icon - brand background */}
+                  <div className="relative z-10 w-12 h-12 bg-brand rounded-full flex items-center justify-center shadow-lg">
                     <Sparkles className="h-6 w-6 text-white" />
                   </div>
                 </div>
@@ -80,13 +80,18 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
                 <p className="text-gray-500 text-sm">
                   Transcribing audio with AI...
                 </p>
-                {/* Progress indicator */}
-                <div className="mt-6 h-1 bg-gray-100 rounded-full overflow-hidden">
+                {/* Progress indicator - smooth continuous fill animation */}
+                <div className="mt-6 h-1.5 bg-brand-light rounded-full overflow-hidden">
                   <motion.div
-                    initial={{ x: '-100%' }}
-                    animate={{ x: '100%' }}
-                    transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-                    className="h-full w-1/3 bg-gradient-to-r from-transparent via-[#BD6750] to-transparent"
+                    initial={{ width: '0%' }}
+                    animate={{ width: '100%' }}
+                    transition={{
+                      duration: 8,
+                      ease: [0.4, 0, 0.2, 1],
+                      repeat: Infinity,
+                      repeatType: 'loop'
+                    }}
+                    className="h-full bg-brand rounded-full"
                   />
                 </div>
               </div>

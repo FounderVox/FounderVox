@@ -1,17 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Clock, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ActionItem, formatDeadline, isOverdue, isToday } from '@/types/dashboard'
+
+// Move config outside component to prevent recreation on each render
+const PRIORITY_CONFIG = {
+  high: {
+    border: 'border-l-red-500',
+    badge: 'bg-red-50 text-red-700 border-red-200',
+    label: 'High'
+  },
+  medium: {
+    border: 'border-l-amber-500',
+    badge: 'bg-amber-50 text-amber-700 border-amber-200',
+    label: 'Med'
+  },
+  low: {
+    border: 'border-l-gray-400',
+    badge: 'bg-gray-50 text-gray-600 border-gray-200',
+    label: 'Low'
+  }
+} as const
 
 interface FocusActionItemProps {
   item: ActionItem
   onComplete: (itemId: string) => Promise<void>
 }
 
-export function FocusActionItem({ item, onComplete }: FocusActionItemProps) {
+export const FocusActionItem = memo(function FocusActionItem({ item, onComplete }: FocusActionItemProps) {
   const [isCompleting, setIsCompleting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(item.status === 'done')
 
@@ -32,25 +51,7 @@ export function FocusActionItem({ item, onComplete }: FocusActionItemProps) {
     }
   }
 
-  const priorityConfig = {
-    high: {
-      border: 'border-l-red-500',
-      badge: 'bg-red-50 text-red-700 border-red-200',
-      label: 'High'
-    },
-    medium: {
-      border: 'border-l-amber-500',
-      badge: 'bg-amber-50 text-amber-700 border-amber-200',
-      label: 'Med'
-    },
-    low: {
-      border: 'border-l-gray-400',
-      badge: 'bg-gray-50 text-gray-600 border-gray-200',
-      label: 'Low'
-    }
-  }
-
-  const config = priorityConfig[item.priority]
+  const config = PRIORITY_CONFIG[item.priority]
   const deadline = formatDeadline(item.deadline)
   const overdue = isOverdue(item.deadline)
   const today = isToday(item.deadline)
@@ -138,4 +139,4 @@ export function FocusActionItem({ item, onComplete }: FocusActionItemProps) {
       </div>
     </motion.div>
   )
-}
+})
