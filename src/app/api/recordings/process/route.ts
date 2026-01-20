@@ -4,8 +4,6 @@ import { createClient as createDeepgramClient, DeepgramClient } from '@deepgram/
 import {
   extractActionItems,
   extractInvestorUpdate,
-  extractProgressLog,
-  extractProductIdeas,
   extractBrainDump
 } from '@/lib/ai/extraction'
 
@@ -235,6 +233,29 @@ export async function POST(request: NextRequest) {
 
     console.log('[Process] Creating note from transcript...')
 
+    // Check note limit before creating
+    const MAX_NOTES = 10
+    const { count: notesCount } = await serviceClient
+      .from('notes')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+
+    if (notesCount !== null && notesCount >= MAX_NOTES) {
+      console.log('[Process] Note limit reached, skipping note creation')
+      return NextResponse.json({
+        success: true,
+        recording: {
+          id: recordingId,
+          status: 'completed',
+          transcript: cleanedTranscript,
+          duration: Math.floor(actualDuration)
+        },
+        note: null,
+        noteLimitReached: true,
+        message: `You've reached the limit of ${MAX_NOTES} notes. Upgrade to Pro for unlimited notes.`
+      })
+    }
+
     // Generate a meaningful title using GPT-4o
     console.log('[Process] Generating note title...')
     const noteTitle = await generateNoteTitle(cleanedTranscript)
@@ -267,6 +288,18 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('[Process] Note created successfully:', note.id)
 
+      // Link recording to note
+      const { error: linkError } = await serviceClient
+        .from('recordings')
+        .update({ note_id: note.id })
+        .eq('id', recordingId)
+
+      if (linkError) {
+        console.error('[Process] Error linking recording to note:', linkError)
+      } else {
+        console.log('[Process] Recording linked to note:', note.id)
+      }
+
       // Generate embedding for semantic search (fire and forget)
       generateEmbeddingAsync(note.id).catch(err =>
         console.error('[Process] Embedding generation failed:', err)
@@ -287,8 +320,6 @@ export async function POST(request: NextRequest) {
       extracted: {
         actionItems: 0,
         investorUpdates: 0,
-        progressLogs: 0,
-        productIdeas: 0,
         brainDump: 0
       }
     })

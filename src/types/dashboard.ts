@@ -10,6 +10,7 @@ export interface ActionItem {
   created_at: string
   completed_at: string | null
   recording_id: string
+  user_id: string
 }
 
 export interface BrainDumpItem {
@@ -19,6 +20,7 @@ export interface BrainDumpItem {
   participants: string[] | null
   created_at: string
   recording_id: string
+  user_id: string
 }
 
 export type FocusItemType = 'action' | 'brain_dump'

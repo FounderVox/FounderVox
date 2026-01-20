@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Search, ChevronDown, LogOut, Settings, Sparkles } from 'lucide-react'
@@ -10,21 +10,50 @@ interface FilterBarProps {
   avatarUrl?: string | null
   displayName?: string | null
   email?: string | null
-  recordingsCount?: number
 }
 
-export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }: FilterBarProps) {
+export function FilterBar({ avatarUrl, displayName, email }: FilterBarProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [notesCount, setNotesCount] = useState(0)
   const router = useRouter()
   const supabase = createClient()
+
+  // Self-managed notes count
+  useEffect(() => {
+    async function fetchNotesCount() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { count } = await supabase
+        .from('notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+
+      setNotesCount(count || 0)
+    }
+
+    fetchNotesCount()
+
+    // Listen for note creation/deletion events
+    const handleNoteCreated = () => fetchNotesCount()
+    const handleNoteDeleted = () => fetchNotesCount()
+
+    window.addEventListener('noteCreated', handleNoteCreated)
+    window.addEventListener('noteDeleted', handleNoteDeleted)
+
+    return () => {
+      window.removeEventListener('noteCreated', handleNoteCreated)
+      window.removeEventListener('noteDeleted', handleNoteDeleted)
+    }
+  }, [supabase])
 
   const initials = displayName
     ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : email?.[0].toUpperCase() || 'U'
 
   const maxNotes = 10
-  const progressPercentage = Math.min(((recordingsCount || 0) / maxNotes) * 100, 100)
+  const progressPercentage = Math.min(((notesCount || 0) / maxNotes) * 100, 100)
 
   const handleSignOut = async () => {
     console.log('[FounderNote:Dashboard:FilterBar] Signing out...')
@@ -122,7 +151,7 @@ export function FilterBar({ avatarUrl, displayName, email, recordingsCount = 0 }
                     <div className="p-4 border-b border-gray-200/50">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-black">Free Plan</span>
-                        <span className="text-xs text-gray-600">{recordingsCount || 0}/{maxNotes} notes</span>
+                        <span className="text-xs text-gray-600">{notesCount || 0}/{maxNotes} notes</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
                         <div

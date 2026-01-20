@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { getMetricsTracker } from '@/lib/metrics'
 
 interface RecordingState {
   isRecording: boolean
@@ -146,6 +147,11 @@ export function useRecording() {
         timeslice: 100
       })
 
+      // Track recording started
+      const tracker = getMetricsTracker()
+      tracker.track('recording_started', 'feature')
+      tracker.setUserMilestone('first_recording_at')
+
       setState(prev => ({
         ...prev,
         isRecording: true,
@@ -165,11 +171,14 @@ export function useRecording() {
 
   const pauseRecording = useCallback(() => {
     if (mediaRecorderRef.current && stateRef.current.isRecording) {
+      const tracker = getMetricsTracker()
       if (stateRef.current.isPaused) {
         mediaRecorderRef.current.resume()
+        tracker.track('recording_resumed', 'feature')
         setState(prev => ({ ...prev, isPaused: false }))
       } else {
         mediaRecorderRef.current.pause()
+        tracker.track('recording_paused', 'feature', { duration_seconds: stateRef.current.duration })
         setState(prev => ({ ...prev, isPaused: true }))
       }
     }
@@ -231,14 +240,23 @@ export function useRecording() {
             type: audioBlob.type,
             chunks: audioChunksRef.current.length
           })
-          
+
           if (audioBlob.size === 0) {
             console.error('[FounderNote:Recording] Blob is empty!')
+            const tracker = getMetricsTracker()
+            tracker.track('recording_failed', 'error', { error_message: 'Recorded audio is empty' })
             setState(prev => ({ ...prev, isRecording: false, error: 'Recorded audio is empty' }))
             resolve(null)
             return
           }
-          
+
+          // Track recording stopped
+          const tracker = getMetricsTracker()
+          tracker.track('recording_stopped', 'feature', {
+            duration_seconds: stateRef.current.duration,
+            file_size_bytes: audioBlob.size
+          })
+
           setState(prev => ({ ...prev, audioBlob, isRecording: false }))
           
           // Call original handler if it exists
@@ -406,6 +424,20 @@ export function useRecording() {
       const recordingId = uploadData.recording.id
       console.log('[FounderNote:Recording] Upload successful, recording ID:', recordingId)
 
+      // Track upload success
+      const tracker = getMetricsTracker()
+      tracker.track('recording_uploaded', 'feature', {
+        duration_seconds: stateRef.current.duration,
+        file_size_bytes: audioBlob.size
+      })
+      tracker.incrementUserProperty('total_recordings')
+      tracker.incrementUserProperty('current_month_recordings')
+      if (stateRef.current.duration > 0) {
+        const minutes = stateRef.current.duration / 60
+        tracker.incrementUserProperty('total_recording_minutes', minutes)
+        tracker.incrementUserProperty('current_month_recording_minutes', minutes)
+      }
+
       setState(prev => ({ ...prev, recordingId }))
 
       // Step 2: Process recording (transcription with Deepgram)
@@ -455,6 +487,22 @@ export function useRecording() {
       const processData = await processResponse.json()
       console.log('[FounderNote:Recording] Processing complete:', processData.extracted)
 
+      // Track transcription complete
+      tracker.track('recording_transcribed', 'feature', {
+        duration_seconds: stateRef.current.duration,
+        has_transcript: true
+      })
+
+      // Track API usage for transcription (Deepgram)
+      tracker.trackAPIUsage({
+        operationType: 'transcription',
+        provider: 'deepgram',
+        audioSeconds: stateRef.current.duration,
+        sourceType: 'recording',
+        sourceId: recordingId,
+        status: 'success',
+      })
+
       setState(prev => ({
         ...prev,
         isProcessing: false,
@@ -464,6 +512,11 @@ export function useRecording() {
 
     } catch (error) {
       console.error('Error uploading/processing:', error)
+      const errorTracker = getMetricsTracker()
+      errorTracker.track('recording_failed', 'error', {
+        error_message: error instanceof Error ? error.message : 'Failed to process recording',
+        context: 'upload_or_process'
+      })
       setState(prev => ({
         ...prev,
         isProcessing: false,

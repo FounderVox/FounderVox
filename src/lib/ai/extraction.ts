@@ -29,19 +29,6 @@ interface InvestorUpdate {
   draft_body: string
 }
 
-interface ProgressLog {
-  completed: string[]
-  in_progress: string[]
-  blocked: string[]
-}
-
-interface ProductIdea {
-  idea: string
-  category: 'feature' | 'improvement' | 'integration' | 'pivot' | 'experiment' | 'new_product'
-  priority: 'high' | 'medium' | 'low'
-  context: string
-}
-
 interface BrainDumpItem {
   content: string
   category: 'meeting' | 'blocker' | 'decision' | 'question' | 'followup'
@@ -136,6 +123,7 @@ Return format (must be valid JSON object):
     const supabase = await createClient()
     const itemsToInsert = actionItems.map(item => ({
       recording_id: recordingId,
+      user_id: userId,
       task: item.task || 'Untitled task',
       assignee: item.assignee || null,
       deadline: item.deadline ? (isNaN(Date.parse(item.deadline)) ? null : new Date(item.deadline).toISOString()) : null,
@@ -231,6 +219,7 @@ Return format:
     const supabase = await createClient()
     const { data, error } = await supabase.from('investor_updates').insert({
       recording_id: recordingId,
+      user_id: userId,
       draft_subject: update.draft_subject,
       draft_body: update.draft_body,
       wins: update.wins,
@@ -247,168 +236,6 @@ Return format:
     }
   } catch (error) {
     console.error('[Extraction] Investor update error:', error)
-  }
-}
-
-export async function extractProgressLog(transcript: string, recordingId: string, userId: string): Promise<void> {
-  // Validate transcript has meaningful content
-  if (!isTranscriptMeaningful(transcript)) {
-    console.log('[Extraction] Transcript has no meaningful content, skipping progress log extraction')
-    return
-  }
-
-  const prompt = `Analyze this transcript and extract progress updates categorized into three groups:
-
-CRITICAL RULES:
-1. ONLY extract what is EXPLICITLY stated in the transcript
-2. If content is unclear or gibberish, return EMPTY arrays
-3. NEVER fabricate, infer, or hallucinate content
-4. When in doubt, return empty results
-
-1. COMPLETED: Tasks finished, shipped features, done items (past tense: "shipped", "finished", "completed", "done")
-2. IN PROGRESS: Current work, ongoing tasks (present: "working on", "building", "currently")
-3. BLOCKED: Stuck items, waiting on something, obstacles (words: "blocked", "stuck", "waiting for", "can't proceed")
-
-Be specific about what was accomplished, what's being worked on, and what's blocking progress.
-
-Transcript:
-${transcript}
-
-Return format:
-{
-  "completed": ["Shipped the new dashboard", "Fixed the login bug"],
-  "in_progress": ["Building the analytics feature", "Refactoring the API"],
-  "blocked": ["Waiting on design mockups for checkout flow"]
-}`
-
-  try {
-    const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You ONLY extract information EXPLICITLY stated. NEVER fabricate content. Return empty results if unsure. Return only valid JSON.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.3,
-      response_format: { type: 'json_object' }
-    })
-
-    const content = response.choices[0]?.message?.content
-    if (!content) return
-
-    const progress: ProgressLog = JSON.parse(content)
-
-    // Get current week's Monday date
-    const now = new Date()
-    const dayOfWeek = now.getDay()
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-    const monday = new Date(now)
-    monday.setDate(now.getDate() + daysToMonday)
-    monday.setHours(0, 0, 0, 0)
-
-    // Save to database
-    const supabase = await createClient()
-    const { data, error } = await supabase.from('progress_logs').insert({
-      recording_id: recordingId,
-      week_of: monday.toISOString().split('T')[0],
-      completed: progress.completed,
-      in_progress: progress.in_progress,
-      blocked: progress.blocked
-    }).select()
-
-    if (error) {
-      console.error('[Extraction] Error saving progress log:', error)
-    } else {
-      console.log('[Extraction] Saved progress log to database:', data?.[0]?.id)
-    }
-  } catch (error) {
-    console.error('[Extraction] Progress log error:', error)
-  }
-}
-
-export async function extractProductIdeas(transcript: string, recordingId: string, userId: string): Promise<void> {
-  // Validate transcript has meaningful content
-  if (!isTranscriptMeaningful(transcript)) {
-    console.log('[Extraction] Transcript has no meaningful content, skipping product ideas extraction')
-    return
-  }
-
-  const prompt = `Analyze this transcript and extract ALL product ideas, feature requests, and improvement suggestions.
-
-CRITICAL RULES:
-1. ONLY extract what is EXPLICITLY stated in the transcript
-2. If content is unclear or gibberish, return EMPTY arrays
-3. NEVER fabricate, infer, or hallucinate content
-4. When in doubt, return empty results
-
-For each idea, identify:
-1. The idea itself (be specific and actionable)
-2. Category:
-   - feature: Brand new feature or capability
-   - improvement: Enhancement to existing feature
-   - integration: Third-party integration or API
-   - pivot: Major strategic change
-   - experiment: Something to test or try
-   - new_product: Entirely new product line
-3. Priority based on language:
-   - HIGH: "Must have", "critical", "urgent", "customers are asking for this"
-   - MEDIUM: "Would be nice", "should add", "important"
-   - LOW: "Maybe", "someday", "nice to have"
-4. Context: Why this idea came up, the problem it solves
-
-Transcript:
-${transcript}
-
-Return format:
-{
-  "ideas": [
-    {
-      "idea": "Add dark mode to the dashboard",
-      "category": "feature",
-      "priority": "medium",
-      "context": "Multiple users have requested this for late-night work sessions"
-    }
-  ]
-}`
-
-  try {
-    const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You ONLY extract information EXPLICITLY stated. NEVER fabricate content. Return empty results if unsure. Return only valid JSON.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.4,
-      response_format: { type: 'json_object' }
-    })
-
-    const content = response.choices[0]?.message?.content
-    if (!content) return
-
-    const parsed = JSON.parse(content)
-    const ideas: ProductIdea[] = parsed.ideas || []
-
-    if (ideas.length === 0) return
-
-    // Save to database
-    const supabase = await createClient()
-    const ideasToInsert = ideas.map(idea => ({
-      recording_id: recordingId,
-      idea: idea.idea,
-      category: idea.category,
-      priority: idea.priority,
-      context: idea.context,
-      status: 'idea' as const,
-      votes: 0
-    }))
-
-    const { data, error } = await supabase.from('product_ideas').insert(ideasToInsert).select()
-    if (error) {
-      console.error('[Extraction] Error saving product ideas:', error)
-    } else {
-      console.log(`[Extraction] Saved ${ideas.length} product ideas to database:`, data?.map(i => i.id))
-    }
-  } catch (error) {
-    console.error('[Extraction] Product ideas error:', error)
   }
 }
 
@@ -494,6 +321,7 @@ Return format:
     const supabase = await createClient()
     const itemsToInsert = items.map(item => ({
       recording_id: recordingId,
+      user_id: userId,
       content: item.content,
       category: item.category,
       participants: item.participants || []

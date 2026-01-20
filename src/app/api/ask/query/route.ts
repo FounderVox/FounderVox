@@ -6,6 +6,77 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // 1 minute max for complex queries
 
+// Server-side metrics tracking
+async function trackAskMetrics(userId: string, data: {
+  queryLength: number
+  timeFilter: string
+  citationsCount: number
+  responseTimeMs: number
+  isFollowup: boolean
+  status: 'success' | 'error'
+  errorMessage?: string
+}) {
+  try {
+    const serviceClient = createServiceRoleClient()
+
+    // Track event
+    await serviceClient.from('user_events').insert({
+      user_id: userId,
+      event_name: data.status === 'success' ? 'ask_response_received' : 'api_error',
+      event_category: data.status === 'success' ? 'feature' : 'error',
+      event_properties: {
+        query_length: data.queryLength,
+        time_filter: data.timeFilter,
+        citations_count: data.citationsCount,
+        response_time_ms: data.responseTimeMs,
+        is_followup: data.isFollowup,
+        error_message: data.errorMessage,
+      },
+      platform: 'web',
+    })
+
+    // Track API usage
+    await serviceClient.from('api_usage').insert([
+      {
+        user_id: userId,
+        operation_type: 'embedding',
+        provider: 'openai',
+        model: 'text-embedding-3-small',
+        status: data.status,
+        duration_ms: data.responseTimeMs,
+      },
+      {
+        user_id: userId,
+        operation_type: 'ask_query',
+        provider: 'openai',
+        model: 'gpt-4o',
+        status: data.status,
+        duration_ms: data.responseTimeMs,
+      },
+    ])
+
+    // Update user properties
+    if (data.status === 'success') {
+      await serviceClient.rpc('increment_user_property', {
+        p_user_id: userId,
+        p_property: 'total_ask_queries',
+        p_increment: 1,
+      })
+      await serviceClient.rpc('increment_user_property', {
+        p_user_id: userId,
+        p_property: 'current_month_ask_queries',
+        p_increment: 1,
+      })
+      await serviceClient.rpc('set_user_milestone', {
+        p_user_id: userId,
+        p_milestone: 'first_ask_query_at',
+      })
+    }
+  } catch (error) {
+    console.error('[Ask Metrics] Failed to track:', error)
+  }
+}
+
 // Types
 interface Message {
   role: 'user' | 'assistant'
@@ -85,6 +156,9 @@ export async function POST(request: NextRequest) {
     console.log('[Ask] Query:', query)
     console.log('[Ask] Time filter:', timeFilter)
     console.log('[Ask] User ID:', user.id)
+
+    const startTime = Date.now()
+    const isFollowup = conversationHistory.length > 0
 
     // Use service role client for database operations
     let dbClient
@@ -254,7 +328,18 @@ I searched your notes but couldn't find any relevant content for this query. Ple
 
     const answer = completion.choices[0]?.message?.content || 'I was unable to generate a response. Please try again.'
 
-    console.log('[Ask] Generated answer with', citations.length, 'citations')
+    const responseTimeMs = Date.now() - startTime
+    console.log('[Ask] Generated answer with', citations.length, 'citations in', responseTimeMs, 'ms')
+
+    // Track metrics asynchronously (don't block response)
+    trackAskMetrics(user.id, {
+      queryLength: query.length,
+      timeFilter,
+      citationsCount: citations.length,
+      responseTimeMs,
+      isFollowup,
+      status: 'success',
+    })
 
     return NextResponse.json({
       answer,
@@ -264,6 +349,26 @@ I searched your notes but couldn't find any relevant content for this query. Ple
 
   } catch (error) {
     console.error('[Ask] Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    // Track error (try to get user from a fresh auth check)
+    try {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        trackAskMetrics(user.id, {
+          queryLength: 0,
+          timeFilter: 'unknown',
+          citationsCount: 0,
+          responseTimeMs: 0,
+          isFollowup: false,
+          status: 'error',
+          errorMessage,
+        })
+      }
+    } catch {
+      // Ignore tracking errors
+    }
 
     // Handle specific OpenAI errors
     if (error instanceof OpenAI.APIError) {
@@ -278,7 +383,7 @@ I searched your notes but couldn't find any relevant content for this query. Ple
     return NextResponse.json(
       {
         error: 'Failed to process query',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: errorMessage
       },
       { status: 500 }
     )

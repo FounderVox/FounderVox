@@ -151,31 +151,18 @@ export default function ActionItemsPage() {
 
       setProfile(profileData)
 
-      const { data: recordings, error: recordingsError } = await supabase
-        .from('recordings')
-        .select('id')
+      // Direct query using user_id (no need for 2-query pattern)
+      const { data: items, error: itemsError } = await supabase
+        .from('action_items')
+        .select('*')
         .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
 
-      if (recordingsError) {
-        console.error('[ActionItems] Error loading recordings:', recordingsError)
-      }
-
-      if (recordings && recordings.length > 0) {
-        const recordingIds = recordings.map(r => r.id)
-
-        const { data: items, error: itemsError } = await supabase
-          .from('action_items')
-          .select('*')
-          .in('recording_id', recordingIds)
-          .order('created_at', { ascending: false })
-
-        if (itemsError) {
-          console.error('[ActionItems] Error loading items:', itemsError)
-        } else {
-          setActionItems(items || [])
-        }
-      } else {
+      if (itemsError) {
+        console.error('[ActionItems] Error loading items:', itemsError)
         setActionItems([])
+      } else {
+        setActionItems(items || [])
       }
 
       setIsLoading(false)
@@ -668,7 +655,6 @@ export default function ActionItemsPage() {
         avatarUrl={profile?.avatar_url}
         displayName={profile?.display_name}
         email={profile?.email}
-        recordingsCount={profile?.recordings_count || 0}
       />
 
       {/* Premium Header */}

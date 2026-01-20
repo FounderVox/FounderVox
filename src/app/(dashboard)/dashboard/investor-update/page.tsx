@@ -99,36 +99,29 @@ export default function InvestorUpdatePage() {
 
         setProfile(profileData)
 
-        // Load investor updates via recordings
-        const { data: recordings } = await supabase
-          .from('recordings')
-          .select('id')
+        // Direct query using user_id (no need for 2-query pattern)
+        const { data: updateData, error: updateError } = await supabase
+          .from('investor_updates')
+          .select('*')
           .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
 
-        if (recordings && recordings.length > 0) {
-          const recordingIds = recordings.map(r => r.id)
-          const { data: updateData, error: updateError } = await supabase
-            .from('investor_updates')
-            .select('*')
-            .in('recording_id', recordingIds)
-            .order('created_at', { ascending: false })
-
-          if (updateError) {
-            console.error('[InvestorUpdate] Error loading updates:', updateError)
-          } else {
-            // Filter out empty updates (no subject, no body, no wins, no metrics, no challenges, no asks)
-            const filteredUpdates = (updateData || []).filter(update => {
-              const hasContent = 
-                (update.draft_subject && update.draft_subject.trim()) ||
-                (update.draft_body && update.draft_body.trim()) ||
-                (update.wins && Array.isArray(update.wins) && update.wins.length > 0) ||
-                (update.metrics && typeof update.metrics === 'object' && Object.keys(update.metrics).length > 0) ||
-                (update.challenges && Array.isArray(update.challenges) && update.challenges.length > 0) ||
-                (update.asks && Array.isArray(update.asks) && update.asks.length > 0)
-              return hasContent
-            })
-            setUpdates(filteredUpdates)
-          }
+        if (updateError) {
+          console.error('[InvestorUpdate] Error loading updates:', updateError)
+          setUpdates([])
+        } else {
+          // Filter out empty updates (no subject, no body, no wins, no metrics, no challenges, no asks)
+          const filteredUpdates = (updateData || []).filter(update => {
+            const hasContent =
+              (update.draft_subject && update.draft_subject.trim()) ||
+              (update.draft_body && update.draft_body.trim()) ||
+              (update.wins && Array.isArray(update.wins) && update.wins.length > 0) ||
+              (update.metrics && typeof update.metrics === 'object' && Object.keys(update.metrics).length > 0) ||
+              (update.challenges && Array.isArray(update.challenges) && update.challenges.length > 0) ||
+              (update.asks && Array.isArray(update.asks) && update.asks.length > 0)
+            return hasContent
+          })
+          setUpdates(filteredUpdates)
         }
 
         setIsLoading(false)
@@ -362,7 +355,6 @@ export default function InvestorUpdatePage() {
         avatarUrl={profile?.avatar_url}
         displayName={profile?.display_name}
         email={profile?.email}
-        recordingsCount={profile?.recordings_count || 0}
       />
 
       {/* Premium Header */}

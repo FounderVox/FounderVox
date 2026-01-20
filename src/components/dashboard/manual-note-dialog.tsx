@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Upload, Type, Save } from 'lucide-react'
+import { Upload, Type, Save, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+
+const MAX_NOTES = 10
 
 interface ManualNoteDialogProps {
   open: boolean
@@ -20,6 +22,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
   const [noteContent, setNoteContent] = useState('')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [limitError, setLimitError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
@@ -28,6 +31,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
 
     try {
       setIsSaving(true)
+      setLimitError(null)
       console.log('[FounderNote:ManualNote] Saving text note:', { noteTitle, noteContent })
 
       // Get current user
@@ -35,6 +39,18 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
 
       if (userError || !user) {
         console.error('[FounderNote:ManualNote] Error getting user:', userError)
+        setIsSaving(false)
+        return
+      }
+
+      // Check note limit
+      const { count } = await supabase
+        .from('notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+
+      if (count !== null && count >= MAX_NOTES) {
+        setLimitError(`You've reached the limit of ${MAX_NOTES} notes. Upgrade to Pro for unlimited notes.`)
         setIsSaving(false)
         return
       }
@@ -97,6 +113,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
 
     try {
       setIsSaving(true)
+      setLimitError(null)
       console.log('[FounderNote:ManualNote] Uploading audio file:', audioFile.name)
 
       // Get current user
@@ -104,6 +121,18 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
 
       if (userError || !user) {
         console.error('[FounderNote:ManualNote] Error getting user:', userError)
+        setIsSaving(false)
+        return
+      }
+
+      // Check note limit
+      const { count } = await supabase
+        .from('notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+
+      if (count !== null && count >= MAX_NOTES) {
+        setLimitError(`You've reached the limit of ${MAX_NOTES} notes. Upgrade to Pro for unlimited notes.`)
         setIsSaving(false)
         return
       }
@@ -202,6 +231,14 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
             )}
           </button>
         </div>
+
+        {/* Error Message */}
+        {limitError && (
+          <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{limitError}</span>
+          </div>
+        )}
 
         {/* Content Area */}
         <div className="py-4">

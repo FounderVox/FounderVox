@@ -27,14 +27,6 @@ export const templateColors: Record<string, TemplateColor> = {
     icon: 'text-purple-600',
     value: 'brain_dump'
   },
-  progress_log: {
-    name: 'Progress Log',
-    bg: 'bg-green-50',
-    border: 'border-green-200',
-    borderLeft: 'border-l-green-500',
-    icon: 'text-green-600',
-    value: 'progress_log'
-  },
   investor_update: {
     name: 'Investor Update',
     bg: 'bg-amber-50',
@@ -42,14 +34,6 @@ export const templateColors: Record<string, TemplateColor> = {
     borderLeft: 'border-l-amber-500',
     icon: 'text-amber-600',
     value: 'investor_update'
-  },
-  product_ideas: {
-    name: 'Product Ideas',
-    bg: 'bg-pink-50',
-    border: 'border-pink-200',
-    borderLeft: 'border-l-pink-500',
-    icon: 'text-pink-600',
-    value: 'product_ideas'
   },
   recording: {
     name: 'Recording',

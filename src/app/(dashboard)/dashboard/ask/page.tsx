@@ -393,7 +393,6 @@ export default function AskPage() {
         avatarUrl={profile?.avatar_url}
         displayName={profile?.display_name}
         email={profile?.email}
-        recordingsCount={profile?.recordings_count || 0}
       />
 
       {/* Page Header */}

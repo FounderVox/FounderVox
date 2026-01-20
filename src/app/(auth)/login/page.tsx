@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Logo } from '@/components/shared/logo'
-import { SocialAuthButtons } from '@/components/auth/social-auth-buttons'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -342,20 +341,6 @@ function LoginContent() {
           )}
         </Button>
       </form>
-
-      <div>
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-[#e5e0db]" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-4 text-[#888] font-medium font-body">
-              or continue with
-            </span>
-          </div>
-        </div>
-        <SocialAuthButtons mode="login" />
-      </div>
 
       <p className="text-center text-sm text-[#666] mt-8 font-body">
         Don&apos;t have an account?{' '}

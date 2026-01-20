@@ -59,25 +59,18 @@ export default function BrainDumpPage() {
 
       setProfile(profileData)
 
-      // Load brain dump items via recordings
-      const { data: recordings } = await supabase
-        .from('recordings')
-        .select('id')
+      // Direct query using user_id (no need for 2-query pattern)
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('brain_dump')
+        .select('*')
         .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
 
-      if (recordings && recordings.length > 0) {
-        const recordingIds = recordings.map(r => r.id)
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('brain_dump')
-          .select('*')
-          .in('recording_id', recordingIds)
-          .order('created_at', { ascending: false })
-
-        if (itemsError) {
-          console.error('[BrainDump] Error loading items:', itemsError)
-        } else {
-          setItems(itemsData || [])
-        }
+      if (itemsError) {
+        console.error('[BrainDump] Error loading items:', itemsError)
+        setItems([])
+      } else {
+        setItems(itemsData || [])
       }
 
       setIsLoading(false)
@@ -309,7 +302,6 @@ export default function BrainDumpPage() {
         avatarUrl={profile?.avatar_url}
         displayName={profile?.display_name}
         email={profile?.email}
-        recordingsCount={profile?.recordings_count || 0}
       />
 
       {/* Header */}

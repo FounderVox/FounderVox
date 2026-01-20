@@ -218,7 +218,7 @@ export default function SettingsPage() {
     const confirmed = window.confirm(
       'Are you sure you want to permanently delete your account? This will immediately and irreversibly delete:\n\n' +
       '• All your notes and recordings\n' +
-      '• All your action items, investor updates, and progress logs\n' +
+      '• All your action items, investor updates, and brain dumps\n' +
       '• Your profile and account data\n\n' +
       'This action cannot be undone. Please confirm to proceed.'
     )
@@ -255,23 +255,7 @@ export default function SettingsPage() {
           .in('recording_id', recordingIds)
       }
 
-      // 3. Delete progress logs
-      if (recordingIds.length > 0) {
-        await supabase
-          .from('progress_logs')
-          .delete()
-          .in('recording_id', recordingIds)
-      }
-
-      // 4. Delete product ideas
-      if (recordingIds.length > 0) {
-        await supabase
-          .from('product_ideas')
-          .delete()
-          .in('recording_id', recordingIds)
-      }
-
-      // 5. Delete brain dump items (if table exists)
+      // 3. Delete brain dump items
       if (recordingIds.length > 0) {
         try {
           await supabase
@@ -284,19 +268,19 @@ export default function SettingsPage() {
         }
       }
 
-      // 6. Delete recordings (CASCADE will handle related items, but we've been explicit above)
+      // 4. Delete recordings (CASCADE will handle related items, but we've been explicit above)
       await supabase
         .from('recordings')
         .delete()
         .eq('user_id', user.id)
 
-      // 7. Delete notes (has CASCADE from user_id, but being explicit)
+      // 5. Delete notes (has CASCADE from user_id, but being explicit)
       await supabase
         .from('notes')
         .delete()
         .eq('user_id', user.id)
 
-      // 8. Delete profile
+      // 6. Delete profile
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -304,10 +288,10 @@ export default function SettingsPage() {
 
       if (profileError) throw profileError
 
-      // 9. Sign out (this will clear the session)
+      // 7. Sign out (this will clear the session)
       await supabase.auth.signOut()
-      
-      // 10. Redirect to home
+
+      // 8. Redirect to home
       window.location.href = '/'
     } catch (error: any) {
       console.error('[Settings] Error deleting account:', error)
@@ -380,7 +364,6 @@ export default function SettingsPage() {
         avatarUrl={profile?.avatar_url}
         displayName={profile?.display_name}
         email={profile?.email}
-        recordingsCount={profile?.recordings_count || 0}
       />
 
       <div className="max-w-4xl mx-auto space-y-6 pb-24">

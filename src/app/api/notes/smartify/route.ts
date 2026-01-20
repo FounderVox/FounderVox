@@ -1,10 +1,74 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   extractActionItems,
   extractInvestorUpdate,
   extractBrainDump
 } from '@/lib/ai/extraction'
+
+// Server-side metrics tracking helper
+async function trackServerEvent(
+  userId: string,
+  eventName: string,
+  eventCategory: string,
+  properties?: Record<string, unknown>
+) {
+  try {
+    const serviceClient = createServiceRoleClient()
+    await serviceClient.from('user_events').insert({
+      user_id: userId,
+      event_name: eventName,
+      event_category: eventCategory,
+      event_properties: properties || {},
+      platform: 'web',
+    })
+  } catch (error) {
+    console.error('[Metrics] Failed to track event:', error)
+  }
+}
+
+async function trackAPIUsage(
+  userId: string,
+  operationType: string,
+  provider: string,
+  options: {
+    model?: string
+    inputTokens?: number
+    outputTokens?: number
+    sourceId?: string
+    status?: string
+    durationMs?: number
+  }
+) {
+  try {
+    const serviceClient = createServiceRoleClient()
+    await serviceClient.from('api_usage').insert({
+      user_id: userId,
+      operation_type: operationType,
+      provider: provider,
+      model: options.model,
+      input_tokens: options.inputTokens,
+      output_tokens: options.outputTokens,
+      source_type: 'note',
+      source_id: options.sourceId,
+      status: options.status || 'success',
+      duration_ms: options.durationMs,
+    })
+  } catch (error) {
+    console.error('[Metrics] Failed to track API usage:', error)
+  }
+}
+
+async function updateUserProperties(userId: string, updates: Record<string, unknown>) {
+  try {
+    const serviceClient = createServiceRoleClient()
+    await serviceClient
+      .from('user_properties')
+      .upsert({ user_id: userId, ...updates }, { onConflict: 'user_id' })
+  } catch (error) {
+    console.error('[Metrics] Failed to update user properties:', error)
+  }
+}
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -77,6 +141,10 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Smartify] Starting extraction for note:', noteId)
+    const startTime = Date.now()
+
+    // Track smartify started
+    await trackServerEvent(user.id, 'smartify_started', 'feature', { note_id: noteId })
 
     // Find or create a recording record for this note
     // We'll use the audio_url to find the recording, or create a new one
@@ -151,6 +219,61 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Smartify] Extraction complete for note:', noteId)
+    const extractionTimeMs = Date.now() - startTime
+
+    // Track smartify completed
+    await trackServerEvent(user.id, 'smartify_completed', 'feature', {
+      note_id: noteId,
+      action_items_count: counts.actionItems,
+      brain_dump_count: counts.brainDump,
+      investor_updates_count: counts.investorUpdates,
+      extraction_time_ms: extractionTimeMs,
+    })
+
+    // Track API usage for AI extraction
+    await trackAPIUsage(user.id, 'extraction', 'openai', {
+      model: 'gpt-4o',
+      sourceId: noteId,
+      status: 'success',
+      durationMs: extractionTimeMs,
+    })
+
+    // Update user properties
+    await updateUserProperties(user.id, {
+      first_smartify_at: new Date().toISOString(),
+      last_smartify_at: new Date().toISOString(),
+    })
+
+    // Increment counters via RPC
+    try {
+      const serviceClient = createServiceRoleClient()
+      await serviceClient.rpc('increment_user_property', {
+        p_user_id: user.id,
+        p_property: 'total_smartify_runs',
+        p_increment: 1,
+      })
+      await serviceClient.rpc('increment_user_property', {
+        p_user_id: user.id,
+        p_property: 'current_month_smartify_runs',
+        p_increment: 1,
+      })
+      if (counts.actionItems > 0) {
+        await serviceClient.rpc('increment_user_property', {
+          p_user_id: user.id,
+          p_property: 'total_action_items_created',
+          p_increment: counts.actionItems,
+        })
+      }
+      if (counts.brainDump > 0) {
+        await serviceClient.rpc('increment_user_property', {
+          p_user_id: user.id,
+          p_property: 'total_brain_dump_items',
+          p_increment: counts.brainDump,
+        })
+      }
+    } catch (rpcError) {
+      console.error('[Smartify] Error updating user properties:', rpcError)
+    }
 
     // Update note to mark it as smartified
     await supabase
@@ -166,6 +289,19 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('[Smartify] Error:', error)
+
+    // Track smartify failure (we may not have user.id in all error cases)
+    try {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await trackServerEvent(user.id, 'smartify_failed', 'error', {
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+    } catch {
+      // Ignore tracking errors
+    }
 
     return NextResponse.json(
       { error: 'Smartify failed', details: error instanceof Error ? error.message : 'Unknown error' },

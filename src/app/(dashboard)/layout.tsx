@@ -11,6 +11,7 @@ import { RecordingProvider } from '@/contexts/recording-context'
 import { AuthProvider, useAuth } from '@/contexts/auth-context'
 import { MenuProvider } from '@/contexts/menu-context'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { MetricsProvider } from '@/components/providers/metrics-provider'
 import { usePathname } from 'next/navigation'
 import { useDebouncedEventListeners } from '@/hooks/useDebouncedEventListener'
 
@@ -22,9 +23,11 @@ export default function DashboardLayout({
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <DashboardLayoutContent>
-          {children}
-        </DashboardLayoutContent>
+        <MetricsProvider>
+          <DashboardLayoutContent>
+            {children}
+          </DashboardLayoutContent>
+        </MetricsProvider>
       </AuthProvider>
     </ErrorBoundary>
   )

@@ -144,42 +144,32 @@ export default function DashboardPage() {
 
     try {
       setIsLoadingFocus(true)
-      const { data: recordings } = await supabase
-        .from('recordings')
-        .select('id')
-        .eq('user_id', user.id)
 
-      if (!recordings || recordings.length === 0) {
-        setActionItems([])
-        setBrainDumpItems([])
-        return
-      }
-
-      const recordingIds = recordings.map(r => r.id)
-
-      // Load action items and brain dump items in parallel for faster loading
+      // Direct query using user_id (no need for 2-query pattern)
       const [actionResult, brainResult] = await Promise.all([
         supabase
           .from('action_items')
           .select('*')
-          .in('recording_id', recordingIds)
+          .eq('user_id', user.id)
           .in('status', ['open', 'in_progress'])
           .order('created_at', { ascending: false }),
         supabase
           .from('brain_dump')
           .select('*')
-          .in('recording_id', recordingIds)
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
       ])
 
       if (actionResult.error) {
         console.error('[Dashboard] Error loading action items:', actionResult.error)
+        setActionItems([])
       } else {
         setActionItems(actionResult.data || [])
       }
 
       if (brainResult.error) {
         console.error('[Dashboard] Error loading brain dump:', brainResult.error)
+        setBrainDumpItems([])
       } else {
         setBrainDumpItems(brainResult.data || [])
       }
@@ -530,7 +520,6 @@ export default function DashboardPage() {
         avatarUrl={profile?.avatar_url}
         displayName={profile?.display_name}
         email={profile?.email}
-        recordingsCount={profile?.recordings_count || 0}
       />
 
       {/* Personalized Greeting */}
