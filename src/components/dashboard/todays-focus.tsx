@@ -129,7 +129,7 @@ export function TodaysFocusSection({
               <Target className="h-6 w-6 text-brand" />
             </div>
             <div className="text-left">
-              <h2 className="text-xl font-bold text-gray-900">Today's Focus</h2>
+              <h2 className="text-xl font-bold text-gray-900">Today&apos;s Focus</h2>
               <p className="text-gray-500 text-sm mt-0.5">
                 {stats.actionItems > 0 && `${stats.actionItems} action item${stats.actionItems !== 1 ? 's' : ''}`}
                 {stats.actionItems > 0 && stats.brainDumpItems > 0 && ' \u2022 '}

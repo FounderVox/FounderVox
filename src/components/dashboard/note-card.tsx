@@ -13,12 +13,14 @@ interface NoteCardProps {
   duration?: string
   isStarred?: boolean
   template?: string
+  tags?: string[]
   onPlay?: () => void
   onStar?: () => void
   onEdit?: () => void
   onDelete?: () => void
   onSmartify?: () => void
   onView?: () => void
+  onAddTag?: () => void
   noteId?: string
   canSmartify?: boolean
   isSmartified?: boolean
@@ -31,12 +33,14 @@ export const NoteCard = memo(function NoteCard({
   duration,
   isStarred = false,
   template,
+  tags: _tags,
   onPlay,
   onStar,
   onEdit,
   onDelete,
   onSmartify,
   onView,
+  onAddTag: _onAddTag,
   noteId,
   canSmartify = true,
   isSmartified = false,

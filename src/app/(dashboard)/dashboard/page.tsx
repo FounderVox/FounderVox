@@ -574,7 +574,7 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-              Today's Focus
+              Today&apos;s Focus
             </h2>
             <Link
               href="/dashboard/action-items"
@@ -868,7 +868,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="bg-gray-50 rounded-lg border border-dashed border-gray-200 p-8 text-center">
                   <p className="text-sm text-gray-500">No tasks in progress</p>
-                  <p className="text-xs text-gray-400 mt-1">Click "Work" on a task to start</p>
+                  <p className="text-xs text-gray-400 mt-1">Click &quot;Work&quot; on a task to start</p>
                 </div>
               )}
             </div>

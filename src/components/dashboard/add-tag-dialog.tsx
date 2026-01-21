@@ -251,7 +251,7 @@ export function AddTagDialog({ open, onOpenChange, noteId, existingTags = [] }: 
                 <Plus className="h-3 w-3" />
               </div>
               <span className="text-sm">
-                Create "<span className="font-medium">{searchQuery.trim()}</span>"
+                Create &quot;<span className="font-medium">{searchQuery.trim()}</span>&quot;
               </span>
             </button>
           )}

@@ -482,7 +482,7 @@ export default function AskPage() {
               What would you like to know?
             </h2>
             <p className="text-gray-500 max-w-md mb-6 text-sm">
-              Ask questions about your notes and I'll find relevant information with citations.
+              Ask questions about your notes and I&apos;ll find relevant information with citations.
             </p>
 
             {/* Example Questions - Responsive Grid/Scroll */}
