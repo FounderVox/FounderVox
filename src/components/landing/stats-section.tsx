@@ -40,18 +40,11 @@ export default function StatsSection() {
 
   const stats = [
     {
-      value: 300,
-      prefix: '<',
-      suffix: 'ms',
-      label: 'Response',
-      description: 'Faster than you can blink'
-    },
-    {
-      value: 31,
+      value: 5,
       prefix: '',
       suffix: '+',
-      label: 'Languages',
-      description: 'From English to Japanese'
+      label: 'AI Features',
+      description: 'Smart analysis on every note'
     },
     {
       value: 95,
@@ -59,6 +52,13 @@ export default function StatsSection() {
       suffix: '%+',
       label: 'Accuracy',
       description: 'Industry-leading transcription'
+    },
+    {
+      value: 100,
+      prefix: '',
+      suffix: '+',
+      label: 'Minutes Free',
+      description: 'Audio transcription monthly'
     }
   ]
 

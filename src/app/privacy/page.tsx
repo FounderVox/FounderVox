@@ -47,7 +47,7 @@ export default function PrivacyPage() {
       content: [
         {
           subtitle: 'Storage Location',
-          text: 'Your data is stored on secure servers provided by Supabase, which uses industry-standard security measures. Our servers are located in data centers with robust physical and digital security controls.'
+          text: 'Your data is stored on secure, enterprise-grade cloud infrastructure with industry-standard security measures. Our servers are located in data centers with robust physical and digital security controls, including 24/7 monitoring and multi-layered access controls.'
         },
         {
           subtitle: 'Encryption',
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
         },
         {
           subtitle: 'Authentication',
-          text: 'We use Supabase Auth for user authentication, which may integrate with Google and Apple sign-in services if you choose to use those options.'
+          text: 'We use secure, industry-standard authentication services that support email/password login as well as OAuth integration with Google and Apple sign-in if you choose to use those options. All authentication tokens are securely managed and encrypted.'
         }
       ]
     },

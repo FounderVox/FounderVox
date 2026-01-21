@@ -138,9 +138,112 @@ export default function FeaturesSection() {
       span: 1,
       illustration: (
         <div className="relative h-32 flex items-center justify-center">
+          {/* Animated connection lines SVG */}
+          <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible' }}>
+            <defs>
+              <linearGradient id="lineGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#BD6750" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#BD6750" stopOpacity="0.2" />
+              </linearGradient>
+              <linearGradient id="lineGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.2" />
+              </linearGradient>
+              <linearGradient id="lineGradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.2" />
+              </linearGradient>
+            </defs>
+            {/* Line to Key Insight (top) */}
+            <motion.path
+              d="M 55 64 Q 90 64, 110 32"
+              fill="none"
+              stroke="url(#lineGradient1)"
+              strokeWidth="1.5"
+              strokeDasharray="4 4"
+              initial={{ pathLength: 0, opacity: 0 }}
+              whileInView={{ pathLength: 1, opacity: 1 }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ delay: 0.5, duration: 0.8, ease: 'easeOut' }}
+              style={{
+                strokeDashoffset: 0,
+              }}
+            />
+            {/* Line to Action Item (middle) */}
+            <motion.path
+              d="M 55 64 L 110 64"
+              fill="none"
+              stroke="url(#lineGradient2)"
+              strokeWidth="1.5"
+              strokeDasharray="4 4"
+              initial={{ pathLength: 0, opacity: 0 }}
+              whileInView={{ pathLength: 1, opacity: 1 }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ delay: 0.65, duration: 0.8, ease: 'easeOut' }}
+            />
+            {/* Line to Summary (bottom) */}
+            <motion.path
+              d="M 55 64 Q 90 64, 110 96"
+              fill="none"
+              stroke="url(#lineGradient3)"
+              strokeWidth="1.5"
+              strokeDasharray="4 4"
+              initial={{ pathLength: 0, opacity: 0 }}
+              whileInView={{ pathLength: 1, opacity: 1 }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ delay: 0.8, duration: 0.8, ease: 'easeOut' }}
+            />
+            {/* Animated flowing dots */}
+            <motion.circle
+              r="2"
+              fill="#BD6750"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: [0, 1, 1, 0] }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ delay: 1.3, duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
+            >
+              <animateMotion
+                dur="1.5s"
+                repeatCount="indefinite"
+                begin="1.3s"
+                path="M 55 64 Q 90 64, 110 32"
+              />
+            </motion.circle>
+            <motion.circle
+              r="2"
+              fill="#10b981"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: [0, 1, 1, 0] }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ delay: 1.5, duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
+            >
+              <animateMotion
+                dur="1.5s"
+                repeatCount="indefinite"
+                begin="1.5s"
+                path="M 55 64 L 110 64"
+              />
+            </motion.circle>
+            <motion.circle
+              r="2"
+              fill="#8b5cf6"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: [0, 1, 1, 0] }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ delay: 1.7, duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
+            >
+              <animateMotion
+                dur="1.5s"
+                repeatCount="indefinite"
+                begin="1.7s"
+                path="M 55 64 Q 90 64, 110 96"
+              />
+            </motion.circle>
+          </svg>
+
           {/* Central Zap icon with pulse glow */}
           <motion.div
-            className="absolute left-4 top-1/2 -translate-y-1/2"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-10"
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, margin: '-100px' }}
@@ -160,7 +263,7 @@ export default function FeaturesSection() {
           </motion.div>
 
           {/* Insight cards with stagger */}
-          <div className="absolute right-2 space-y-2">
+          <div className="absolute right-2 space-y-2 z-10">
             {[
               { label: 'Key Insight', color: '#BD6750', textWidth: 'w-16' },
               { label: 'Action Item', color: '#10b981', textWidth: 'w-12' },

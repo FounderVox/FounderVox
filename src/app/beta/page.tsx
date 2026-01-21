@@ -147,7 +147,7 @@ export default function BetaPage() {
                 {/* Price */}
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-display text-white">$10</span>
+                    <span className="text-5xl font-display text-white">$9.99</span>
                     <span className="text-lg text-white/80 font-body">USD / month</span>
                   </div>
                   <p className="text-white/60 font-body mt-2 text-sm">

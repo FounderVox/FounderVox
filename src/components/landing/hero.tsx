@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { MoveRight, Mic, Calendar, ListTodo, Send, Mail, Check, Languages, Zap } from 'lucide-react'
+import { MoveRight, Mic, Calendar, ListTodo, Send, Mail, Check, Languages } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 
@@ -47,20 +47,6 @@ export default function Hero() {
     <div className="w-full landing-hero-bg">
       <div className="container mx-auto px-6">
         <div className="flex gap-8 py-24 lg:py-36 items-center justify-center flex-col">
-          {/* Badge with warm glow and capability stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="badge-warm-glow px-4 py-2 rounded-full flex items-center gap-3">
-              <Zap className="w-4 h-4" style={{ color: '#BD6750' }} />
-              <span className="text-sm font-medium font-body" style={{ color: '#BD6750' }}>
-                31+ languages • &lt;300ms • 95%+ accuracy
-              </span>
-            </div>
-          </motion.div>
-
           {/* Headline with Instrument Serif */}
           <motion.div
             className="flex gap-4 flex-col"
