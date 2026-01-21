@@ -2,11 +2,9 @@
 
 import { useState, useEffect, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Clock, MoreVertical, Play, Edit, Trash2, Tag, Wand2, CheckCircle } from 'lucide-react'
+import { Star, Clock, MoreVertical, Play, Edit, Trash2, Wand2, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getTagColor } from '@/lib/tag-colors'
 import { getTemplateColor } from '@/lib/template-colors'
-import { useMenu } from '@/contexts/menu-context'
 
 interface NoteCardProps {
   title: string
@@ -15,12 +13,10 @@ interface NoteCardProps {
   duration?: string
   isStarred?: boolean
   template?: string
-  tags?: string[]
   onPlay?: () => void
   onStar?: () => void
   onEdit?: () => void
   onDelete?: () => void
-  onAddTag?: () => void
   onSmartify?: () => void
   onView?: () => void
   noteId?: string
@@ -35,12 +31,10 @@ export const NoteCard = memo(function NoteCard({
   duration,
   isStarred = false,
   template,
-  tags = [],
   onPlay,
   onStar,
   onEdit,
   onDelete,
-  onAddTag,
   onSmartify,
   onView,
   noteId,
@@ -48,17 +42,7 @@ export const NoteCard = memo(function NoteCard({
   isSmartified = false,
 }: NoteCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { isAnyMenuOpen, openMenu, closeMenu } = useMenu()
-  
-  // Update global menu state when this menu opens/closes
-  useEffect(() => {
-    if (isMenuOpen) {
-      openMenu()
-    } else {
-      closeMenu()
-    }
-  }, [isMenuOpen, openMenu, closeMenu])
-  
+
   // Close menu on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -93,12 +77,9 @@ export const NoteCard = memo(function NoteCard({
         "group bg-white shadow-sm border border-gray-200 rounded-2xl p-5 transition-all duration-200 cursor-pointer",
         "border-l-4",
         templateColor.borderLeft,
-        // Disable hover effects when any menu is open (except on the card with the open menu)
-        isAnyMenuOpen && !isMenuOpen
-          ? ""
-          : "hover:shadow-md hover:border-gray-300"
+        "hover:shadow-md hover:border-gray-300"
       )}
-      whileHover={isAnyMenuOpen && !isMenuOpen ? undefined : { y: -2, scale: 1.01 }}
+      whileHover={{ y: -2, scale: 1.01 }}
       onClick={handleCardClick}
     >
       {/* Header */}
@@ -189,17 +170,6 @@ export const NoteCard = memo(function NoteCard({
                         <Edit className="h-4 w-4" />
                         Edit Note
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setIsMenuOpen(false)
-                          onAddTag?.()
-                        }}
-                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-black hover:bg-gray-200 transition-all duration-200"
-                      >
-                        <Tag className="h-4 w-4" />
-                        Add Tag
-                      </button>
                       {onSmartify && (
                         <button
                           onClick={(e) => {
@@ -249,29 +219,6 @@ export const NoteCard = memo(function NoteCard({
 
       {/* Preview */}
       <p className="text-sm text-gray-600 line-clamp-2 mb-4">{preview}</p>
-
-      {/* Tags */}
-      {tags && tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {tags.map((tag) => {
-            const color = getTagColor(tag)
-            
-            return (
-              <span
-                key={tag}
-                className={cn(
-                  "inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border",
-                  color.bg,
-                  color.text,
-                  color.border
-                )}
-              >
-                {tag}
-              </span>
-            )
-          })}
-        </div>
-      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between">

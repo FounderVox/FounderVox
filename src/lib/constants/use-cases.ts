@@ -60,7 +60,6 @@ export const USE_CASES: UseCase[] = [
     title: 'Team Collaboration',
     description: 'Shared notes, action items, decision logs',
     icon: Users,
-    badge: 'new',
     templates: ['Shared notes', 'Action items', 'Decision logs'],
   },
   {
@@ -68,7 +67,6 @@ export const USE_CASES: UseCase[] = [
     title: 'Founder Mode',
     description: 'Investor updates, pitch notes, product ideas, user research',
     icon: Target,
-    badge: 'founder',
     templates: ['Investor updates', 'Pitch notes', 'Product ideas', 'User research'],
   },
   {

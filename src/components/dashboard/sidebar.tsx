@@ -15,13 +15,13 @@ import {
   Clock,
   FileText,
   Settings,
-  Sparkles,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Mail,
   Zap,
   CheckSquare,
+  Sparkles,
 } from 'lucide-react'
 import { getTemplateIconColor } from '@/lib/template-colors'
 
@@ -338,22 +338,23 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
               )}
             </div>
           </Link>
-          <button
-            className={cn(
-              'flex items-center gap-3 w-full rounded-lg text-sm text-brand hover:bg-brand-light transition-all duration-200',
-              isCollapsed ? 'justify-center p-2.5 relative group' : 'px-3 py-2.5'
-            )}
-          >
-            <Sparkles className="h-4 w-4" />
-            {!isCollapsed && 'Upgrade to Pro'}
-            {/* Hover tooltip for collapsed state */}
-            {isCollapsed && (
-              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300] transition-all duration-200 shadow-lg">
-                Upgrade to Pro
-                <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-r-[6px] border-r-gray-900 border-b-[6px] border-b-transparent"></div>
+          {!isCollapsed && (
+            <div className="flex items-center gap-2 px-3 py-2">
+              <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-[#BD6750]/10 text-[#BD6750] border border-[#BD6750]/20">
+                Beta
+              </span>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="flex justify-center p-2 relative group">
+              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-[#BD6750]/10 text-[#BD6750]">
+                B
+              </span>
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[300]">
+                Beta Version
               </div>
-            )}
-          </button>
+            </div>
+          )}
         </div>
       </motion.aside>
   )

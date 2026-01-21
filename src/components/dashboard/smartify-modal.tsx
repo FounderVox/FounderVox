@@ -163,20 +163,6 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
               <p className="text-gray-600">
                 Using AI to identify what can be extracted from your note.
               </p>
-              {/* Progress indicator */}
-              <div className="mt-6 h-1.5 bg-brand-light rounded-full overflow-hidden max-w-xs mx-auto">
-                <motion.div
-                  initial={{ width: '0%' }}
-                  animate={{ width: '100%' }}
-                  transition={{
-                    duration: 6,
-                    ease: [0.4, 0, 0.2, 1],
-                    repeat: Infinity,
-                    repeatType: 'loop'
-                  }}
-                  className="h-full bg-brand rounded-full"
-                />
-              </div>
             </div>
           )}
 
@@ -319,20 +305,6 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
               <p className="text-gray-600">
                 Saving extracted data to your dashboard.
               </p>
-              {/* Progress indicator */}
-              <div className="mt-6 h-1.5 bg-brand-light rounded-full overflow-hidden max-w-xs mx-auto">
-                <motion.div
-                  initial={{ width: '0%' }}
-                  animate={{ width: '100%' }}
-                  transition={{
-                    duration: 4,
-                    ease: [0.4, 0, 0.2, 1],
-                    repeat: Infinity,
-                    repeatType: 'loop'
-                  }}
-                  className="h-full bg-brand rounded-full"
-                />
-              </div>
             </div>
           )}
 

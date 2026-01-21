@@ -61,8 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null
     }
     try {
-      console.log('[AuthContext] Loading profile for user:', currentUser.id)
-
       // Add 5-second timeout to profile query to prevent hanging
       const profileQueryWithTimeout = Promise.race([
         supabaseClient
@@ -78,9 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error: profileError } = await profileQueryWithTimeout
 
       if (profileError) {
-        console.log('[AuthContext] Profile error:', profileError.code, profileError.message)
         if (profileError.code === 'PGRST116') {
-          console.log('[AuthContext] Profile not found, creating new profile')
           const { data: newProfile, error: insertError } = await supabaseClient
             .from('profiles')
             .insert({
@@ -98,7 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error('[AuthContext] Error creating profile:', insertError)
             return null
           }
-          console.log('[AuthContext] Profile created successfully')
           return newProfile as Profile
         }
         console.error('[AuthContext] Error loading profile:', profileError)
@@ -106,11 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!data) {
-        console.warn('[AuthContext] Profile query returned no data')
         return null
       }
 
-      console.log('[AuthContext] Profile loaded successfully')
       return data as Profile
     } catch (err) {
       console.error('[AuthContext] Unexpected error loading profile:', err)
@@ -129,7 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Prevent double initialization - NEVER reset this flag
     if (initializedRef.current) {
-      console.log('[AuthContext] Already initialized, skipping')
       return
     }
     initializedRef.current = true
@@ -144,16 +136,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        console.log('[AuthContext] Initializing auth...')
-
         // Add 5-second timeout to getUser() to prevent hanging
         const getUserWithTimeout = Promise.race([
           supabaseClient.auth.getUser(),
-          new Promise<{ data: { user: null }; error: Error }>((_, reject) => 
+          new Promise<{ data: { user: null }; error: Error }>((_, reject) =>
             setTimeout(() => reject(new Error('getUser timeout after 5s')), 5000)
           )
         ])
-        
+
         let currentUser = null
         let userError = null
         try {
@@ -162,7 +152,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           userError = result.error
         } catch (e) {
           // getUser timed out - try getSession as fallback with its own timeout
-          console.log('[AuthContext] getUser timed out, trying getSession as fallback')
           try {
             const getSessionWithTimeout = Promise.race([
               supabaseClient.auth.getSession(),
@@ -173,14 +162,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const { data: { session } } = await getSessionWithTimeout
             currentUser = session?.user ?? null
           } catch (sessionError) {
-            console.error('[AuthContext] getSession also timed out:', sessionError)
+            console.error('[AuthContext] getSession timed out:', sessionError)
             throw new Error('AUTH_TIMEOUT')
           }
         }
 
         // Don't abort on unmount - React Strict Mode causes remounts, we should complete initialization
         if (userError || !currentUser) {
-          console.log('[AuthContext] No user found, redirecting to login:', userError?.message)
           // Always set isLoading false - React handles unmounted component state updates safely
           setIsLoading(false)
           if (mounted) {
@@ -189,7 +177,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        console.log('[AuthContext] User found:', currentUser.id)
         setUser(currentUser)
 
         const profileData = await loadProfile(currentUser)
@@ -197,7 +184,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Always update state - React handles unmounted component state updates safely
         // This is necessary for Strict Mode where the first mount's async work completes after cleanup
         if (profileData) {
-          console.log('[AuthContext] Profile loaded:', profileData.id)
           setProfile(profileData)
 
           // Only redirect to welcome if user is trying to access protected routes
@@ -205,22 +191,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!profileData.onboarding_completed) {
             const publicRoutes = ['/', '/login', '/signup', '/pricing', '/download', '/auth/callback']
             const isPublicRoute = publicRoutes.includes(pathname || '/')
-            
+
             if (!isPublicRoute) {
-              console.log('[AuthContext] Onboarding not completed, redirecting to welcome from:', pathname)
               setIsLoading(false)
               if (mounted) router.push('/welcome')
               return
-            } else {
-              console.log('[AuthContext] Onboarding not completed, but on public route, allowing access to:', pathname)
             }
           }
         } else {
-          console.warn('[AuthContext] Profile data is null, but user exists. This may indicate a database issue.')
           setError('Profile could not be loaded. Please try refreshing the page.')
         }
 
-        console.log('[AuthContext] Auth initialization complete')
         setIsLoading(false)
       } catch (err) {
         console.error('[AuthContext] Init error:', err)
@@ -245,7 +226,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let subscription: { unsubscribe: () => void } | null = null
     if (supabaseClient) {
       const { data } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        console.log('[AuthContext] Auth state changed:', event)
         if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)

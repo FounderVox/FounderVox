@@ -82,10 +82,10 @@ export default function UseCasesPage() {
           throw error
         }
 
-        console.log('[FounderNote:Onboarding] Use cases saved, redirecting to demo')
+        console.log('[FounderNote:Onboarding] Use cases saved, redirecting to dashboard')
       }
 
-      router.push('/demo')
+      router.push('/dashboard')
     } catch (error) {
       console.error('[FounderNote:Onboarding] Error saving use cases:', error)
     } finally {
@@ -115,7 +115,7 @@ export default function UseCasesPage() {
         }
       }
 
-      router.push('/demo')
+      router.push('/dashboard')
     } catch (error) {
       console.error('[FounderNote:Onboarding] Error skipping:', error)
     } finally {

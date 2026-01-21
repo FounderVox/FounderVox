@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic'
 import { motion } from 'framer-motion'
 import { NoteCard } from '@/components/dashboard/note-card'
 import { FilterBar } from '@/components/dashboard/filter-bar'
-import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
 import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
 import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
@@ -85,6 +84,13 @@ function getFirstName(displayName: string | null | undefined): string {
   return displayName.split(' ')[0]
 }
 
+// Format duration from seconds to MM:SS
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
 export default function DashboardPage() {
   const { user, profile, supabase } = useAuth()
   const router = useRouter()
@@ -99,8 +105,6 @@ export default function DashboardPage() {
     message: '',
     variant: 'success'
   })
-  const [showTagDialog, setShowTagDialog] = useState(false)
-  const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedNoteForEdit, setSelectedNoteForEdit] = useState<string | null>(null)
   const [showSmartifyModal, setShowSmartifyModal] = useState(false)
@@ -219,12 +223,25 @@ export default function DashboardPage() {
     loadNotes()
     loadFocusItems()
 
-    const handleNoteEvent = () => {
-      loadNotes()
-      loadFocusItems()
+    let noteTimeout: NodeJS.Timeout | null = null
+    let focusTimeout: NodeJS.Timeout | null = null
+
+    const debouncedNoteRefresh = () => {
+      if (noteTimeout) clearTimeout(noteTimeout)
+      noteTimeout = setTimeout(loadNotes, 100)
     }
-    const handleTagsUpdated = () => loadNotes()
-    const handleActionItemEvent = () => loadFocusItems()
+
+    const debouncedFocusRefresh = () => {
+      if (focusTimeout) clearTimeout(focusTimeout)
+      focusTimeout = setTimeout(loadFocusItems, 100)
+    }
+
+    const handleNoteEvent = () => {
+      debouncedNoteRefresh()
+      debouncedFocusRefresh()
+    }
+
+    const handleActionItemEvent = () => debouncedFocusRefresh()
 
     // Handle search panel note click - open in detail modal
     const handleOpenNoteDetail = (event: CustomEvent<{ noteId: string }>) => {
@@ -232,19 +249,17 @@ export default function DashboardPage() {
       setShowDetailModal(true)
     }
 
-    window.addEventListener('noteCreated', handleNoteEvent as EventListener)
-    window.addEventListener('noteUpdated', handleNoteEvent as EventListener)
-    window.addEventListener('noteDeleted', handleNoteEvent as EventListener)
-    window.addEventListener('tagsUpdated', handleTagsUpdated)
+    // Combine all note-related events
+    const noteEvents = ['noteCreated', 'noteUpdated', 'noteDeleted', 'tagsUpdated']
+    noteEvents.forEach(e => window.addEventListener(e, handleNoteEvent as EventListener))
     window.addEventListener('actionItemCompleted', handleActionItemEvent as EventListener)
     window.addEventListener('actionItemUpdated', handleActionItemEvent as EventListener)
     window.addEventListener('openNoteDetail', handleOpenNoteDetail as EventListener)
 
     return () => {
-      window.removeEventListener('noteCreated', handleNoteEvent as EventListener)
-      window.removeEventListener('noteUpdated', handleNoteEvent as EventListener)
-      window.removeEventListener('noteDeleted', handleNoteEvent as EventListener)
-      window.removeEventListener('tagsUpdated', handleTagsUpdated)
+      if (noteTimeout) clearTimeout(noteTimeout)
+      if (focusTimeout) clearTimeout(focusTimeout)
+      noteEvents.forEach(e => window.removeEventListener(e, handleNoteEvent as EventListener))
       window.removeEventListener('actionItemCompleted', handleActionItemEvent as EventListener)
       window.removeEventListener('actionItemUpdated', handleActionItemEvent as EventListener)
       window.removeEventListener('openNoteDetail', handleOpenNoteDetail as EventListener)
@@ -410,12 +425,6 @@ export default function DashboardPage() {
       console.error('[Dashboard] Unexpected error deleting note:', error)
       setNotes(originalNotes)
     }
-  }
-
-  const handleAddTag = (noteId: string) => {
-    const note = notes.find(n => n.id === noteId)
-    setSelectedNoteForTag({ id: noteId, tags: note?.tags || [] })
-    setShowTagDialog(true)
   }
 
   const handleEditNote = (noteId: string) => {
@@ -909,15 +918,12 @@ export default function DashboardPage() {
                   title={note.title || 'Untitled Note'}
                   preview={note.formatted_content?.substring(0, 150) || note.raw_transcript?.substring(0, 150) || 'No content'}
                   createdAt={new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(note.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                  duration={note.duration || '0:00'}
+                  duration={note.duration_seconds ? formatDuration(note.duration_seconds) : undefined}
                   template={note.template_label || note.template_type || 'Note'}
                   isStarred={note.is_starred || false}
-                  tags={note.tags || []}
                   onStar={() => toggleStar(note.id)}
-                  onPlay={() => console.log('[Dashboard] Playing note:', note.id)}
                   onEdit={() => handleEditNote(note.id)}
                   onDelete={() => handleDeleteNote(note.id)}
-                  onAddTag={() => handleAddTag(note.id)}
                   onSmartify={() => handleSmartify(note.id)}
                   onView={() => handleViewNote(note.id)}
                   noteId={note.id}
@@ -941,26 +947,6 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Dialogs */}
-      {selectedNoteForTag && (
-        <AddTagDialog
-          open={showTagDialog}
-          onOpenChange={async (open) => {
-            setShowTagDialog(open)
-            if (!open) {
-              await loadNotes()
-              if (selectedNoteForTag) {
-                const note = notes.find(n => n.id === selectedNoteForTag.id)
-                if (note) {
-                  setSelectedNoteForTag({ id: note.id, tags: note.tags || [] })
-                }
-              }
-            }
-          }}
-          noteId={selectedNoteForTag.id}
-          existingTags={selectedNoteForTag.tags}
-        />
-      )}
-
       <EditNoteDialog
         open={showEditDialog}
         onOpenChange={(open) => {

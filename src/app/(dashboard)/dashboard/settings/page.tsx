@@ -227,71 +227,17 @@ export default function SettingsPage() {
 
     setIsLoading(true)
     try {
-      // Get all recording IDs first
-      const { data: recordings } = await supabase
-        .from('recordings')
-        .select('id')
-        .eq('user_id', user.id)
+      // Use RPC function to delete all user data securely
+      const { error: deleteError } = await supabase.rpc('delete_user_account', {
+        target_user_id: user.id
+      })
 
-      const recordingIds = recordings?.map(r => r.id) || []
+      if (deleteError) throw deleteError
 
-      // Delete all user data in the correct order to respect foreign key constraints
-      // Note: Due to CASCADE constraints, deleting recordings will auto-delete related items,
-      // but we'll be explicit to ensure complete deletion
-
-      // 1. Delete action items (references recordings via CASCADE, but being explicit)
-      if (recordingIds.length > 0) {
-        await supabase
-          .from('action_items')
-          .delete()
-          .in('recording_id', recordingIds)
-      }
-
-      // 2. Delete investor updates
-      if (recordingIds.length > 0) {
-        await supabase
-          .from('investor_updates')
-          .delete()
-          .in('recording_id', recordingIds)
-      }
-
-      // 3. Delete brain dump items
-      if (recordingIds.length > 0) {
-        try {
-          await supabase
-            .from('brain_dump')
-            .delete()
-            .in('recording_id', recordingIds)
-        } catch (e) {
-          // Table might not exist, continue
-          console.log('[Settings] brain_dump table may not exist, continuing...')
-        }
-      }
-
-      // 4. Delete recordings (CASCADE will handle related items, but we've been explicit above)
-      await supabase
-        .from('recordings')
-        .delete()
-        .eq('user_id', user.id)
-
-      // 5. Delete notes (has CASCADE from user_id, but being explicit)
-      await supabase
-        .from('notes')
-        .delete()
-        .eq('user_id', user.id)
-
-      // 6. Delete profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', user.id)
-
-      if (profileError) throw profileError
-
-      // 7. Sign out (this will clear the session)
+      // Sign out (this will clear the session)
       await supabase.auth.signOut()
 
-      // 8. Redirect to home
+      // Redirect to home
       window.location.href = '/'
     } catch (error: any) {
       console.error('[Settings] Error deleting account:', error)
@@ -664,29 +610,24 @@ export default function SettingsPage() {
           </div>
         </SettingSection>
 
-        {/* Billing Section */}
+        {/* Account Status Section */}
         <SettingSection
-          title="Subscription"
-          description="Manage your subscription and billing"
+          title="Account Status"
+          description="Your FounderNote access status"
           icon={CreditCard}
         >
           <div className="space-y-6">
-            <SettingItem 
-              label="Current Plan"
-              description="Your current subscription tier"
+            <SettingItem
+              label="Current Status"
+              description="Your current access level"
             >
               <div className="flex items-center gap-3">
-                <div className="px-4 py-2 rounded-lg bg-gray-100 text-sm font-semibold text-black">
-                  {(profile as any)?.subscription_tier === 'pro' ? 'Pro' : 'Free'}
+                <div className="px-4 py-2 rounded-lg bg-[#BD6750]/10 text-sm font-semibold text-[#BD6750] border border-[#BD6750]/20">
+                  Beta Access
                 </div>
-                {(profile as any)?.subscription_tier !== 'pro' && (
-                  <Button
-                    className="bg-[#BD6750] hover:bg-[#a55a45] text-white"
-                    onClick={() => window.location.href = '/pricing'}
-                  >
-                    Upgrade to Pro
-                  </Button>
-                )}
+                <span className="text-sm text-gray-600">
+                  Full access during beta period
+                </span>
               </div>
             </SettingItem>
           </div>

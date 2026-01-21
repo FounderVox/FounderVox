@@ -485,20 +485,20 @@ export default function AskPage() {
               Ask questions about your notes and I'll find relevant information with citations.
             </p>
 
-            {/* Example Questions - Horizontal Scrollable */}
+            {/* Example Questions - Responsive Grid/Scroll */}
             <div className="w-full max-w-3xl">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-3 font-medium text-left">
                 Try asking
               </p>
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {EXAMPLE_QUESTIONS.map((question, index) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-3 lg:overflow-x-auto lg:pb-2">
+                {EXAMPLE_QUESTIONS.slice(0, 4).map((question, index) => (
                   <motion.button
                     key={index}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 + index * 0.05 }}
                     onClick={() => handleSubmit(question)}
-                    className="flex-shrink-0 text-left px-4 py-3 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all group shadow-sm max-w-[280px]"
+                    className="lg:flex-shrink-0 text-left px-4 py-3 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all group shadow-sm lg:max-w-[260px]"
                   >
                     <span className="text-sm text-gray-700 group-hover:text-gray-900 line-clamp-2">
                       {question}
@@ -557,7 +557,7 @@ export default function AskPage() {
 
       {/* Input Area - Fixed at bottom */}
       <div className="flex-shrink-0 border-t border-gray-100 bg-gray-50 pt-4 pb-4 -mx-6 px-6 -mb-6">
-        <div className="relative bg-white rounded-2xl border border-gray-200 shadow-sm">
+        <div className="relative bg-white rounded-2xl shadow-sm">
           <textarea
             ref={inputRef}
             value={inputValue}
@@ -566,7 +566,7 @@ export default function AskPage() {
             placeholder="Ask a question about your notes..."
             rows={1}
             disabled={isLoading}
-            className="w-full resize-none px-4 py-3.5 pr-14 rounded-2xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#BD6750]/20 focus:border-[#BD6750]/30 disabled:opacity-50 text-sm"
+            className="w-full resize-none px-4 py-3.5 pr-14 rounded-2xl border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#BD6750]/20 focus:border-[#BD6750] disabled:opacity-50 text-sm"
             style={{ maxHeight: '150px' }}
           />
           <button

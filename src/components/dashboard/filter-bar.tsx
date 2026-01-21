@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Search, ChevronDown, LogOut, Settings, Sparkles } from 'lucide-react'
+import { Search, ChevronDown, LogOut, Settings } from 'lucide-react'
 import { SearchPanel } from './search-panel'
 
 interface FilterBarProps {
@@ -15,45 +15,12 @@ interface FilterBarProps {
 export function FilterBar({ avatarUrl, displayName, email }: FilterBarProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [notesCount, setNotesCount] = useState(0)
   const router = useRouter()
   const supabase = createClient()
-
-  // Self-managed notes count
-  useEffect(() => {
-    async function fetchNotesCount() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { count } = await supabase
-        .from('notes')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-
-      setNotesCount(count || 0)
-    }
-
-    fetchNotesCount()
-
-    // Listen for note creation/deletion events
-    const handleNoteCreated = () => fetchNotesCount()
-    const handleNoteDeleted = () => fetchNotesCount()
-
-    window.addEventListener('noteCreated', handleNoteCreated)
-    window.addEventListener('noteDeleted', handleNoteDeleted)
-
-    return () => {
-      window.removeEventListener('noteCreated', handleNoteCreated)
-      window.removeEventListener('noteDeleted', handleNoteDeleted)
-    }
-  }, [supabase])
 
   const initials = displayName
     ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : email?.[0].toUpperCase() || 'U'
-
-  const maxNotes = 10
-  const progressPercentage = Math.min(((notesCount || 0) / maxNotes) * 100, 100)
 
   const handleSignOut = async () => {
     console.log('[FounderNote:Dashboard:FilterBar] Signing out...')
@@ -147,22 +114,14 @@ export function FilterBar({ avatarUrl, displayName, email }: FilterBarProps) {
                       </div>
                     </div>
 
-                    {/* Plan Status */}
+                    {/* Beta Status */}
                     <div className="p-4 border-b border-gray-200/50">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-black">Free Plan</span>
-                        <span className="text-xs text-gray-600">{notesCount || 0}/{maxNotes} notes</span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1.5 text-sm font-semibold rounded-full bg-[#BD6750]/10 text-[#BD6750] border border-[#BD6750]/20">
+                          Beta Access
+                        </span>
+                        <span className="text-xs text-gray-500">Early adopter</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                        <div
-                          className="bg-black h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-                        />
-                      </div>
-                      <button className="w-full px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:opacity-90 hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2">
-                        <Sparkles className="h-4 w-4" />
-                        Upgrade to Pro
-                      </button>
                     </div>
 
                     {/* Menu Items */}

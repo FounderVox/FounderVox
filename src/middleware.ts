@@ -5,7 +5,7 @@ import { updateSession } from '@/lib/supabase/middleware'
 const publicRoutes = ['/', '/login', '/signup', '/auth/callback', '/pricing', '/download']
 
 // Routes that require authentication
-const protectedRoutes = ['/dashboard', '/welcome', '/use-cases', '/demo']
+const protectedRoutes = ['/dashboard', '/welcome', '/use-cases']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -64,19 +64,17 @@ export async function middleware(request: NextRequest) {
   )
 
   // OPTIMIZATION: Fetch profile data ONCE if user is authenticated and needs routing decisions
-  // This replaces 4 separate queries with 1 query
   const needsProfileCheck = user && (
     isAuthRoute ||
     pathname === '/welcome' ||
-    pathname === '/use-cases' ||
-    pathname === '/demo'
+    pathname === '/use-cases'
   )
 
-  let profile: { onboarding_completed: boolean; demo_completed: boolean } | null = null
+  let profile: { onboarding_completed: boolean } | null = null
   if (needsProfileCheck) {
     const { data } = await supabase
       .from('profiles')
-      .select('onboarding_completed, demo_completed')
+      .select('onboarding_completed')
       .eq('id', user.id)
       .single()
     profile = data
@@ -85,11 +83,7 @@ export async function middleware(request: NextRequest) {
   if (isAuthRoute && user) {
     console.log('[FounderNote:Middleware] Authenticated user on auth page, redirecting')
     if (profile?.onboarding_completed) {
-      if (profile.demo_completed) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
-      } else {
-        return NextResponse.redirect(new URL('/demo', request.url))
-      }
+      return NextResponse.redirect(new URL('/dashboard', request.url))
     }
     return NextResponse.redirect(new URL('/welcome', request.url))
   }
@@ -97,24 +91,7 @@ export async function middleware(request: NextRequest) {
   // For onboarding routes, ensure user hasn't completed onboarding
   if (user && (pathname === '/welcome' || pathname === '/use-cases')) {
     if (profile?.onboarding_completed) {
-      console.log('[FounderNote:Middleware] Onboarding completed, redirecting to demo or dashboard')
-      if (profile.demo_completed) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
-      } else {
-        return NextResponse.redirect(new URL('/demo', request.url))
-      }
-    }
-  }
-
-  // For demo route, check if user has completed onboarding
-  if (user && pathname === '/demo') {
-    if (!profile?.onboarding_completed) {
-      console.log('[FounderNote:Middleware] Onboarding not completed, redirecting to welcome')
-      return NextResponse.redirect(new URL('/welcome', request.url))
-    }
-
-    if (profile?.demo_completed) {
-      console.log('[FounderNote:Middleware] Demo already completed, redirecting to dashboard')
+      console.log('[FounderNote:Middleware] Onboarding completed, redirecting to dashboard')
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
