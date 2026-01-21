@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { MoveRight, Play, Mic, Calendar, ListTodo, Send, Mail, Check, Languages, Zap } from 'lucide-react'
+import { MoveRight, Mic, Calendar, ListTodo, Send, Mail, Check, Languages, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 
@@ -112,7 +112,7 @@ export default function Hero() {
 
           {/* CTAs */}
           <motion.div
-            className="flex flex-row gap-4"
+            className="flex justify-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -128,24 +128,15 @@ export default function Hero() {
                 </Button>
               </Link>
             ) : (
-              <>
-                <Link href="/login">
-                  <Button
-                    size="lg"
-                    className="gap-3 px-8 py-6 text-base font-medium rounded-xl terracotta-glow-sm transition-all duration-300 hover:scale-105"
-                    style={{ backgroundColor: '#BD6750', color: 'white' }}
-                  >
-                    Try It Free <MoveRight className="w-5 h-5" />
-                  </Button>
-                </Link>
+              <Link href="/login">
                 <Button
                   size="lg"
-                  className="gap-3 px-8 py-6 text-base font-medium rounded-xl glass-button-dark transition-all duration-300"
-                  variant="outline"
+                  className="gap-3 px-8 py-6 text-base font-medium rounded-xl terracotta-glow-sm transition-all duration-300 hover:scale-105"
+                  style={{ backgroundColor: '#BD6750', color: 'white' }}
                 >
-                  <Play className="w-4 h-4" /> Watch Demo
+                  Try It Free <MoveRight className="w-5 h-5" />
                 </Button>
-              </>
+              </Link>
             )}
           </motion.div>
 

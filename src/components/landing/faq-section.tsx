@@ -20,11 +20,11 @@ export default function FAQSection() {
     },
     {
       question: 'Is there a free plan?',
-      answer: 'Yes! Our Starter plan is completely free and includes 5 voice notes per day, basic AI categorization, and email formatting. Perfect for trying FounderNote and experiencing voice-first productivity.'
+      answer: 'Yes! We are currently in our beta testing phase and provide our beta users with 10 free notes and 100 minutes of audio transcription per month. This is a great opportunity to experience FounderNote and help shape the future of voice-first productivity.'
     },
     {
       question: 'What languages are supported?',
-      answer: 'We support 31+ languages including English, Spanish, French, German, Chinese, Japanese, Portuguese, Korean, and many more. Our AI automatically detects your language and handles accents with industry-leading accuracy.'
+      answer: 'Currently, we only support English. However, we are actively working on adding support for additional languages, which will be available once our beta testing phase is complete.'
     },
     {
       question: 'How does the AI analysis work?',

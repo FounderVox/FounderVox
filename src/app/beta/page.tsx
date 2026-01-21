@@ -25,8 +25,8 @@ export default function BetaPage() {
 
   const features = [
     { text: '100 minutes audio/month', icon: <Clock className="w-4 h-4" /> },
-    { text: '25 notes included', icon: <FileText className="w-4 h-4" /> },
-    { text: '10+ languages supported', icon: <Globe className="w-4 h-4" /> },
+    { text: '10 free notes', icon: <FileText className="w-4 h-4" /> },
+    { text: 'English language support', icon: <Globe className="w-4 h-4" /> },
     { text: 'Advanced AI categorization', icon: <Sparkles className="w-4 h-4" /> },
     { text: 'All export formats', icon: <Zap className="w-4 h-4" /> },
     { text: 'AI Ask feature', icon: <Mic className="w-4 h-4" /> },
@@ -38,7 +38,7 @@ export default function BetaPage() {
     {
       icon: <Star className="w-6 h-6" />,
       title: 'Founding Member Status',
-      description: 'Lock in beta pricing forever. Your rate stays the same even after launch.'
+      description: 'Founding members will receive an exclusive discount during our next lifetime deal promotion after the beta testing phase ends.'
     },
     {
       icon: <Users className="w-6 h-6" />,
@@ -147,11 +147,11 @@ export default function BetaPage() {
                 {/* Price */}
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-display text-white">29.99</span>
-                    <span className="text-lg text-white/80 font-body">QAR / month</span>
+                    <span className="text-5xl font-display text-white">$10</span>
+                    <span className="text-lg text-white/80 font-body">USD / month</span>
                   </div>
                   <p className="text-white/60 font-body mt-2 text-sm">
-                    Locked in forever as a founding member
+                    Beta pricing for early supporters
                   </p>
                 </div>
 
@@ -264,7 +264,7 @@ export default function BetaPage() {
             {[
               {
                 q: 'What happens after the beta ends?',
-                a: 'Your beta pricing is locked in forever. When we launch publicly, prices will increase, but you keep your founding member rate.'
+                a: 'After beta testing, founding members will receive an exclusive discount on our upcoming lifetime deal promotion. This is our way of thanking early supporters who helped shape FounderNote.'
               },
               {
                 q: 'Can I upgrade my limits later?',

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useInView } from 'framer-motion'
-import { ArrowRight, Play } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function CTASection() {
@@ -48,7 +48,7 @@ export default function CTASection() {
         </motion.div>
 
         <motion.div
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="flex justify-center"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.15 }}
@@ -63,20 +63,14 @@ export default function CTASection() {
               <ArrowRight className="w-5 h-5" />
             </Link>
           ) : (
-            <>
-              <Link
-                href="/login"
-                className="px-10 py-4 rounded-xl text-lg font-medium flex items-center gap-3 transition-all duration-300 terracotta-glow hover:scale-105 font-body"
-                style={{ backgroundColor: '#BD6750', color: 'white' }}
-              >
-                Try It Free
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-              <button className="glass-button px-8 py-4 rounded-xl text-lg font-medium text-white flex items-center gap-3 transition-all duration-300 font-body">
-                <Play className="w-5 h-5" />
-                See How It Works
-              </button>
-            </>
+            <Link
+              href="/login"
+              className="px-10 py-4 rounded-xl text-lg font-medium flex items-center gap-3 transition-all duration-300 terracotta-glow hover:scale-105 font-body"
+              style={{ backgroundColor: '#BD6750', color: 'white' }}
+            >
+              Try It Free
+              <ArrowRight className="w-5 h-5" />
+            </Link>
           )}
         </motion.div>
 
