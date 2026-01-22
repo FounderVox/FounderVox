@@ -137,113 +137,10 @@ export default function FeaturesSection() {
       description: 'Extracts key insights, action items, and summaries from every note automatically.',
       span: 1,
       illustration: (
-        <div className="relative h-32 flex items-center justify-center">
-          {/* Animated connection lines SVG */}
-          <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible' }}>
-            <defs>
-              <linearGradient id="lineGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#BD6750" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="#BD6750" stopOpacity="0.2" />
-              </linearGradient>
-              <linearGradient id="lineGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#10b981" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.2" />
-              </linearGradient>
-              <linearGradient id="lineGradient3" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.2" />
-              </linearGradient>
-            </defs>
-            {/* Line to Key Insight (top) */}
-            <motion.path
-              d="M 55 64 Q 90 64, 110 32"
-              fill="none"
-              stroke="url(#lineGradient1)"
-              strokeWidth="1.5"
-              strokeDasharray="4 4"
-              initial={{ pathLength: 0, opacity: 0 }}
-              whileInView={{ pathLength: 1, opacity: 1 }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ delay: 0.5, duration: 0.8, ease: 'easeOut' }}
-              style={{
-                strokeDashoffset: 0,
-              }}
-            />
-            {/* Line to Action Item (middle) */}
-            <motion.path
-              d="M 55 64 L 110 64"
-              fill="none"
-              stroke="url(#lineGradient2)"
-              strokeWidth="1.5"
-              strokeDasharray="4 4"
-              initial={{ pathLength: 0, opacity: 0 }}
-              whileInView={{ pathLength: 1, opacity: 1 }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ delay: 0.65, duration: 0.8, ease: 'easeOut' }}
-            />
-            {/* Line to Summary (bottom) */}
-            <motion.path
-              d="M 55 64 Q 90 64, 110 96"
-              fill="none"
-              stroke="url(#lineGradient3)"
-              strokeWidth="1.5"
-              strokeDasharray="4 4"
-              initial={{ pathLength: 0, opacity: 0 }}
-              whileInView={{ pathLength: 1, opacity: 1 }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ delay: 0.8, duration: 0.8, ease: 'easeOut' }}
-            />
-            {/* Animated flowing dots */}
-            <motion.circle
-              r="2"
-              fill="#BD6750"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: [0, 1, 1, 0] }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ delay: 1.3, duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
-            >
-              <animateMotion
-                dur="1.5s"
-                repeatCount="indefinite"
-                begin="1.3s"
-                path="M 55 64 Q 90 64, 110 32"
-              />
-            </motion.circle>
-            <motion.circle
-              r="2"
-              fill="#10b981"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: [0, 1, 1, 0] }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ delay: 1.5, duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
-            >
-              <animateMotion
-                dur="1.5s"
-                repeatCount="indefinite"
-                begin="1.5s"
-                path="M 55 64 L 110 64"
-              />
-            </motion.circle>
-            <motion.circle
-              r="2"
-              fill="#8b5cf6"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: [0, 1, 1, 0] }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ delay: 1.7, duration: 1.5, repeat: Infinity, repeatDelay: 1 }}
-            >
-              <animateMotion
-                dur="1.5s"
-                repeatCount="indefinite"
-                begin="1.7s"
-                path="M 55 64 Q 90 64, 110 96"
-              />
-            </motion.circle>
-          </svg>
-
-          {/* Central Zap icon with pulse glow */}
+        <div className="relative h-32 flex items-center justify-center overflow-visible">
+          {/* Central Zap icon with pulse glow - positioned to align with middle connection */}
           <motion.div
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-10"
+            className="absolute left-5 top-[44px] z-10"
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, margin: '-100px' }}
@@ -262,12 +159,167 @@ export default function FeaturesSection() {
             </div>
           </motion.div>
 
-          {/* Insight cards with stagger */}
-          <div className="absolute right-2 space-y-2 z-10">
+          {/* Animated connection lines - positioned between icon and cards */}
+          <div className="absolute left-[60px] right-[130px] top-0 bottom-0 z-0">
+            <svg
+              className="w-full h-full"
+              viewBox="0 0 100 128"
+              preserveAspectRatio="none"
+              style={{ overflow: 'visible' }}
+            >
+              <defs>
+                {/* Terracotta gradient for top line */}
+                <linearGradient id="aiLineGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#BD6750" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#BD6750" stopOpacity="0.4" />
+                </linearGradient>
+                {/* Green gradient for middle line */}
+                <linearGradient id="aiLineGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.4" />
+                </linearGradient>
+                {/* Purple gradient for bottom line */}
+                <linearGradient id="aiLineGradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.4" />
+                </linearGradient>
+              </defs>
+
+              {/* Line to Key Insight (top card) - curves up from center */}
+              <motion.path
+                d="M 0 64 C 35 64, 65 28, 100 28"
+                fill="none"
+                stroke="url(#aiLineGradient1)"
+                strokeWidth="2"
+                strokeDasharray="4 4"
+                strokeLinecap="round"
+                initial={{ pathLength: 0, opacity: 0 }}
+                whileInView={{ pathLength: 1, opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ delay: 0.5, duration: 0.6, ease: 'easeOut' }}
+              />
+
+              {/* Line to Action Item (middle card) - slight curve for visual interest */}
+              <motion.path
+                d="M 0 64 C 25 64, 75 64, 100 64"
+                fill="none"
+                stroke="url(#aiLineGradient2)"
+                strokeWidth="2"
+                strokeDasharray="4 4"
+                strokeLinecap="round"
+                initial={{ pathLength: 0, opacity: 0 }}
+                whileInView={{ pathLength: 1, opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ delay: 0.65, duration: 0.6, ease: 'easeOut' }}
+              />
+
+              {/* Line to Summary (bottom card) - curves down from center */}
+              <motion.path
+                d="M 0 64 C 35 64, 65 100, 100 100"
+                fill="none"
+                stroke="url(#aiLineGradient3)"
+                strokeWidth="2"
+                strokeDasharray="4 4"
+                strokeLinecap="round"
+                initial={{ pathLength: 0, opacity: 0 }}
+                whileInView={{ pathLength: 1, opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ delay: 0.8, duration: 0.6, ease: 'easeOut' }}
+              />
+
+              {/* Flowing dot - top path (terracotta) */}
+              <motion.circle
+                r="3"
+                fill="#BD6750"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ delay: 1.2 }}
+              >
+                <animateMotion
+                  dur="2s"
+                  repeatCount="indefinite"
+                  path="M 0 64 C 35 64, 65 28, 100 28"
+                  keyPoints="0;1;1"
+                  keyTimes="0;0.7;1"
+                  calcMode="spline"
+                  keySplines="0.4 0 0.2 1;0 0 0 0"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="0;1;1;0"
+                  keyTimes="0;0.1;0.6;0.7"
+                  dur="2s"
+                  repeatCount="indefinite"
+                />
+              </motion.circle>
+
+              {/* Flowing dot - middle path (green) */}
+              <motion.circle
+                r="3"
+                fill="#10b981"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ delay: 1.4 }}
+              >
+                <animateMotion
+                  dur="2s"
+                  repeatCount="indefinite"
+                  begin="0.3s"
+                  path="M 0 64 C 25 64, 75 64, 100 64"
+                  keyPoints="0;1;1"
+                  keyTimes="0;0.7;1"
+                  calcMode="spline"
+                  keySplines="0.4 0 0.2 1;0 0 0 0"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="0;1;1;0"
+                  keyTimes="0;0.1;0.6;0.7"
+                  dur="2s"
+                  repeatCount="indefinite"
+                  begin="0.3s"
+                />
+              </motion.circle>
+
+              {/* Flowing dot - bottom path (purple) */}
+              <motion.circle
+                r="3"
+                fill="#8b5cf6"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ delay: 1.6 }}
+              >
+                <animateMotion
+                  dur="2s"
+                  repeatCount="indefinite"
+                  begin="0.6s"
+                  path="M 0 64 C 35 64, 65 100, 100 100"
+                  keyPoints="0;1;1"
+                  keyTimes="0;0.7;1"
+                  calcMode="spline"
+                  keySplines="0.4 0 0.2 1;0 0 0 0"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="0;1;1;0"
+                  keyTimes="0;0.1;0.6;0.7"
+                  dur="2s"
+                  repeatCount="indefinite"
+                  begin="0.6s"
+                />
+              </motion.circle>
+            </svg>
+          </div>
+
+          {/* Insight cards with stagger - positioned to align with line endpoints */}
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 space-y-2 z-10">
             {[
-              { label: 'Key Insight', color: '#BD6750', textWidth: 'w-16' },
-              { label: 'Action Item', color: '#10b981', textWidth: 'w-12' },
-              { label: 'Summary', color: '#8b5cf6', textWidth: 'w-14' }
+              { label: 'Key Insight', color: '#BD6750', textWidth: 'w-12' },
+              { label: 'Action Item', color: '#10b981', textWidth: 'w-10' },
+              { label: 'Summary', color: '#8b5cf6', textWidth: 'w-11' }
             ].map((item, i) => (
               <motion.div
                 key={i}
@@ -275,11 +327,17 @@ export default function FeaturesSection() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: '-100px' }}
                 transition={{ delay: 0.4 + i * 0.15, duration: 0.4 }}
-                className="bg-white/10 backdrop-blur rounded-lg px-3 py-1.5 flex items-center gap-2"
+                className="bg-white/10 backdrop-blur rounded-lg px-2 py-1.5 flex items-center gap-1.5"
               >
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                <div
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{
+                    backgroundColor: item.color,
+                    boxShadow: `0 0 8px ${item.color}60`
+                  }}
+                />
                 <div className={`h-1.5 rounded bg-white/30 ${item.textWidth}`} />
-                <span className="text-white/50 text-[10px] font-body px-1.5 py-0.5 rounded bg-white/5">{item.label}</span>
+                <span className="text-white/60 text-[9px] font-body px-1 py-0.5 rounded bg-white/5 whitespace-nowrap">{item.label}</span>
               </motion.div>
             ))}
           </div>
