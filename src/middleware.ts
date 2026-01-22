@@ -5,7 +5,10 @@ import { updateSession } from '@/lib/supabase/middleware'
 const publicRoutes = ['/', '/login', '/signup', '/auth/callback', '/pricing', '/download']
 
 // Routes that require authentication
-const protectedRoutes = ['/dashboard', '/welcome', '/use-cases']
+const protectedRoutes = ['/dashboard', '/welcome', '/use-cases', '/support']
+
+// Routes that require payment (subset of protected routes)
+const paidRoutes = ['/dashboard']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -63,18 +66,18 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   )
 
-  // OPTIMIZATION: Fetch profile data ONCE if user is authenticated and needs routing decisions
-  const needsProfileCheck = user && (
-    isAuthRoute ||
-    pathname === '/welcome' ||
-    pathname === '/use-cases'
-  )
+  // Check if route requires payment
+  const isPaidRoute = paidRoutes.some((route) => pathname.startsWith(route))
 
-  let profile: { onboarding_completed: boolean } | null = null
+  // OPTIMIZATION: Fetch profile data ONCE if user is authenticated and needs routing decisions
+  const isOnboardingRoute = pathname === '/welcome' || pathname === '/use-cases' || pathname === '/support'
+  const needsProfileCheck = user && (isAuthRoute || isOnboardingRoute || isPaidRoute)
+
+  let profile: { onboarding_completed: boolean; is_paid_beta: boolean } | null = null
   if (needsProfileCheck) {
     const { data } = await supabase
       .from('profiles')
-      .select('onboarding_completed')
+      .select('onboarding_completed, is_paid_beta')
       .eq('id', user.id)
       .single()
     profile = data
@@ -82,16 +85,49 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthRoute && user) {
     console.log('[FounderNote:Middleware] Authenticated user on auth page, redirecting')
-    if (profile?.onboarding_completed) {
+    // If user has paid, go to dashboard
+    if (profile?.is_paid_beta) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
+    // If onboarding completed but not paid, go to support/payment page
+    if (profile?.onboarding_completed) {
+      return NextResponse.redirect(new URL('/support', request.url))
+    }
+    // Otherwise, start onboarding
     return NextResponse.redirect(new URL('/welcome', request.url))
   }
 
-  // For onboarding routes, ensure user hasn't completed onboarding
+  // For paid routes (dashboard), require is_paid_beta
+  if (user && isPaidRoute) {
+    if (!profile?.is_paid_beta) {
+      console.log('[FounderNote:Middleware] User has not paid, redirecting to support page')
+      // If onboarding not completed, go to welcome first
+      if (!profile?.onboarding_completed) {
+        return NextResponse.redirect(new URL('/welcome', request.url))
+      }
+      // Otherwise, go to support/payment page
+      return NextResponse.redirect(new URL('/support', request.url))
+    }
+  }
+
+  // For onboarding routes (welcome, use-cases), ensure user hasn't completed onboarding
   if (user && (pathname === '/welcome' || pathname === '/use-cases')) {
     if (profile?.onboarding_completed) {
-      console.log('[FounderNote:Middleware] Onboarding completed, redirecting to dashboard')
+      // If paid, go to dashboard; otherwise go to support
+      if (profile?.is_paid_beta) {
+        console.log('[FounderNote:Middleware] Onboarding completed and paid, redirecting to dashboard')
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      } else {
+        console.log('[FounderNote:Middleware] Onboarding completed but not paid, redirecting to support')
+        return NextResponse.redirect(new URL('/support', request.url))
+      }
+    }
+  }
+
+  // For support page, if user has already paid, redirect to dashboard
+  if (user && pathname === '/support') {
+    if (profile?.is_paid_beta) {
+      console.log('[FounderNote:Middleware] User already paid, redirecting to dashboard')
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }

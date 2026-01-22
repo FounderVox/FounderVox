@@ -25,6 +25,8 @@ export interface Database {
           last_active_at: string
           first_login_at: string | null
           demo_completed: boolean
+          is_paid_beta: boolean
+          customer_id: string | null
         }
         Insert: {
           id: string
@@ -41,6 +43,8 @@ export interface Database {
           last_active_at?: string
           first_login_at?: string | null
           demo_completed?: boolean
+          is_paid_beta?: boolean
+          customer_id?: string | null
         }
         Update: {
           id?: string
@@ -57,6 +61,8 @@ export interface Database {
           last_active_at?: string
           first_login_at?: string | null
           demo_completed?: boolean
+          is_paid_beta?: boolean
+          customer_id?: string | null
         }
       }
       notes: {

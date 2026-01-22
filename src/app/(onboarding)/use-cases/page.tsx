@@ -67,27 +67,32 @@ export default function UseCasesPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
-      if (user) {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            use_cases: selectedUseCases,
-            onboarding_completed: true,
-            onboarding_step: 2,
-          })
-          .eq('id', user.id)
-
-        if (error) {
-          console.error('[FounderNote:Onboarding] Error saving use cases:', error.message)
-          throw error
-        }
-
-        console.log('[FounderNote:Onboarding] Use cases saved, redirecting to dashboard')
+      if (!user) {
+        router.push('/support')
+        return
       }
 
-      router.push('/dashboard')
+      // Save use cases and mark onboarding as complete
+      // Note: is_paid_beta will be set by the webhook after successful payment
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          use_cases: selectedUseCases,
+          onboarding_step: 2,
+          onboarding_completed: true,
+        })
+        .eq('id', user.id)
+
+      if (error) {
+        console.error('[FounderNote:Onboarding] Error saving use cases:', error.message)
+      }
+
+      // Redirect to beta support page
+      console.log('[FounderNote:Onboarding] Redirecting to beta support page')
+      router.push('/support')
     } catch (error) {
-      console.error('[FounderNote:Onboarding] Error saving use cases:', error)
+      console.error('[FounderNote:Onboarding] Error:', error)
+      router.push('/support')
     } finally {
       setIsSaving(false)
     }
@@ -100,24 +105,31 @@ export default function UseCasesPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
-      if (user) {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            onboarding_completed: true,
-            onboarding_step: 2,
-          })
-          .eq('id', user.id)
-
-        if (error) {
-          console.error('[FounderNote:Onboarding] Error skipping:', error.message)
-          throw error
-        }
+      if (!user) {
+        router.push('/support')
+        return
       }
 
-      router.push('/dashboard')
+      // Update onboarding step and mark as complete
+      // Note: is_paid_beta will be set by the webhook after successful payment
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          onboarding_step: 2,
+          onboarding_completed: true,
+        })
+        .eq('id', user.id)
+
+      if (error) {
+        console.error('[FounderNote:Onboarding] Error skipping:', error.message)
+      }
+
+      // Redirect to beta support page
+      console.log('[FounderNote:Onboarding] Redirecting to beta support page')
+      router.push('/support')
     } catch (error) {
       console.error('[FounderNote:Onboarding] Error skipping:', error)
+      router.push('/support')
     } finally {
       setIsSaving(false)
     }
