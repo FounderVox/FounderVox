@@ -143,7 +143,7 @@ function LoginContent() {
       let profile = null
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('onboarding_completed, demo_completed')
+        .select('onboarding_completed')
         .eq('id', data.user.id)
         .single()
 
@@ -162,7 +162,6 @@ function LoginContent() {
               onboarding_completed: false,
               onboarding_step: 0,
               recordings_count: 0,
-              demo_completed: false,
               use_cases: [],
               subscription_tier: 'free',
             })
@@ -173,8 +172,7 @@ function LoginContent() {
           } else {
             console.log('[Login] Profile created successfully')
             profile = {
-              onboarding_completed: false,
-              demo_completed: false
+              onboarding_completed: false
             }
           }
         }
@@ -183,8 +181,7 @@ function LoginContent() {
       }
 
       console.log('[Login] Profile status:', {
-        onboarding_completed: profile?.onboarding_completed,
-        demo_completed: profile?.demo_completed
+        onboarding_completed: profile?.onboarding_completed
       })
 
       // Refresh session to ensure cookies are set
@@ -208,13 +205,8 @@ function LoginContent() {
 
       // Redirect based on onboarding status
       if (profile?.onboarding_completed) {
-        if (profile.demo_completed) {
-          console.log('[Login] Redirecting to dashboard')
-          window.location.href = '/dashboard'
-        } else {
-          console.log('[Login] Redirecting to demo')
-          window.location.href = '/demo'
-        }
+        console.log('[Login] Redirecting to dashboard')
+        window.location.href = '/dashboard'
       } else {
         console.log('[Login] Redirecting to welcome (onboarding)')
         window.location.href = '/welcome'

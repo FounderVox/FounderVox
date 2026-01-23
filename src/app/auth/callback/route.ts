@@ -47,15 +47,12 @@ export async function GET(request: Request) {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('onboarding_completed, demo_completed')
+        .select('onboarding_completed')
         .eq('id', user.id)
         .single()
 
       if (profile?.onboarding_completed) {
-        if (profile.demo_completed) {
-          return NextResponse.redirect(`${origin}/dashboard`)
-        }
-        return NextResponse.redirect(`${origin}/demo`)
+        return NextResponse.redirect(`${origin}/dashboard`)
       }
     }
 

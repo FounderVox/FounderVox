@@ -6,10 +6,9 @@ export const dynamic = 'force-dynamic'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
-import { UseCaseGrid } from '@/components/onboarding/use-case-grid'
-import { ProgressIndicator } from '@/components/onboarding/progress-indicator'
 import { Button } from '@/components/ui/button'
-import { Sparkles } from 'lucide-react'
+import { Check } from 'lucide-react'
+import { USE_CASES } from '@/lib/constants/use-cases'
 
 export default function UseCasesPage() {
   const [selectedUseCases, setSelectedUseCases] = useState<string[]>([])
@@ -138,72 +137,117 @@ export default function UseCasesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#BD6750] border-t-transparent" />
       </div>
     )
   }
 
   return (
     <motion.div
-      className="w-full max-w-3xl"
+      className="w-full max-w-2xl"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Glass card container */}
-      <div className="glass-card-light p-8 md:p-10 shadow-xl">
+      {/* Premium card container */}
+      <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-[#f0ebe6]">
         <div className="text-center mb-8">
-          <motion.div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/5 border border-black/10 mb-6"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Sparkles className="h-4 w-4 text-black" />
-            <span className="text-sm text-black font-medium">
-              Personalize your experience
-            </span>
-          </motion.div>
-
           <motion.h1
-            className="text-2xl md:text-3xl font-bold mb-3 text-black"
+            className="text-2xl font-semibold font-body text-[#1a1a1a] mb-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            What will you use voice notes for{displayName ? `, ${displayName}` : ''}?
+            How will you use FounderNote{displayName ? `, ${displayName}` : ''}?
           </motion.h1>
 
           <motion.p
-            className="text-gray-600"
+            className="text-[#666] font-body"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            Select all that apply - this helps us customize your templates
+            Select all that apply
           </motion.p>
         </div>
 
+        {/* Use case grid - cleaner, minimal design */}
         <motion.div
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <UseCaseGrid
-            selectedUseCases={selectedUseCases}
-            onToggle={toggleUseCase}
-          />
+          {USE_CASES.map((useCase, index) => {
+            const Icon = useCase.icon
+            const isSelected = selectedUseCases.includes(useCase.id)
+
+            return (
+              <motion.button
+                key={useCase.id}
+                onClick={() => toggleUseCase(useCase.id)}
+                className={`
+                  relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-200 text-center min-h-[100px]
+                  ${isSelected
+                    ? 'border-[#BD6750] bg-[#BD6750]/5'
+                    : 'border-[#e5e0db] bg-[#faf8f6] hover:border-[#BD6750]/40 hover:bg-[#faf8f6]'
+                  }
+                `}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + index * 0.05 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {/* Selection indicator */}
+                {isSelected && (
+                  <motion.div
+                    className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: '#BD6750' }}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                  >
+                    <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                  </motion.div>
+                )}
+
+                {/* Icon */}
+                <div
+                  className={`mb-2 p-2 rounded-xl transition-all duration-200 ${
+                    isSelected ? 'bg-[#BD6750]/10' : 'bg-white'
+                  }`}
+                >
+                  <Icon
+                    className={`h-5 w-5 transition-colors duration-200 ${
+                      isSelected ? 'text-[#BD6750]' : 'text-[#666]'
+                    }`}
+                    strokeWidth={1.5}
+                  />
+                </div>
+
+                {/* Title only - no description */}
+                <span
+                  className={`text-sm font-medium font-body transition-colors duration-200 ${
+                    isSelected ? 'text-[#BD6750]' : 'text-[#1a1a1a]'
+                  }`}
+                >
+                  {useCase.title}
+                </span>
+              </motion.button>
+            )
+          })}
         </motion.div>
 
         <motion.div
-          className="mt-8 flex flex-col items-center gap-4"
+          className="flex flex-col items-center gap-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
           <Button
             size="xl"
-            className="w-full max-w-xs bg-black hover:bg-black text-white shadow-lg"
+            className="w-full max-w-xs rounded-xl font-semibold transition-all duration-300 hover:shadow-lg font-body"
+            style={{ backgroundColor: '#BD6750', color: 'white' }}
             onClick={handleContinue}
             disabled={isSaving}
           >
@@ -217,20 +261,24 @@ export default function UseCasesPage() {
           <button
             onClick={handleSkip}
             disabled={isSaving}
-            className="text-sm text-gray-600 hover:text-black font-medium transition-colors"
+            className="text-sm text-[#666] hover:text-[#BD6750] font-medium font-body transition-colors"
           >
             Skip for now
           </button>
         </motion.div>
       </div>
 
+      {/* Progress indicator */}
       <motion.div
         className="mt-8 flex justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
-        <ProgressIndicator current={2} total={2} />
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-8 rounded-full" style={{ backgroundColor: '#BD6750' }} />
+          <div className="h-2 w-8 rounded-full" style={{ backgroundColor: '#BD6750' }} />
+        </div>
       </motion.div>
     </motion.div>
   )
