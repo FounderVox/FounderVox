@@ -55,9 +55,29 @@ export function RecordingModal({ isOpen, onClose, onStop }: RecordingModalProps 
   }, [isRecording, isPaused, getAnalyserData])
 
   useEffect(() => {
-    if (!recordingContext || !startRecording) return
+    console.log('[RecordingModal] State changed:', {
+      isOpen,
+      isRecording,
+      isPaused,
+      isProcessing,
+      isComplete,
+      duration,
+      error,
+      hasContext: !!recordingContext
+    })
+  }, [isOpen, isRecording, isPaused, isProcessing, isComplete, duration, error, recordingContext])
+
+  useEffect(() => {
+    if (!recordingContext || !startRecording) {
+      console.log('[RecordingModal] Missing context or startRecording:', {
+        hasContext: !!recordingContext,
+        hasStartRecording: !!startRecording
+      })
+      return
+    }
     if (isOpen && !hasStartedRef.current) {
       hasStartedRef.current = true
+      console.log('[RecordingModal] Modal opened, starting recording...')
       startRecording()
     }
     if (!isOpen) {

@@ -29,6 +29,10 @@ export default function FAQSection() {
     {
       question: 'How does the AI analysis work?',
       answer: 'Our AI analyzes your voice notes to extract key insights, action items, and summaries. It also powers our Ask feature—semantic search that lets you ask questions about your notes and get instant, relevant answers from your personal knowledge base.'
+    },
+    {
+      question: 'Do Founder Notes have apps in the Play Store and App Store?',
+      answer: 'No, Founder Notes is currently only available as a web app. However, we are working on releasing apps in the Play Store and App Store in the future.'
     }
   ]
 

@@ -5,6 +5,9 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  console.log('='.repeat(60))
+  console.log('[Upload] ========== UPLOAD REQUEST RECEIVED ==========')
+  console.log('='.repeat(60))
   try {
     console.log('[Upload] Starting upload process...')
     const supabase = await createClient()

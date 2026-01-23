@@ -34,7 +34,7 @@ export default function ContactPage() {
               Get in Touch
             </h1>
             <p className="text-lg md:text-xl leading-relaxed text-[#666] font-body max-w-2xl mx-auto">
-              We'd love to hear from you. Whether you have a question, feedback, or just want to say hello — reach out anytime.
+              We&apos;d love to hear from you. Whether you have a question, feedback, or just want to say hello — reach out anytime.
             </p>
           </motion.div>
 
@@ -56,7 +56,7 @@ export default function ContactPage() {
               </div>
               <h2 className="text-2xl font-display text-[#1a1a1a] mb-3">Email Us</h2>
               <p className="text-[#666] font-body mb-6">
-                Drop us a line and we'll get back to you as soon as possible.
+                Drop us a line and we&apos;ll get back to you as soon as possible.
               </p>
               <a
                 href="mailto:foundervox.workplace@gmail.com"
@@ -80,7 +80,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-display text-[#1a1a1a] mb-1">Feedback Welcome</h3>
                     <p className="text-sm text-[#666] font-body">
-                      We're always looking for ways to improve. Share your thoughts and suggestions with us.
+                      We&apos;re always looking for ways to improve. Share your thoughts and suggestions with us.
                     </p>
                   </div>
                 </div>
@@ -106,7 +106,7 @@ export default function ContactPage() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            We're a small team of three developers building Founder Notes with care. Every message matters to us.
+            We&apos;re a small team of three developers building Founder Notes with care. Every message matters to us.
           </motion.p>
         </div>
       </section>

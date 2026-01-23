@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useCallback } from 'react'
+// Debug logging enabled for voice transcription testing
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRecordingContext } from '@/contexts/recording-context'
 import { X, CheckCircle2, Sparkles, FileText } from 'lucide-react'
@@ -17,6 +18,17 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
   const isComplete = context?.isComplete ?? false
   const error = context?.error ?? null
   const reset = context?.reset
+
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log('[Founder Notes:ProcessingModal] State:', {
+      isOpen,
+      isProcessing,
+      isComplete,
+      error,
+      hasContext: !!context
+    })
+  }, [isOpen, isProcessing, isComplete, error, context])
 
   const handleClose = useCallback(() => {
     console.log('[Founder Notes:ProcessingModal] Closing and resetting...')

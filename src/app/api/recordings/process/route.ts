@@ -32,11 +32,16 @@ function getDeepgram(): DeepgramClient {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('='.repeat(60))
+  console.log('[Process] ========== PROCESS REQUEST RECEIVED ==========')
+  console.log('='.repeat(60))
+  
   // Parse request body first (can only be read once)
   let recordingId: string | undefined
   try {
     const body = await request.json()
     recordingId = body.recordingId
+    console.log('[Process] Recording ID from request:', recordingId)
   } catch (parseError) {
     console.error('[Process] Failed to parse request body:', parseError)
     return NextResponse.json(
@@ -312,7 +317,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('[Process] Processing complete for recording:', recordingId)
+    console.log('='.repeat(60))
+    console.log('[Process] ========== PROCESSING COMPLETE ==========')
+    console.log('[Process] Recording ID:', recordingId)
+    console.log('[Process] Note ID:', note?.id || 'NONE')
+    console.log('[Process] Transcript length:', cleanedTranscript.length)
+    console.log('[Process] Duration:', Math.floor(actualDuration), 'seconds')
+    console.log('='.repeat(60))
 
     return NextResponse.json({
       success: true,
