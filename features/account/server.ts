@@ -99,15 +99,16 @@ export async function startOnboardingCheckout() {
       return null;
     }
 
-    // Create checkout URL with redirect to dashboard after completion
+    // Create checkout URL with redirect to success page after completion
+    // The success page will poll for payment confirmation before redirecting to dashboard
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    console.log('[startOnboardingCheckout] Creating checkout URL with redirect:', `${appUrl}/dashboard`);
+    console.log('[startOnboardingCheckout] Creating checkout URL with redirect:', `${appUrl}/payment/success`);
     
     const checkoutUrl = await createCheckoutUrl({
       variantId: variant.id.toString(),
       userEmail: user.email || "",
       userId: user.id,
-      redirectUrl: `${appUrl}/dashboard`,
+      redirectUrl: `${appUrl}/payment/success`,
     });
 
     console.log('[startOnboardingCheckout] Checkout URL created:', checkoutUrl ? 'Success' : 'Failed');

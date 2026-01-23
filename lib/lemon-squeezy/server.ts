@@ -139,7 +139,7 @@ export async function createCheckoutUrl({
   }
 
   // Determine test mode from environment variable
-  const testMode = process.env.LEMON_SQUEEZY_TEST_MODE === "false";
+  const testMode = process.env.LEMON_SQUEEZY_TEST_MODE === "true"; 
   console.log('[createCheckoutUrl] Creating checkout with test_mode:', testMode);
 
   try {

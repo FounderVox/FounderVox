@@ -5,10 +5,13 @@ import { updateSession } from '@/lib/supabase/middleware'
 const publicRoutes = ['/', '/login', '/signup', '/auth/callback', '/pricing', '/download']
 
 // Routes that require authentication
-const protectedRoutes = ['/dashboard', '/welcome', '/use-cases', '/support']
+const protectedRoutes = ['/dashboard', '/welcome', '/use-cases', '/support', '/payment']
 
 // Routes that require payment (subset of protected routes)
 const paidRoutes = ['/dashboard']
+
+// Routes that are in payment flow (don't redirect away from these)
+const paymentFlowRoutes = ['/payment/success']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -68,6 +71,15 @@ export async function middleware(request: NextRequest) {
 
   // Check if route requires payment
   const isPaidRoute = paidRoutes.some((route) => pathname.startsWith(route))
+  
+  // Check if in payment flow (don't interfere with these)
+  const isPaymentFlowRoute = paymentFlowRoutes.some((route) => pathname.startsWith(route))
+  
+  // Allow payment flow routes without additional checks
+  if (user && isPaymentFlowRoute) {
+    console.log('[FounderNote:Middleware] Payment flow route, allowing access')
+    return supabaseResponse
+  }
 
   // OPTIMIZATION: Fetch profile data ONCE if user is authenticated and needs routing decisions
   const isOnboardingRoute = pathname === '/welcome' || pathname === '/use-cases' || pathname === '/support'
