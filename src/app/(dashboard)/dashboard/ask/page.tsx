@@ -486,19 +486,19 @@ export default function AskPage() {
             </p>
 
             {/* Example Questions - Responsive Grid/Scroll */}
-            <div className="w-full max-w-3xl">
+            <div className="w-full max-w-4xl">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-3 font-medium text-left">
                 Try asking
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-3 lg:overflow-x-auto lg:pb-2">
-                {EXAMPLE_QUESTIONS.slice(0, 4).map((question, index) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-3 lg:overflow-x-auto lg:pb-2 try-asking-scroll">
+                {EXAMPLE_QUESTIONS.map((question, index) => (
                   <motion.button
                     key={index}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 + index * 0.05 }}
                     onClick={() => handleSubmit(question)}
-                    className="lg:flex-shrink-0 text-left px-4 py-3 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all group shadow-sm lg:max-w-[260px]"
+                    className="lg:flex-shrink-0 text-left px-4 py-3 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all group shadow-sm lg:min-w-[270px] lg:max-w-[270px]"
                   >
                     <span className="text-sm text-gray-700 group-hover:text-gray-900 line-clamp-2">
                       {question}

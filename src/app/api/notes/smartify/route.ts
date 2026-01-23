@@ -87,8 +87,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get note ID from request
-    const { noteId } = await request.json()
+    // Get note ID and categories from request
+    const { noteId, categories } = await request.json()
+
+    // Default categories if not provided
+    const selectedCategories = categories || {
+      actionItems: true,
+      investorUpdates: true,
+      brainDump: true
+    }
 
     if (!noteId) {
       return NextResponse.json(
@@ -147,30 +154,49 @@ export async function POST(request: NextRequest) {
     await trackServerEvent(user.id, 'smartify_started', 'feature', { note_id: noteId })
 
     // Find or create a recording record for this note
-    // We'll use the audio_url to find the recording, or create a new one
+    // Use note_id for stable lookups to prevent phantom recordings
     let recordingId: string | null = null
 
-    if (note.audio_url) {
-      // Try to find existing recording by audio_url
-      const { data: existingRecording } = await supabase
+    // First, try to find existing recording by note_id (most reliable)
+    const { data: existingByNoteId } = await supabase
+      .from('recordings')
+      .select('id')
+      .eq('note_id', noteId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (existingByNoteId) {
+      recordingId = existingByNoteId.id
+      console.log('[Smartify] Found existing recording by note_id:', recordingId)
+    } else if (note.audio_url) {
+      // Fallback: try to find by audio_url
+      const { data: existingByAudio } = await supabase
         .from('recordings')
         .select('id')
         .eq('audio_url', note.audio_url)
         .eq('user_id', user.id)
         .single()
 
-      if (existingRecording) {
-        recordingId = existingRecording.id
+      if (existingByAudio) {
+        recordingId = existingByAudio.id
+        console.log('[Smartify] Found existing recording by audio_url:', recordingId)
+
+        // Update the recording to include note_id for future lookups
+        await supabase
+          .from('recordings')
+          .update({ note_id: noteId })
+          .eq('id', recordingId)
       }
     }
 
-    // If no recording found, create a new one (even without audio_url)
+    // If no recording found, create a new one with note_id
     if (!recordingId) {
       console.log('[Smartify] Creating new recording record for note:', noteId)
       const { data: newRecording, error: recError } = await supabase
         .from('recordings')
         .insert({
           user_id: user.id,
+          note_id: noteId,
           audio_url: note.audio_url || null,
           raw_transcript: transcript,
           cleaned_transcript: note.formatted_content || transcript,
@@ -188,24 +214,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Run extraction functions in parallel (only action items, investor updates, and brain dump)
+    // Run extraction functions in parallel (only selected categories)
     if (recordingId) {
       console.log('[Smartify] Running extraction with recording ID:', recordingId)
-      const results = await Promise.allSettled([
-        extractActionItems(transcript, recordingId, user.id),
-        extractInvestorUpdate(transcript, recordingId, user.id),
-        extractBrainDump(transcript, recordingId, user.id)
-      ])
+      console.log('[Smartify] Selected categories:', selectedCategories)
 
-      // Log any failures
-      results.forEach((result, index) => {
-        const names = ['ActionItems', 'InvestorUpdate', 'BrainDump']
-        if (result.status === 'rejected') {
-          console.error(`[Smartify] ${names[index]} extraction failed:`, result.reason)
-        } else {
-          console.log(`[Smartify] ${names[index]} extraction completed`)
-        }
-      })
+      // Build extraction promises based on selected categories
+      const extractionPromises: { name: string; promise: Promise<void> }[] = []
+
+      if (selectedCategories.actionItems) {
+        extractionPromises.push({
+          name: 'ActionItems',
+          promise: extractActionItems(transcript, recordingId, user.id)
+        })
+      }
+      if (selectedCategories.investorUpdates) {
+        extractionPromises.push({
+          name: 'InvestorUpdate',
+          promise: extractInvestorUpdate(transcript, recordingId, user.id)
+        })
+      }
+      if (selectedCategories.brainDump) {
+        extractionPromises.push({
+          name: 'BrainDump',
+          promise: extractBrainDump(transcript, recordingId, user.id)
+        })
+      }
+
+      if (extractionPromises.length > 0) {
+        const results = await Promise.allSettled(extractionPromises.map(e => e.promise))
+
+        // Log any failures
+        results.forEach((result, index) => {
+          const name = extractionPromises[index].name
+          if (result.status === 'rejected') {
+            console.error(`[Smartify] ${name} extraction failed:`, result.reason)
+          } else {
+            console.log(`[Smartify] ${name} extraction completed`)
+          }
+        })
+      } else {
+        console.log('[Smartify] No categories selected for extraction')
+      }
     } else {
       console.warn('[Smartify] No recording ID available - extraction requires a recording record')
       // Return empty counts if we couldn't create a recording

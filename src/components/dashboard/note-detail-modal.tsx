@@ -36,6 +36,8 @@ export function NoteDetailModal({ open, onOpenChange, noteId }: NoteDetailModalP
   const [editedTitle, setEditedTitle] = useState('')
   const [editedContent, setEditedContent] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [isTitleHovered, setIsTitleHovered] = useState(false)
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -143,6 +145,36 @@ export function NoteDetailModal({ open, onOpenChange, noteId }: NoteDetailModalP
     setError(null)
   }
 
+  const handleTitleSave = async () => {
+    if (!noteId || editedTitle.trim() === note?.title) {
+      setIsEditingTitle(false)
+      return
+    }
+
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        setIsEditingTitle(false)
+        return
+      }
+
+      const newTitle = editedTitle.trim() || 'Untitled Note'
+      const { error } = await supabase
+        .from('notes')
+        .update({ title: newTitle })
+        .eq('id', noteId)
+        .eq('user_id', user.id)
+
+      if (!error) {
+        setNote(prev => prev ? { ...prev, title: newTitle } : null)
+        window.dispatchEvent(new CustomEvent('noteUpdated', { detail: { noteId } }))
+      }
+    } catch (err) {
+      console.error('[NoteDetailModal] Error saving title:', err)
+    }
+    setIsEditingTitle(false)
+  }
+
   const toggleStar = async () => {
     if (!noteId || !note) return
 
@@ -232,9 +264,46 @@ export function NoteDetailModal({ open, onOpenChange, noteId }: NoteDetailModalP
                         autoFocus
                       />
                     ) : (
-                      <h1 className="text-2xl font-bold text-gray-900 truncate">
-                        {note.title || 'Untitled Note'}
-                      </h1>
+                      <div
+                        className="relative group"
+                        onMouseEnter={() => setIsTitleHovered(true)}
+                        onMouseLeave={() => setIsTitleHovered(false)}
+                      >
+                        {isEditingTitle ? (
+                          <input
+                            type="text"
+                            value={editedTitle}
+                            onChange={(e) => setEditedTitle(e.target.value)}
+                            onBlur={handleTitleSave}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleTitleSave()
+                              if (e.key === 'Escape') {
+                                setIsEditingTitle(false)
+                                setEditedTitle(note?.title || '')
+                              }
+                            }}
+                            className="w-full text-2xl font-bold text-gray-900 bg-white border-2 border-[#BD6750] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#BD6750]/20"
+                            autoFocus
+                          />
+                        ) : (
+                          <>
+                            <h1
+                              onClick={() => setIsEditingTitle(true)}
+                              className="text-2xl font-bold text-gray-900 leading-relaxed break-words cursor-text hover:bg-gray-50 rounded-lg px-3 py-2 -mx-3 transition-colors"
+                            >
+                              {note.title || 'Untitled Note'}
+                            </h1>
+                            {isTitleHovered && (
+                              <button
+                                onClick={() => setIsEditingTitle(true)}
+                                className="absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-white shadow-md border border-gray-200 text-gray-500 hover:text-[#BD6750] transition-colors"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     )}
                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                       <div className="flex items-center gap-1.5">

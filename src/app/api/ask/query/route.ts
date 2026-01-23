@@ -290,7 +290,7 @@ CRITICAL RULES:
 1. ONLY use information from the provided note excerpts to answer questions
 2. When citing information, place citation markers like [1], [2] at the END of the relevant sentence or statement
 3. If multiple notes support a point, cite all of them together: [1][2]
-4. If you cannot find relevant information in the notes, clearly state: "I couldn't find information about this in your notes."
+4. If you cannot find relevant information in the notes, respond warmly: "I don't have information about this in your notes yet. Feel free to record a voice note about it, and I'll be able to help you recall it later!"
 5. Be concise but thorough - founders are busy
 6. For follow-up questions, use the conversation history for context
 7. Format responses with markdown for readability when appropriate
@@ -313,7 +313,7 @@ Answer based on the information in these notes, using citation markers [1], [2],
     } else {
       userPrompt = `${conversationContext ? `Previous conversation:\n${conversationContext}\n\n---\n\n` : ''}Question: ${query}
 
-I searched your notes but couldn't find any relevant content for this query. Please provide an appropriate response.`
+I searched your notes but couldn't find any relevant content. Provide a helpful, encouraging response that invites the user to add this information via a voice note.`
     }
 
     const completion = await getOpenAI().chat.completions.create({

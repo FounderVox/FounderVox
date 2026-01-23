@@ -49,6 +49,18 @@ function isTranscriptMeaningful(transcript: string): boolean {
   return words.length >= 10
 }
 
+/**
+ * Normalize task text for duplicate comparison.
+ * Converts to lowercase, removes punctuation, normalizes whitespace.
+ */
+function normalizeTask(task: string): string {
+  return task
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s]/g, '')
+    .replace(/\s+/g, ' ')
+}
+
 export async function extractActionItems(transcript: string, recordingId: string, userId: string): Promise<void> {
   // Validate transcript has meaningful content
   if (!isTranscriptMeaningful(transcript)) {
@@ -121,7 +133,38 @@ Return format (must be valid JSON object):
 
     // Save to database
     const supabase = await createClient()
-    const itemsToInsert = actionItems.map(item => ({
+
+    // Get existing open tasks for this user to check for duplicates
+    const { data: existingItems } = await supabase
+      .from('action_items')
+      .select('task')
+      .eq('user_id', userId)
+      .eq('status', 'open')
+
+    const existingTasks = new Set(
+      (existingItems || []).map(item => normalizeTask(item.task))
+    )
+
+    console.log('[Extraction] Found', existingTasks.size, 'existing open tasks')
+
+    // Filter out duplicates based on normalized task text
+    const newItems = actionItems.filter(item => {
+      const normalized = normalizeTask(item.task || '')
+      const isDuplicate = existingTasks.has(normalized)
+      if (isDuplicate) {
+        console.log('[Extraction] Skipping duplicate task:', item.task)
+      }
+      return !isDuplicate
+    })
+
+    if (newItems.length === 0) {
+      console.log('[Extraction] All action items were duplicates, nothing to insert')
+      return
+    }
+
+    console.log('[Extraction] After dedup:', newItems.length, 'new items (filtered out', actionItems.length - newItems.length, 'duplicates)')
+
+    const itemsToInsert = newItems.map(item => ({
       recording_id: recordingId,
       user_id: userId,
       task: item.task || 'Untitled task',
@@ -135,10 +178,15 @@ Return format (must be valid JSON object):
 
     const { data, error } = await supabase.from('action_items').insert(itemsToInsert).select()
     if (error) {
+      // Handle unique constraint violation gracefully
+      if (error.code === '23505') {
+        console.log('[Extraction] Some items already exist (unique constraint), continuing...')
+        return
+      }
       console.error('[Extraction] Error saving action items:', error)
       throw error
     } else {
-      console.log(`[Extraction] Successfully saved ${actionItems.length} action items to database:`, data?.map(i => i.id))
+      console.log(`[Extraction] Successfully saved ${newItems.length} action items to database:`, data?.map(i => i.id))
     }
   } catch (error) {
     console.error('[Extraction] Action items error:', error)

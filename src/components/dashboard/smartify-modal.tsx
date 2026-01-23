@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Wand2, CheckCircle2, XCircle, Loader2, CheckCircle, AlertCircle, ClipboardList, Briefcase, Brain } from 'lucide-react'
+import { Wand2, CheckCircle2, XCircle, Loader2, CheckCircle, AlertCircle, ClipboardList, Briefcase, Brain, Check } from 'lucide-react'
 
 interface SmartifyModalProps {
   open: boolean
@@ -20,12 +20,23 @@ interface ExtractionPreview {
   productIdeas?: number
 }
 
+interface SelectedCategories {
+  actionItems: boolean
+  investorUpdates: boolean
+  brainDump: boolean
+}
+
 export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: SmartifyModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [preview, setPreview] = useState<ExtractionPreview | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>({
+    actionItems: true,
+    investorUpdates: true,
+    brainDump: true
+  })
 
   useEffect(() => {
     if (open && noteId) {
@@ -37,6 +48,11 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
       setPreview(null)
       setError(null)
       setShowPreview(false)
+      setSelectedCategories({
+        actionItems: true,
+        investorUpdates: true,
+        brainDump: true
+      })
     }
   }, [open, noteId])
 
@@ -79,11 +95,12 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
       setIsSaving(true)
       setError(null)
       console.log('[FounderNote:SmartifyModal] Confirming and saving extraction for note:', noteId)
+      console.log('[FounderNote:SmartifyModal] Selected categories:', selectedCategories)
 
       const response = await fetch('/api/notes/smartify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ noteId })
+        body: JSON.stringify({ noteId, categories: selectedCategories })
       })
 
       if (!response.ok) {
@@ -110,6 +127,19 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
   const totalExtracted = preview
     ? preview.actionItems + preview.investorUpdates + preview.brainDump
     : 0
+
+  const selectedTotal = preview
+    ? (selectedCategories.actionItems ? preview.actionItems : 0) +
+      (selectedCategories.investorUpdates ? preview.investorUpdates : 0) +
+      (selectedCategories.brainDump ? preview.brainDump : 0)
+    : 0
+
+  const toggleCategory = (category: keyof SelectedCategories) => {
+    setSelectedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }))
+  }
 
   if (!open) return null
 
@@ -200,57 +230,99 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
                 </p>
               </div>
 
-              {/* Preview Grid - Brand accented */}
+              {/* Preview Grid - Clickable category toggles */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 {preview.actionItems > 0 && (
-                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-brand/40 hover:shadow-sm transition-all duration-200">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-brand-light">
-                        <ClipboardList className="h-4 w-4 text-brand" />
+                  <button
+                    onClick={() => toggleCategory('actionItems')}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                      selectedCategories.actionItems
+                        ? 'bg-white border-brand ring-2 ring-brand/20 shadow-sm'
+                        : 'bg-gray-50 border-gray-200 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${selectedCategories.actionItems ? 'bg-brand-light' : 'bg-gray-100'}`}>
+                        <ClipboardList className={`h-4 w-4 ${selectedCategories.actionItems ? 'text-brand' : 'text-gray-400'}`} />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-900">Action Items</span>
-                          <span className="text-lg font-bold text-brand">{preview.actionItems}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-lg font-bold ${selectedCategories.actionItems ? 'text-brand' : 'text-gray-400'}`}>{preview.actionItems}</span>
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                              selectedCategories.actionItems ? 'bg-brand border-brand' : 'border-gray-300'
+                            }`}>
+                              {selectedCategories.actionItems && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                          </div>
                         </div>
                         <p className="text-xs text-gray-500">Tasks and todos</p>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 )}
 
                 {preview.investorUpdates > 0 && (
-                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-brand/40 hover:shadow-sm transition-all duration-200">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-brand-light">
-                        <Briefcase className="h-4 w-4 text-brand" />
+                  <button
+                    onClick={() => toggleCategory('investorUpdates')}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                      selectedCategories.investorUpdates
+                        ? 'bg-white border-brand ring-2 ring-brand/20 shadow-sm'
+                        : 'bg-gray-50 border-gray-200 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${selectedCategories.investorUpdates ? 'bg-brand-light' : 'bg-gray-100'}`}>
+                        <Briefcase className={`h-4 w-4 ${selectedCategories.investorUpdates ? 'text-brand' : 'text-gray-400'}`} />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-900">Investor Updates</span>
-                          <span className="text-lg font-bold text-brand">{preview.investorUpdates}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-lg font-bold ${selectedCategories.investorUpdates ? 'text-brand' : 'text-gray-400'}`}>{preview.investorUpdates}</span>
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                              selectedCategories.investorUpdates ? 'bg-brand border-brand' : 'border-gray-300'
+                            }`}>
+                              {selectedCategories.investorUpdates && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                          </div>
                         </div>
                         <p className="text-xs text-gray-500">Update drafts</p>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 )}
 
                 {preview.brainDump > 0 && (
-                  <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-brand/40 hover:shadow-sm transition-all duration-200 col-span-2">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-brand-light">
-                        <Brain className="h-4 w-4 text-brand" />
+                  <button
+                    onClick={() => toggleCategory('brainDump')}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-left col-span-2 ${
+                      selectedCategories.brainDump
+                        ? 'bg-white border-brand ring-2 ring-brand/20 shadow-sm'
+                        : 'bg-gray-50 border-gray-200 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${selectedCategories.brainDump ? 'bg-brand-light' : 'bg-gray-100'}`}>
+                        <Brain className={`h-4 w-4 ${selectedCategories.brainDump ? 'text-brand' : 'text-gray-400'}`} />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-900">Brain Dump Notes</span>
-                          <span className="text-lg font-bold text-brand">{preview.brainDump}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-lg font-bold ${selectedCategories.brainDump ? 'text-brand' : 'text-gray-400'}`}>{preview.brainDump}</span>
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                              selectedCategories.brainDump ? 'bg-brand border-brand' : 'border-gray-300'
+                            }`}>
+                              {selectedCategories.brainDump && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                          </div>
                         </div>
                         <p className="text-xs text-gray-500">Thoughts and insights</p>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 )}
               </div>
 
@@ -271,13 +343,13 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
                 >
                   Cancel
                 </button>
-                {totalExtracted > 0 && (
+                {selectedTotal > 0 && (
                   <button
                     onClick={handleConfirm}
                     className="px-6 py-2.5 bg-brand text-white rounded-xl hover:opacity-90 transition-all flex items-center gap-2 font-medium shadow-sm"
                   >
                     <CheckCircle className="h-4 w-4" />
-                    Create {totalExtracted} Item{totalExtracted !== 1 ? 's' : ''}
+                    Create {selectedTotal} Item{selectedTotal !== 1 ? 's' : ''}
                   </button>
                 )}
               </div>

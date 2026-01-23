@@ -729,3 +729,19 @@ html {
 .animate-fan-out {
   animation: fanOut 0.5s ease-out forwards;
 }
+
+/* Try Asking section custom scrollbar */
+.try-asking-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.try-asking-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 3px;
+}
+.try-asking-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #BD6750 0%, #a85744 100%);
+  border-radius: 3px;
+}
+.try-asking-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a85744;
+}
