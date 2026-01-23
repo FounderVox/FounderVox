@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { startOnboardingCheckout } from '../../../../features/account/server'
 
-const BETA_PRICE = '29.99'
+const BETA_PRICE = '9.99'
 
 export default function BetaSupportPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -94,7 +94,7 @@ export default function BetaSupportPage() {
           <div className="text-sm text-gray-500 uppercase tracking-wide mb-2 font-body">Beta Access</div>
           <div className="flex items-baseline justify-center gap-1">
             <span className="text-5xl font-bold text-black">{BETA_PRICE}</span>
-            <span className="text-xl text-gray-500">QAR</span>
+            <span className="text-xl text-gray-500">USD</span>
           </div>
           <div className="text-sm text-gray-500 mt-2 font-body">One-time payment</div>
         </div>
