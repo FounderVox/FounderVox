@@ -165,8 +165,8 @@ export default function BetaSupportPage() {
       >
         <h3 className="text-xl font-bold mb-6 text-black">Why we need your support</h3>
         <p className="text-gray-600 mb-8 font-body">
-          We are a small team of three independent developers. We don't have VC funding, 
-          which means we answer only to our users. Your support helps us fund our developers 
+          We are a small team of three independent developers. We don&apos;t have VC funding,
+          which means we answer only to our users. Your support helps us fund our developers
           and cover operational costs.
         </p>
         
