@@ -2,8 +2,8 @@
 import {
   createCheckoutUrl,
   createCustomerPortal,
-  getCheckoutVariantId,
 } from "../../lib/lemon-squeezy/server";
+import { getCheckoutVariantId } from "../../lib/lemon-squeezy/config";
 import { getCustomerId } from "../../supabase/database/user";
 import { getSubscriptionId } from "../../supabase/database/subscriptions";
 import { createClient } from "../../src/lib/supabase/server";
