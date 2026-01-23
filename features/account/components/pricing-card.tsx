@@ -19,11 +19,14 @@ interface PricingCardProps {
     name: string;
     price_formatted: string;
     description: string;
-    variant_id?: string;
     test_mode: boolean;
   };
 }
 
+/**
+ * Pricing card component for displaying a subscription option.
+ * Now uses environment-configured variant ID instead of dynamic selection.
+ */
 export function PricingCard({ product }: PricingCardProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -42,10 +45,9 @@ export function PricingCard({ product }: PricingCardProps) {
   };
 
   const onSubscribe = () => {
-    if (!product.variant_id) return;
-    
     startTransition(async () => {
-      const checkoutUrl = await handleCheckout(product.variant_id!);
+      // Variant ID is now sourced from environment variables
+      const checkoutUrl = await handleCheckout();
       if (checkoutUrl) {
         router.push(checkoutUrl);
       }
@@ -77,7 +79,7 @@ export function PricingCard({ product }: PricingCardProps) {
           className="w-full"
           size="lg"
           onClick={onSubscribe}
-          disabled={isPending || !product.variant_id}
+          disabled={isPending}
         >
           {isPending ? "Processing..." : "Subscribe"}
         </Button>

@@ -4,7 +4,6 @@ interface Product {
   name: string;
   price_formatted: string;
   description: string;
-  variant_id?: string;
   test_mode: boolean;
   [key: string]: any;
 }
@@ -13,6 +12,11 @@ interface PricingSectionProps {
   products: Product[];
 }
 
+/**
+ * Pricing section component for displaying subscription options.
+ * Note: Variant ID is now sourced from environment variables,
+ * not from product data. This component is for display only.
+ */
 export function PricingSection({ products }: PricingSectionProps) {
   if (products.length === 0) {
     return (
@@ -40,7 +44,7 @@ export function PricingSection({ products }: PricingSectionProps) {
         }`}
       >
         {products.map((product, index) => (
-          <PricingCard key={product.variant_id || index} product={product} />
+          <PricingCard key={index} product={product} />
         ))}
       </div>
     </div>
