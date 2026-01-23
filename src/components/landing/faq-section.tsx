@@ -11,16 +11,16 @@ export default function FAQSection() {
 
   const faqs = [
     {
-      question: 'How does FounderNote work?',
+      question: 'How does Founder Notes work?',
       answer: 'Simply tap to record and speak your thoughts. Our AI transcribes in real-time with 95%+ accuracy, then automatically categorizes your content into notes, tasks, meetings, and more. From there, you can export to emails, social posts, or action items with one click.'
     },
     {
-      question: 'Who is FounderNote for?',
-      answer: 'FounderNote is built for founders, executives, and professionals who think faster than they type. If you\'re constantly capturing ideas, managing tasks, and need to stay organized, FounderNote helps you do it all through voice—without slowing down.'
+      question: 'Who is Founder Notes for?',
+      answer: 'Founder Notes is built for founders, executives, and professionals who think faster than they type. If you\'re constantly capturing ideas, managing tasks, and need to stay organized, Founder Notes helps you do it all through voice—without slowing down.'
     },
     {
       question: 'Is there a free plan?',
-      answer: 'Yes! We are currently in our beta testing phase and provide our beta users with 10 free notes and 100 minutes of audio transcription per month. This is a great opportunity to experience FounderNote and help shape the future of voice-first productivity.'
+      answer: 'Yes! We are currently in our beta testing phase and provide our beta users with 10 free notes and 100 minutes of audio transcription per month. This is a great opportunity to experience Founder Notes and help shape the future of voice-first productivity.'
     },
     {
       question: 'What languages are supported?',
@@ -45,7 +45,7 @@ export default function FAQSection() {
             Frequently asked questions
           </h2>
           <p className="text-lg md:text-xl text-gray-500 font-body">
-            Everything you need to know about FounderNote.
+            Everything you need to know about Founder Notes.
           </p>
         </motion.div>
 

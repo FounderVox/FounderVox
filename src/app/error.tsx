@@ -14,7 +14,7 @@ export default function Error({
   const router = useRouter()
 
   useEffect(() => {
-    console.error('[FounderNote:Error] Error caught:', {
+    console.error('[Founder Notes:Error] Error caught:', {
       message: error.message,
       stack: error.stack,
       digest: error.digest,

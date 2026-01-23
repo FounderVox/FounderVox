@@ -241,7 +241,7 @@ function LoginContent() {
           Welcome back
         </h1>
         <p className="text-[#666] font-body">
-          Sign in to continue to FounderNote
+          Sign in to continue to Founder Notes
         </p>
       </div>
 

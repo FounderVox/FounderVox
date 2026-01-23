@@ -105,7 +105,7 @@ export default function BetaPage() {
               <span className="text-[#BD6750]">circle of builders</span>
             </h1>
             <p className="text-lg md:text-xl text-[#666] font-body max-w-2xl mx-auto">
-              Be among the first to experience FounderNote. Help shape the future of
+              Be among the first to experience Founder Notes. Help shape the future of
               voice-powered productivity for founders.
             </p>
           </motion.div>
@@ -264,7 +264,7 @@ export default function BetaPage() {
             {[
               {
                 q: 'What happens after the beta ends?',
-                a: 'After beta testing, founding members will receive an exclusive discount on our upcoming lifetime deal promotion. This is our way of thanking early supporters who helped shape FounderNote.'
+                a: 'After beta testing, founding members will receive an exclusive discount on our upcoming lifetime deal promotion. This is our way of thanking early supporters who helped shape Founder Notes.'
               },
               {
                 q: 'Can I upgrade my limits later?',
@@ -272,7 +272,7 @@ export default function BetaPage() {
               },
               {
                 q: 'How do I provide feedback?',
-                a: 'As a beta member, you get direct access to our team through a private feedback channel. Your input directly shapes the product.'
+                a: 'As a beta member, you get direct access to our team through a priority support channel. Your input directly shapes the product.'
               },
               {
                 q: 'Is my data secure during beta?',

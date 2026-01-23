@@ -10,7 +10,7 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error('[FounderNote:GlobalError] Global error caught:', {
+    console.error('[Founder Notes:GlobalError] Global error caught:', {
       message: error.message,
       stack: error.stack,
       digest: error.digest,

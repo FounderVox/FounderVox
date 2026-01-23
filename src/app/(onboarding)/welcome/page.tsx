@@ -26,20 +26,20 @@ export default function WelcomePage() {
     initRef.current = true
 
     const loadUser = async () => {
-      console.log('[FounderNote:Onboarding] Loading user for welcome page...')
+      console.log('[Founder Notes:Onboarding] Loading user for welcome page...')
       const { data: { user }, error } = await supabase.auth.getUser()
 
       if (error) {
-        console.error('[FounderNote:Onboarding] Error loading user:', error.message)
+        console.error('[Founder Notes:Onboarding] Error loading user:', error.message)
       }
 
       if (!user) {
-        console.log('[FounderNote:Onboarding] No user found, redirecting to login')
+        console.log('[Founder Notes:Onboarding] No user found, redirecting to login')
         router.push('/login')
         return
       }
 
-      console.log('[FounderNote:Onboarding] User loaded:', user.email)
+      console.log('[Founder Notes:Onboarding] User loaded:', user.email)
 
       // Get name from OAuth metadata or profile
       const fullName = user.user_metadata?.full_name ||
@@ -47,7 +47,7 @@ export default function WelcomePage() {
                        ''
       const firstNamePart = fullName.split(' ')[0] || ''
 
-      console.log('[FounderNote:Onboarding] Pre-filling name:', firstNamePart || '(none)')
+      console.log('[Founder Notes:Onboarding] Pre-filling name:', firstNamePart || '(none)')
       setFirstName(firstNamePart)
       setDisplayName(firstNamePart)
       setIsLoading(false)
@@ -61,7 +61,7 @@ export default function WelcomePage() {
 
     if (!displayName.trim()) return
 
-    console.log('[FounderNote:Onboarding] Saving display name:', displayName.trim())
+    console.log('[Founder Notes:Onboarding] Saving display name:', displayName.trim())
     setIsSaving(true)
 
     try {
@@ -74,16 +74,16 @@ export default function WelcomePage() {
           .eq('id', user.id)
 
         if (error) {
-          console.error('[FounderNote:Onboarding] Error updating profile:', error.message)
+          console.error('[Founder Notes:Onboarding] Error updating profile:', error.message)
           throw error
         }
 
-        console.log('[FounderNote:Onboarding] Display name saved successfully')
+        console.log('[Founder Notes:Onboarding] Display name saved successfully')
       }
 
       router.push('/use-cases')
     } catch (error) {
-      console.error('[FounderNote:Onboarding] Error saving name:', error)
+      console.error('[Founder Notes:Onboarding] Error saving name:', error)
     } finally {
       setIsSaving(false)
     }

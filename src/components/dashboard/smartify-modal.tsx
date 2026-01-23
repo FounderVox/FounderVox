@@ -62,7 +62,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
     try {
       setIsProcessing(true)
       setError(null)
-      console.log('[FounderNote:SmartifyModal] Getting preview for note:', noteId)
+      console.log('[Founder Notes:SmartifyModal] Getting preview for note:', noteId)
 
       const response = await fetch('/api/notes/smartify/preview', {
         method: 'POST',
@@ -76,13 +76,13 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
       }
 
       const data = await response.json()
-      console.log('[FounderNote:SmartifyModal] Preview received:', data.preview)
+      console.log('[Founder Notes:SmartifyModal] Preview received:', data.preview)
 
       setPreview(data.preview)
       setIsProcessing(false)
       setShowPreview(true)
     } catch (error) {
-      console.error('[FounderNote:SmartifyModal] Error getting preview:', error)
+      console.error('[Founder Notes:SmartifyModal] Error getting preview:', error)
       setError(error instanceof Error ? error.message : 'Failed to get preview')
       setIsProcessing(false)
     }
@@ -94,8 +94,8 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
     try {
       setIsSaving(true)
       setError(null)
-      console.log('[FounderNote:SmartifyModal] Confirming and saving extraction for note:', noteId)
-      console.log('[FounderNote:SmartifyModal] Selected categories:', selectedCategories)
+      console.log('[Founder Notes:SmartifyModal] Confirming and saving extraction for note:', noteId)
+      console.log('[Founder Notes:SmartifyModal] Selected categories:', selectedCategories)
 
       const response = await fetch('/api/notes/smartify', {
         method: 'POST',
@@ -109,7 +109,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
       }
 
       const data = await response.json()
-      console.log('[FounderNote:SmartifyModal] Smartify saved:', data.extracted)
+      console.log('[Founder Notes:SmartifyModal] Smartify saved:', data.extracted)
 
       // Show success briefly, then close
       setTimeout(() => {
@@ -118,7 +118,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
         window.dispatchEvent(new CustomEvent('noteUpdated', { detail: { noteId } }))
       }, 1500)
     } catch (error) {
-      console.error('[FounderNote:SmartifyModal] Error confirming smartify:', error)
+      console.error('[Founder Notes:SmartifyModal] Error confirming smartify:', error)
       setError(error instanceof Error ? error.message : 'Failed to save extraction')
       setIsSaving(false)
     }

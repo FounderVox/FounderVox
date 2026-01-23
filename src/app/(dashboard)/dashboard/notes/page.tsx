@@ -117,7 +117,7 @@ export default function AllNotesPage() {
         .limit(NOTES_PAGE_SIZE)
 
       if (notesError) {
-        console.error('[FounderNote:AllNotes] Error loading notes:', notesError)
+        console.error('[Founder Notes:AllNotes] Error loading notes:', notesError)
         return
       }
 
@@ -126,7 +126,7 @@ export default function AllNotesPage() {
       setHasMore(fetchedNotes.length === NOTES_PAGE_SIZE)
       applyFilter(fetchedNotes, activeFilter)
     } catch (error) {
-      console.error('[FounderNote:AllNotes] Unexpected error:', error)
+      console.error('[Founder Notes:AllNotes] Unexpected error:', error)
     } finally {
       setIsLoading(false)
     }
@@ -146,7 +146,7 @@ export default function AllNotesPage() {
         .range(notes.length, notes.length + NOTES_PAGE_SIZE - 1)
 
       if (notesError) {
-        console.error('[FounderNote:AllNotes] Error loading more notes:', notesError)
+        console.error('[Founder Notes:AllNotes] Error loading more notes:', notesError)
         return
       }
 
@@ -156,7 +156,7 @@ export default function AllNotesPage() {
       setHasMore(fetchedNotes.length === NOTES_PAGE_SIZE)
       applyFilter(allNotes, activeFilter)
     } catch (error) {
-      console.error('[FounderNote:AllNotes] Unexpected error loading more:', error)
+      console.error('[Founder Notes:AllNotes] Unexpected error loading more:', error)
     } finally {
       setIsLoadingMore(false)
     }
@@ -187,7 +187,7 @@ export default function AllNotesPage() {
 
     // Listen for note events to refresh
     const handleNoteEvent = (event?: CustomEvent) => {
-      console.log('[FounderNote:AllNotes] Note event received:', event?.detail)
+      console.log('[Founder Notes:AllNotes] Note event received:', event?.detail)
       loadNotes()
     }
     const handleTagsUpdated = () => loadNotes()
@@ -228,7 +228,7 @@ export default function AllNotesPage() {
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderNote:AllNotes] Error toggling star:', error)
+        console.error('[Founder Notes:AllNotes] Error toggling star:', error)
         // Revert on error
         setNotes(notes)
         setGroupedNotes(groupNotesByDate(notes))
@@ -239,7 +239,7 @@ export default function AllNotesPage() {
         detail: { noteId, isStarred: newStarredState }
       }))
     } catch (error) {
-      console.error('[FounderNote:AllNotes] Unexpected error toggling star:', error)
+      console.error('[Founder Notes:AllNotes] Unexpected error toggling star:', error)
       setNotes(notes)
       setGroupedNotes(groupNotesByDate(notes))
     }
@@ -280,7 +280,7 @@ export default function AllNotesPage() {
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderNote:AllNotes] Error deleting note:', error)
+        console.error('[Founder Notes:AllNotes] Error deleting note:', error)
         // Revert on error
         setNotes(originalNotes)
         setGroupedNotes(groupNotesByDate(originalNotes))
@@ -289,7 +289,7 @@ export default function AllNotesPage() {
 
       window.dispatchEvent(new CustomEvent('noteDeleted', { detail: { noteId } }))
     } catch (error) {
-      console.error('[FounderNote:AllNotes] Unexpected error deleting note:', error)
+      console.error('[Founder Notes:AllNotes] Unexpected error deleting note:', error)
       setNotes(originalNotes)
       setGroupedNotes(groupNotesByDate(originalNotes))
     }
@@ -465,7 +465,7 @@ export default function AllNotesPage() {
                         isStarred={note.is_starred}
                         tags={note.tags || []}
                         onStar={() => toggleStar(note.id)}
-                        onPlay={() => console.log('[FounderNote:AllNotes] Playing note:', note.id)}
+                        onPlay={() => console.log('[Founder Notes:AllNotes] Playing note:', note.id)}
                         onEdit={() => handleEditNote(note.id)}
                         onDelete={() => handleDeleteNote(note.id)}
                         onAddTag={() => handleAddTag(note.id)}

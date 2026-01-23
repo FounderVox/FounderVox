@@ -14,7 +14,7 @@ export default function PricingPage() {
     {
       name: 'Starter',
       price: { monthly: 'Free', yearly: 'Free' },
-      description: 'Perfect for trying out Founder Note.',
+      description: 'Perfect for trying out Founder Notes.',
       features: [
         { text: '30 minutes audio/month', included: true, icon: null },
         { text: '10 notes', included: true, icon: null },

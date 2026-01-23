@@ -21,11 +21,11 @@ export default function UseCasesPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      console.log('[FounderNote:Onboarding] Loading user for use-cases page...')
+      console.log('[Founder Notes:Onboarding] Loading user for use-cases page...')
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
-        console.log('[FounderNote:Onboarding] No user found, redirecting to login')
+        console.log('[Founder Notes:Onboarding] No user found, redirecting to login')
         router.push('/login')
         return
       }
@@ -38,14 +38,14 @@ export default function UseCasesPage() {
         .single()
 
       if (profileError) {
-        console.error('[FounderNote:Onboarding] Error loading profile:', profileError)
+        console.error('[Founder Notes:Onboarding] Error loading profile:', profileError)
       }
 
       if (profile?.display_name) {
         setDisplayName(profile.display_name)
       }
 
-      console.log('[FounderNote:Onboarding] User authenticated:', user.email)
+      console.log('[Founder Notes:Onboarding] User authenticated:', user.email)
       setIsLoading(false)
     }
 
@@ -61,7 +61,7 @@ export default function UseCasesPage() {
   }
 
   const handleContinue = async () => {
-    console.log('[FounderNote:Onboarding] Saving use cases:', selectedUseCases)
+    console.log('[Founder Notes:Onboarding] Saving use cases:', selectedUseCases)
     setIsSaving(true)
 
     try {
@@ -84,14 +84,14 @@ export default function UseCasesPage() {
         .eq('id', user.id)
 
       if (error) {
-        console.error('[FounderNote:Onboarding] Error saving use cases:', error.message)
+        console.error('[Founder Notes:Onboarding] Error saving use cases:', error.message)
       }
 
       // Redirect to beta support page
-      console.log('[FounderNote:Onboarding] Redirecting to beta support page')
+      console.log('[Founder Notes:Onboarding] Redirecting to beta support page')
       router.push('/support')
     } catch (error) {
-      console.error('[FounderNote:Onboarding] Error:', error)
+      console.error('[Founder Notes:Onboarding] Error:', error)
       router.push('/support')
     } finally {
       setIsSaving(false)
@@ -99,7 +99,7 @@ export default function UseCasesPage() {
   }
 
   const handleSkip = async () => {
-    console.log('[FounderNote:Onboarding] Skipping use case selection')
+    console.log('[Founder Notes:Onboarding] Skipping use case selection')
     setIsSaving(true)
 
     try {
@@ -121,14 +121,14 @@ export default function UseCasesPage() {
         .eq('id', user.id)
 
       if (error) {
-        console.error('[FounderNote:Onboarding] Error skipping:', error.message)
+        console.error('[Founder Notes:Onboarding] Error skipping:', error.message)
       }
 
       // Redirect to beta support page
-      console.log('[FounderNote:Onboarding] Redirecting to beta support page')
+      console.log('[Founder Notes:Onboarding] Redirecting to beta support page')
       router.push('/support')
     } catch (error) {
-      console.error('[FounderNote:Onboarding] Error skipping:', error)
+      console.error('[Founder Notes:Onboarding] Error skipping:', error)
       router.push('/support')
     } finally {
       setIsSaving(false)

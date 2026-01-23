@@ -24,7 +24,7 @@ export function TemplateSelectorDialog({
   const handleTemplateSelect = (template: string) => {
     if (selectedUseCase) {
       setSelectedTemplate(template)
-      console.log('[FounderNote:TemplateSelector] Selected template:', {
+      console.log('[Founder Notes:TemplateSelector] Selected template:', {
         useCase: selectedUseCase.title,
         template
       })

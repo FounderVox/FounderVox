@@ -16,7 +16,7 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'FounderNote - Voice Notes for Founders',
+  title: 'Founder Notes - Voice Notes for Founders',
   description: 'Transform your voice into actionable content. Capture ideas, draft emails, and stay productive with AI-powered voice notes.',
   icons: {
     icon: '/favicon.svg',
@@ -36,7 +36,7 @@ export default function RootLayout({
             __html: `
               // Global error handler for unhandled errors
               window.addEventListener('error', function(event) {
-                console.error('[FounderNote:Global] Unhandled error:', {
+                console.error('[Founder Notes:Global] Unhandled error:', {
                   message: event.message,
                   filename: event.filename,
                   lineno: event.lineno,
@@ -47,7 +47,7 @@ export default function RootLayout({
               
               // Handle unhandled promise rejections
               window.addEventListener('unhandledrejection', function(event) {
-                console.error('[FounderNote:Global] Unhandled promise rejection:', {
+                console.error('[Founder Notes:Global] Unhandled promise rejection:', {
                   reason: event.reason,
                   promise: event.promise
                 });
@@ -65,7 +65,7 @@ export default function RootLayout({
                     
                     // Only log if it's not a Next.js internal 404 (which are often harmless in dev)
                     if (!(isNextJsInternal && is404)) {
-                      console.error('[FounderNote:Global] Resource loading error:', {
+                      console.error('[Founder Notes:Global] Resource loading error:', {
                         tag: target.tagName,
                         src: src,
                         error: event.error

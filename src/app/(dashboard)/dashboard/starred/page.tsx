@@ -38,7 +38,7 @@ export default function StarredPage() {
 
   useEffect(() => {
     const loadStarredNotes = async () => {
-      console.log('[FounderNote:Starred] Loading starred notes...')
+      console.log('[Founder Notes:Starred] Loading starred notes...')
       setIsLoading(true)
 
       try {
@@ -54,7 +54,7 @@ export default function StarredPage() {
           .limit(50)
 
         if (error) {
-          console.error('[FounderNote:Starred] Error loading notes:', error)
+          console.error('[Founder Notes:Starred] Error loading notes:', error)
           // Fallback to empty array if table doesn't exist yet
           setNotes([])
         } else {
@@ -73,7 +73,7 @@ export default function StarredPage() {
           setNotes(formattedNotes)
         }
       } catch (err) {
-        console.error('[FounderNote:Starred] Error:', err)
+        console.error('[Founder Notes:Starred] Error:', err)
         setNotes([])
       } finally {
         setIsLoading(false)
@@ -84,7 +84,7 @@ export default function StarredPage() {
 
     // Listen for star toggle events to reload starred notes
     const handleStarToggled = () => {
-      console.log('[FounderNote:Starred] Star toggled event received, reloading starred notes...')
+      console.log('[Founder Notes:Starred] Star toggled event received, reloading starred notes...')
       loadStarredNotes()
     }
     window.addEventListener('starToggled', handleStarToggled)
@@ -128,12 +128,12 @@ export default function StarredPage() {
         window.dispatchEvent(new CustomEvent('starToggled'))
       }
     } catch (err) {
-      console.error('[FounderNote:Starred] Error toggling star:', err)
+      console.error('[Founder Notes:Starred] Error toggling star:', err)
     }
   }
 
   const handleEditNote = (noteId: string) => {
-    console.log('[FounderNote:Starred] Edit note:', noteId)
+    console.log('[Founder Notes:Starred] Edit note:', noteId)
     setSelectedNoteForEdit(noteId)
     setShowEditDialog(true)
   }
@@ -165,20 +165,20 @@ export default function StarredPage() {
         .eq('user_id', user.id)
 
       if (error) {
-        console.error('[FounderNote:Starred] Error deleting note:', error)
+        console.error('[Founder Notes:Starred] Error deleting note:', error)
         return
       }
 
-      console.log('[FounderNote:Starred] Note deleted successfully')
+      console.log('[Founder Notes:Starred] Note deleted successfully')
       setNotes(notes.filter(note => note.id !== noteId))
     } catch (error) {
-      console.error('[FounderNote:Starred] Unexpected error deleting note:', error)
+      console.error('[Founder Notes:Starred] Unexpected error deleting note:', error)
     }
   }
 
   const handleAddTag = (noteId: string) => {
     const note = notes.find(n => n.id === noteId)
-    console.log('[FounderNote:Starred] Opening tag dialog for note:', {
+    console.log('[Founder Notes:Starred] Opening tag dialog for note:', {
       noteId,
       currentTags: note?.tags || []
     })
@@ -234,7 +234,7 @@ export default function StarredPage() {
                 isStarred={note.isStarred}
                 tags={note.tags}
                 onStar={() => toggleStar(note.id)}
-                onPlay={() => console.log('[FounderNote:Starred] Playing note:', note.id)}
+                onPlay={() => console.log('[Founder Notes:Starred] Playing note:', note.id)}
                 onEdit={() => handleEditNote(note.id)}
                 onDelete={() => handleDeleteNote(note.id)}
                 onAddTag={() => handleAddTag(note.id)}
@@ -281,7 +281,7 @@ export default function StarredPage() {
                     .limit(50)
 
                   if (!error && data) {
-                    console.log('[FounderNote:Starred] Starred notes reloaded after tag update')
+                    console.log('[Founder Notes:Starred] Starred notes reloaded after tag update')
                     const formattedNotes: Note[] = data.map((note) => ({
                       id: note.id,
                       title: note.title || 'Untitled Note',
@@ -295,7 +295,7 @@ export default function StarredPage() {
                     setNotes(formattedNotes)
                   }
                 } catch (error) {
-                  console.error('[FounderNote:Starred] Error reloading starred notes:', error)
+                  console.error('[Founder Notes:Starred] Error reloading starred notes:', error)
                 }
               }
               reloadStarredNotes()

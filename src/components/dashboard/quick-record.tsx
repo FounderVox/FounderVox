@@ -11,7 +11,7 @@ export function QuickRecord() {
 
   const handleRecord = () => {
     setShowRecordingModal(true)
-    console.log('[FounderNote:Dashboard] Opening recording modal')
+    console.log('[Founder Notes:Dashboard] Opening recording modal')
   }
 
   return (

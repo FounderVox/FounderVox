@@ -38,12 +38,12 @@ export function EditNoteDialog({ open, onOpenChange, noteId }: EditNoteDialogPro
 
     try {
       setIsLoading(true)
-      console.log('[FounderNote:EditNote] Loading note:', noteId)
+      console.log('[Founder Notes:EditNote] Loading note:', noteId)
 
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        console.error('[FounderNote:EditNote] Error getting user:', userError)
+        console.error('[Founder Notes:EditNote] Error getting user:', userError)
         setIsLoading(false)
         return
       }
@@ -56,19 +56,19 @@ export function EditNoteDialog({ open, onOpenChange, noteId }: EditNoteDialogPro
         .single()
 
       if (error) {
-        console.error('[FounderNote:EditNote] Error loading note:', error)
+        console.error('[Founder Notes:EditNote] Error loading note:', error)
         setIsLoading(false)
         return
       }
 
-      console.log('[FounderNote:EditNote] Note loaded successfully:', data)
+      console.log('[Founder Notes:EditNote] Note loaded successfully:', data)
 
       // Populate form with note data
       setNoteTitle(data.title || '')
       setNoteContent(data.formatted_content || data.content || data.raw_transcript || '')
       setIsLoading(false)
     } catch (error) {
-      console.error('[FounderNote:EditNote] Unexpected error loading note:', error)
+      console.error('[Founder Notes:EditNote] Unexpected error loading note:', error)
       setIsLoading(false)
     }
   }
@@ -78,12 +78,12 @@ export function EditNoteDialog({ open, onOpenChange, noteId }: EditNoteDialogPro
 
     try {
       setIsSaving(true)
-      console.log('[FounderNote:EditNote] Saving note:', { noteId, noteTitle, noteContent })
+      console.log('[Founder Notes:EditNote] Saving note:', { noteId, noteTitle, noteContent })
 
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        console.error('[FounderNote:EditNote] Error getting user:', userError)
+        console.error('[Founder Notes:EditNote] Error getting user:', userError)
         setIsSaving(false)
         return
       }
@@ -103,19 +103,19 @@ export function EditNoteDialog({ open, onOpenChange, noteId }: EditNoteDialogPro
         .select()
 
       if (error) {
-        console.error('[FounderNote:EditNote] Error saving note:', error)
+        console.error('[Founder Notes:EditNote] Error saving note:', error)
         setIsSaving(false)
         return
       }
 
-      console.log('[FounderNote:EditNote] Note saved successfully:', data)
+      console.log('[Founder Notes:EditNote] Note saved successfully:', data)
 
       // Regenerate embedding for updated note (fire and forget)
       fetch('/api/embeddings/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ noteId })
-      }).catch(err => console.error('[FounderNote:EditNote] Embedding regeneration failed:', err))
+      }).catch(err => console.error('[Founder Notes:EditNote] Embedding regeneration failed:', err))
 
       setIsSaving(false)
       onOpenChange(false)
@@ -123,7 +123,7 @@ export function EditNoteDialog({ open, onOpenChange, noteId }: EditNoteDialogPro
       // Dispatch event to notify other components (pages listen for this)
       window.dispatchEvent(new CustomEvent('noteUpdated', { detail: { noteId } }))
     } catch (error) {
-      console.error('[FounderNote:EditNote] Unexpected error:', error)
+      console.error('[Founder Notes:EditNote] Unexpected error:', error)
       setIsSaving(false)
     }
   }

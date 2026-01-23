@@ -170,7 +170,7 @@ export default function SettingsPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `foundernote-export-${new Date().toISOString().split('T')[0]}.json`
+      a.download = `founder-notes-export-${new Date().toISOString().split('T')[0]}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -613,7 +613,7 @@ export default function SettingsPage() {
         {/* Account Status Section */}
         <SettingSection
           title="Account Status"
-          description="Your FounderNote access status"
+          description="Your Founder Notes access status"
           icon={CreditCard}
         >
           <div className="space-y-6">

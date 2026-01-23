@@ -94,7 +94,7 @@ function DashboardContent({
         setStarredCount(starredResult.count)
       }
     } catch (error) {
-      console.error('[FounderNote:Dashboard:Layout] Error loading counts:', error)
+      console.error('[Founder Notes:Dashboard:Layout] Error loading counts:', error)
     }
   }
 

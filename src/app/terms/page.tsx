@@ -13,7 +13,7 @@ export default function TermsPage() {
       content: [
         {
           subtitle: '',
-          text: 'By accessing or using FounderNote, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this service. These Terms of Service apply to all users of the service, including without limitation users who are browsers, customers, and contributors of content.'
+          text: 'By accessing or using Founder Notes, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this service. These Terms of Service apply to all users of the service, including without limitation users who are browsers, customers, and contributors of content.'
         }
       ]
     },
@@ -22,7 +22,7 @@ export default function TermsPage() {
       content: [
         {
           subtitle: 'Core Features',
-          text: 'FounderNote is a voice-first productivity application that enables users to capture ideas through voice recordings, automatically transcribe audio to text, and organize content into notes, tasks, and actionable items using artificial intelligence.'
+          text: 'Founder Notes is a voice-first productivity application that enables users to capture ideas through voice recordings, automatically transcribe audio to text, and organize content into notes, tasks, and actionable items using artificial intelligence.'
         },
         {
           subtitle: 'Service Availability',
@@ -39,7 +39,7 @@ export default function TermsPage() {
       content: [
         {
           subtitle: 'Account Creation',
-          text: 'To use FounderNote, you must create an account by providing a valid email address and creating a password. You may also sign up using third-party authentication services such as Google or Apple. You must be at least 16 years old to create an account.'
+          text: 'To use Founder Notes, you must create an account by providing a valid email address and creating a password. You may also sign up using third-party authentication services such as Google or Apple. You must be at least 16 years old to create an account.'
         },
         {
           subtitle: 'Account Security',
@@ -56,11 +56,11 @@ export default function TermsPage() {
       content: [
         {
           subtitle: 'Your Content',
-          text: 'You retain ownership of all content you create, upload, or store in FounderNote, including voice recordings, transcriptions, and notes. By using our service, you grant us a limited license to process and store your content solely to provide the service to you.'
+          text: 'You retain ownership of all content you create, upload, or store in Founder Notes, including voice recordings, transcriptions, and notes. By using our service, you grant us a limited license to process and store your content solely to provide the service to you.'
         },
         {
           subtitle: 'Prohibited Content',
-          text: 'You agree not to use FounderNote to store, process, or transmit any content that is illegal, harmful, threatening, abusive, harassing, defamatory, vulgar, obscene, or otherwise objectionable. You also agree not to upload content that infringes on any third party&apos;s intellectual property rights.'
+          text: 'You agree not to use Founder Notes to store, process, or transmit any content that is illegal, harmful, threatening, abusive, harassing, defamatory, vulgar, obscene, or otherwise objectionable. You also agree not to upload content that infringes on any third party\'s intellectual property rights.'
         },
         {
           subtitle: 'Prohibited Activities',
@@ -73,7 +73,7 @@ export default function TermsPage() {
       content: [
         {
           subtitle: 'Free Tier',
-          text: 'FounderNote offers a free tier with limited features and usage. Free tier limitations are subject to change with reasonable notice.'
+          text: 'Founder Notes offers a free tier with limited features and usage. Free tier limitations are subject to change with reasonable notice.'
         },
         {
           subtitle: 'Paid Subscriptions',
@@ -81,7 +81,7 @@ export default function TermsPage() {
         },
         {
           subtitle: 'Price Changes',
-          text: 'We reserve the right to modify subscription prices with 30 days notice. Price changes will not affect current billing periods. Beta and founding member pricing may be grandfathered at the discretion of FounderNote.'
+          text: 'We reserve the right to modify subscription prices with 30 days notice. Price changes will not affect current billing periods. Beta and founding member pricing may be grandfathered at the discretion of Founder Notes.'
         },
         {
           subtitle: 'Cancellation',
@@ -94,11 +94,11 @@ export default function TermsPage() {
       content: [
         {
           subtitle: 'Our Intellectual Property',
-          text: 'FounderNote and its original content, features, and functionality are owned by FounderNote and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.'
+          text: 'Founder Notes and its original content, features, and functionality are owned by Founder Notes and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.'
         },
         {
           subtitle: 'License to Use',
-          text: 'Subject to these Terms, we grant you a limited, non-exclusive, non-transferable, revocable license to use FounderNote for your personal or internal business purposes.'
+          text: 'Subject to these Terms, we grant you a limited, non-exclusive, non-transferable, revocable license to use Founder Notes for your personal or internal business purposes.'
         },
         {
           subtitle: 'Feedback',
@@ -111,7 +111,7 @@ export default function TermsPage() {
       content: [
         {
           subtitle: '',
-          text: 'FounderNote integrates with third-party services for transcription, AI processing, and other features. Your use of these integrated services is subject to their respective terms of service and privacy policies. We are not responsible for the practices of third-party service providers.'
+          text: 'Founder Notes integrates with third-party services for transcription, AI processing, and other features. Your use of these integrated services is subject to their respective terms of service and privacy policies. We are not responsible for the practices of third-party service providers.'
         }
       ]
     },
@@ -120,7 +120,7 @@ export default function TermsPage() {
       content: [
         {
           subtitle: '',
-          text: 'FOUNDERNOTE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE, OR THAT DEFECTS WILL BE CORRECTED.'
+          text: 'FOUNDER NOTES IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE, OR THAT DEFECTS WILL BE CORRECTED.'
         },
         {
           subtitle: 'Transcription Accuracy',
@@ -128,7 +128,7 @@ export default function TermsPage() {
         },
         {
           subtitle: 'AI-Generated Content',
-          text: 'AI-powered features, including categorization, summarization, and insights, are provided for informational purposes only. We do not guarantee the accuracy, completeness, or usefulness of AI-generated content.'
+          text: 'AI-powered features, including categorization, summarization, and insights, are provided for informational purposes only. Since we are still in the beta stage, we do not guarantee the accuracy, completeness, or usefulness of AI-generated content.'
         }
       ]
     },
@@ -137,11 +137,11 @@ export default function TermsPage() {
       content: [
         {
           subtitle: '',
-          text: 'TO THE MAXIMUM EXTENT PERMITTED BY LAW, FOUNDERNOTE AND ITS DIRECTORS, EMPLOYEES, PARTNERS, AGENTS, SUPPLIERS, OR AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM: (A) YOUR USE OR INABILITY TO USE THE SERVICE; (B) ANY UNAUTHORIZED ACCESS TO OR USE OF OUR SERVERS AND/OR ANY PERSONAL INFORMATION STORED THEREIN; (C) ANY INTERRUPTION OR CESSATION OF TRANSMISSION TO OR FROM THE SERVICE; (D) ANY BUGS, VIRUSES, OR OTHER HARMFUL CODE THAT MAY BE TRANSMITTED THROUGH THE SERVICE; (E) ANY ERRORS OR OMISSIONS IN ANY CONTENT OR FOR ANY LOSS OR DAMAGE INCURRED AS A RESULT OF THE USE OF ANY CONTENT POSTED, TRANSMITTED, OR OTHERWISE MADE AVAILABLE THROUGH THE SERVICE.'
+          text: 'TO THE MAXIMUM EXTENT PERMITTED BY LAW, FOUNDER NOTES AND ITS DIRECTORS, EMPLOYEES, PARTNERS, AGENTS, SUPPLIERS, OR AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM: (A) YOUR USE OR INABILITY TO USE THE SERVICE; (B) ANY UNAUTHORIZED ACCESS TO OR USE OF OUR SERVERS AND/OR ANY PERSONAL INFORMATION STORED THEREIN; (C) ANY INTERRUPTION OR CESSATION OF TRANSMISSION TO OR FROM THE SERVICE; (D) ANY BUGS, VIRUSES, OR OTHER HARMFUL CODE THAT MAY BE TRANSMITTED THROUGH THE SERVICE; (E) ANY ERRORS OR OMISSIONS IN ANY CONTENT OR FOR ANY LOSS OR DAMAGE INCURRED AS A RESULT OF THE USE OF ANY CONTENT POSTED, TRANSMITTED, OR OTHERWISE MADE AVAILABLE THROUGH THE SERVICE.'
         },
         {
           subtitle: '',
-          text: 'IN NO EVENT SHALL OUR TOTAL LIABILITY TO YOU FOR ALL CLAIMS EXCEED THE AMOUNT PAID BY YOU TO FOUNDERNOTE IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR ONE HUNDRED DOLLARS ($100), WHICHEVER IS GREATER.'
+          text: 'IN NO EVENT SHALL OUR TOTAL LIABILITY TO YOU FOR ALL CLAIMS EXCEED THE AMOUNT PAID BY YOU TO FOUNDER NOTES IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR ONE HUNDRED DOLLARS ($100), WHICHEVER IS GREATER.'
         }
       ]
     },
@@ -150,7 +150,7 @@ export default function TermsPage() {
       content: [
         {
           subtitle: '',
-          text: 'You agree to defend, indemnify, and hold harmless FounderNote and its directors, officers, employees, contractors, agents, licensors, and suppliers from and against any claims, liabilities, damages, judgments, awards, losses, costs, expenses, or fees (including reasonable attorneys&apos; fees) arising out of or relating to your violation of these Terms of Service or your use of the service.'
+          text: 'You agree to defend, indemnify, and hold harmless Founder Notes and its directors, officers, employees, contractors, agents, licensors, and suppliers from and against any claims, liabilities, damages, judgments, awards, losses, costs, expenses, or fees (including reasonable attorneys&apos; fees) arising out of or relating to your violation of these Terms of Service or your use of the service.'
         }
       ]
     },
@@ -194,7 +194,7 @@ export default function TermsPage() {
       content: [
         {
           subtitle: '',
-          text: 'These Terms of Service, together with our Privacy Policy, constitute the entire agreement between you and FounderNote regarding the use of our service and supersede all prior and contemporaneous written or oral agreements.'
+          text: 'These Terms of Service, together with our Privacy Policy, constitute the entire agreement between you and Founder Notes regarding the use of our service and supersede all prior and contemporaneous written or oral agreements.'
         }
       ]
     },
@@ -203,7 +203,7 @@ export default function TermsPage() {
       content: [
         {
           subtitle: '',
-          text: 'If you have any questions about these Terms of Service, please contact us at legal@foundernote.com. We will respond to your inquiry within a reasonable timeframe.'
+          text: 'If you have any questions about these Terms of Service, please contact us at foundervox.workplace@gmail.com. We will respond to your inquiry within a reasonable timeframe.'
         }
       ]
     }
@@ -244,9 +244,9 @@ export default function TermsPage() {
             transition={{ duration: 0.6, delay: 0.1 }}
           >
             <p className="text-[#444] font-body leading-relaxed text-lg">
-              Welcome to FounderNote. These Terms of Service (&quot;Terms&quot;) govern your access to and use of
-              FounderNote&apos;s website, applications, and services (collectively, the &quot;Service&quot;). By accessing
-              or using FounderNote, you agree to be bound by these Terms. Please read them carefully.
+              Welcome to Founder Notes. These Terms of Service (&quot;Terms&quot;) govern your access to and use of
+              Founder Notes&apos;s website, applications, and services (collectively, the &quot;Service&quot;). By accessing
+              or using Founder Notes, you agree to be bound by these Terms. Please read them carefully.
             </p>
           </motion.div>
 

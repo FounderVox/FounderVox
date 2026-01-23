@@ -20,7 +20,7 @@ const Logo = ({ variant = 'dark' }: { variant?: 'dark' | 'light' }) => (
     <span className={`text-lg font-semibold tracking-tight font-body ${
       variant === 'dark' ? 'text-gray-900' : 'text-white'
     }`}>
-      FounderNote
+      Founder Notes
     </span>
   </div>
 )

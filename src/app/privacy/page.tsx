@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         },
         {
           subtitle: 'Automatically Collected Information',
-          text: 'We automatically collect certain information when you use FounderNote, including your IP address, device type, operating system, browser type, and usage patterns within the application. This helps us improve our services and provide a better user experience.'
+          text: 'We automatically collect certain information when you use Founder Notes, including your IP address, device type, operating system, browser type, and usage patterns within the application. This helps us improve our services and provide a better user experience.'
         },
         {
           subtitle: 'Voice Data',
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       content: [
         {
           subtitle: 'Service Delivery',
-          text: 'We use your information to provide, maintain, and improve FounderNote, including transcribing your voice recordings, organizing your notes, and generating AI-powered insights and categorizations.'
+          text: 'We use your information to provide, maintain, and improve Founder Notes, including transcribing your voice recordings, organizing your notes, and generating AI-powered insights and categorizations.'
         },
         {
           subtitle: 'Communication',
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
         },
         {
           subtitle: 'Analytics and Improvement',
-          text: 'We analyze usage patterns to understand how users interact with FounderNote, identify areas for improvement, and develop new features. This data is aggregated and anonymized whenever possible.'
+          text: 'We analyze usage patterns to understand how users interact with Founder Notes, identify areas for improvement, and develop new features. This data is aggregated and anonymized whenever possible.'
         }
       ]
     },
@@ -81,7 +81,7 @@ export default function PrivacyPage() {
       content: [
         {
           subtitle: 'Access and Portability',
-          text: 'You can access all your data through your FounderNote account. You can export your notes and transcriptions at any time in multiple formats.'
+          text: 'You can access all your data through your Founder Notes account. You can export your notes and transcriptions at any time in multiple formats.'
         },
         {
           subtitle: 'Deletion',
@@ -124,11 +124,11 @@ export default function PrivacyPage() {
       ]
     },
     {
-      title: '8. Children&apos;s Privacy',
+      title: '8. Children\'s Privacy',
       content: [
         {
           subtitle: '',
-          text: 'FounderNote is not intended for users under the age of 16. We do not knowingly collect personal information from children. If you believe a child has provided us with personal information, please contact us and we will delete it promptly.'
+          text: 'Founder Notes is not intended for users under the age of 16. We do not knowingly collect personal information from children. If you believe a child has provided us with personal information, please contact us and we will delete it promptly.'
         }
       ]
     },
@@ -137,7 +137,7 @@ export default function PrivacyPage() {
       content: [
         {
           subtitle: '',
-          text: 'If you access FounderNote from outside the United States, your data may be transferred to and processed in the United States or other countries where our service providers operate. We ensure appropriate safeguards are in place for such transfers in compliance with applicable data protection laws.'
+          text: 'If you access Founder Notes from outside the United States, your data may be transferred to and processed in the United States or other countries where our service providers operate. We ensure appropriate safeguards are in place for such transfers in compliance with applicable data protection laws.'
         }
       ]
     },
@@ -155,7 +155,7 @@ export default function PrivacyPage() {
       content: [
         {
           subtitle: '',
-          text: 'If you have any questions about this Privacy Policy or our data practices, please contact us at privacy@foundernote.com. We will respond to your inquiry within 30 days.'
+          text: 'If you have any questions about this Privacy Policy or our data practices, please contact us at foundervox.workplace@gmail.com. We will respond to your inquiry within 30 days.'
         }
       ]
     }
@@ -196,7 +196,7 @@ export default function PrivacyPage() {
             transition={{ duration: 0.6, delay: 0.1 }}
           >
             <p className="text-[#444] font-body leading-relaxed text-lg">
-              At FounderNote, we take your privacy seriously. This Privacy Policy explains how we collect,
+              At Founder Notes, we take your privacy seriously. This Privacy Policy explains how we collect,
               use, disclose, and safeguard your information when you use our voice-to-text productivity
               application. Please read this policy carefully to understand our practices regarding your
               personal data.

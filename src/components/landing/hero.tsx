@@ -141,7 +141,7 @@ export default function Hero() {
                   <div className="w-3 h-3 rounded-full bg-red-500/80" />
                   <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
                   <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                  <span className="ml-4 text-gray-500 text-sm font-body">FounderNote</span>
+                  <span className="ml-4 text-gray-500 text-sm font-body">Founder Notes</span>
                 </div>
 
                 {/* Demo Content Grid */}

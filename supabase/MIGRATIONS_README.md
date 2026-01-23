@@ -1,4 +1,4 @@
-# FounderNote Database Migrations
+# Founder Notes Database Migrations
 
 ## 🚀 RECOMMENDED: Use Complete Setup (Single File)
 

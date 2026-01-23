@@ -32,7 +32,7 @@ export default function RecentPage() {
 
   useEffect(() => {
     const loadRecentNotes = async () => {
-      console.log('[FounderNote:Recent] Loading recent notes...')
+      console.log('[Founder Notes:Recent] Loading recent notes...')
       setIsLoading(true)
 
       try {
@@ -47,7 +47,7 @@ export default function RecentPage() {
           .limit(50)
 
         if (error) {
-          console.error('[FounderNote:Recent] Error loading notes:', error)
+          console.error('[Founder Notes:Recent] Error loading notes:', error)
           // Fallback to empty array if table doesn't exist yet
           setNotes([])
         } else {
@@ -63,7 +63,7 @@ export default function RecentPage() {
           setNotes(formattedNotes)
         }
       } catch (err) {
-        console.error('[FounderNote:Recent] Error:', err)
+        console.error('[Founder Notes:Recent] Error:', err)
         setNotes([])
       } finally {
         setIsLoading(false)
@@ -95,7 +95,7 @@ export default function RecentPage() {
   }
 
   const handleEditNote = (noteId: string) => {
-    console.log('[FounderNote:Recent] Edit note:', noteId)
+    console.log('[Founder Notes:Recent] Edit note:', noteId)
     setSelectedNoteForEdit(noteId)
     setShowEditDialog(true)
   }
@@ -129,7 +129,7 @@ export default function RecentPage() {
         ))
       }
     } catch (err) {
-      console.error('[FounderNote:Recent] Error toggling star:', err)
+      console.error('[Founder Notes:Recent] Error toggling star:', err)
     }
   }
 
@@ -180,7 +180,7 @@ export default function RecentPage() {
                 template={note.template}
                 isStarred={note.isStarred}
                 onStar={() => toggleStar(note.id)}
-                onPlay={() => console.log('[FounderNote:Recent] Playing note:', note.id)}
+                onPlay={() => console.log('[Founder Notes:Recent] Playing note:', note.id)}
                 onEdit={() => handleEditNote(note.id)}
                 onSmartify={() => handleSmartify(note.id)}
                 onView={() => handleViewNote(note.id)}

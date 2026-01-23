@@ -51,7 +51,7 @@ export default function DownloadPage() {
 
           {/* App Cards - Side by Side */}
           <div className="grid md:grid-cols-2 gap-6 mb-20">
-            {/* iOS App Card */}
+            {/* Mobile App Card */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -68,29 +68,36 @@ export default function DownloadPage() {
               </div>
 
               <h2 className="text-2xl font-display text-[#1a1a1a] mb-2">Mobile App</h2>
-              <p className="text-[#666] font-body mb-6">Capture ideas on the go with our powerful iOS app.</p>
+              <p className="text-[#666] font-body mb-6">Capture ideas on the go with our powerful mobile apps.</p>
 
-              <a
-                href="https://apps.apple.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3.5 rounded-xl font-semibold mb-6 transition-all duration-300 flex items-center justify-center gap-2.5 text-white font-body"
-                style={{
-                  backgroundColor: '#BD6750',
-                  boxShadow: '0 4px 20px rgba(189, 103, 80, 0.3)'
-                }}
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                </svg>
-                Download for iOS
-              </a>
+              {/* iOS & Android Buttons - Side by Side */}
+              <div className="flex gap-3 mb-6">
+                <div
+                  className="flex-1 py-3 px-4 rounded-xl font-medium flex items-center justify-center gap-2 text-white/80 font-body cursor-not-allowed text-sm"
+                  style={{ backgroundColor: '#9CA3AF' }}
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                  </svg>
+                  iOS
+                </div>
+                <div
+                  className="flex-1 py-3 px-4 rounded-xl font-medium flex items-center justify-center gap-2 text-white/80 font-body cursor-not-allowed text-sm"
+                  style={{ backgroundColor: '#9CA3AF' }}
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
+                    <path d="M17.6 11.4c0-.2 0-.4-.1-.6l1.4-1.4c.1-.1.2-.3.1-.5l-1.3-2.2c-.1-.2-.3-.2-.5-.2l-1.7.4c-.3-.2-.6-.4-1-.5L14 4.6c0-.2-.2-.3-.4-.3h-2.6c-.2 0-.4.1-.4.3l-.5 1.8c-.3.1-.6.3-1 .5l-1.7-.4c-.2 0-.4 0-.5.2L5.6 8.9c-.1.2-.1.4.1.5l1.4 1.4c0 .2-.1.4-.1.6s0 .4.1.6l-1.4 1.4c-.1.1-.2.3-.1.5l1.3 2.2c.1.2.3.2.5.2l1.7-.4c.3.2.6.4 1 .5l.5 1.8c0 .2.2.3.4.3h2.6c.2 0 .4-.1.4-.3l.5-1.8c.3-.1.6-.3 1-.5l1.7.4c.2 0 .4 0 .5-.2l1.3-2.2c.1-.2.1-.4-.1-.5l-1.4-1.4c.1-.2.1-.4.1-.6zm-5.6 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM7 20c0 .6.4 1 1 1h1v3c0 .6.4 1 1 1s1-.4 1-1v-3h2v3c0 .6.4 1 1 1s1-.4 1-1v-3h1c.6 0 1-.4 1-1v-7H7v7zM5 13c-.6 0-1 .4-1 1v5c0 .6.4 1 1 1s1-.4 1-1v-5c0-.6-.4-1-1-1zm14 0c-.6 0-1 .4-1 1v5c0 .6.4 1 1 1s1-.4 1-1v-5c0-.6-.4-1-1-1zM16.5 3.5l1-1.7c.1-.1 0-.3-.1-.4-.1-.1-.3-.1-.4.1l-1 1.7c-.8-.3-1.6-.5-2.5-.5s-1.7.2-2.5.5l-1-1.7c-.1-.1-.3-.2-.4-.1-.2 0-.2.2-.2.4l1 1.7C8.9 4.5 7.8 6.1 7.6 8h9.8c-.2-1.9-1.3-3.5-2.9-4.5zM10 6.5c-.3 0-.5-.2-.5-.5s.2-.5.5-.5.5.2.5.5-.2.5-.5.5zm4 0c-.3 0-.5-.2-.5-.5s.2-.5.5-.5.5.2.5.5-.2.5-.5.5z"/>
+                  </svg>
+                  Android
+                </div>
+              </div>
+              <p className="text-xs text-[#999] font-body text-center mb-6">Coming Soon</p>
 
               <div className="space-y-3">
                 {[
-                  { icon: <WifiOff className="w-4 h-4" />, text: 'Offline recording' },
-                  { icon: <Watch className="w-4 h-4" />, text: 'Apple Watch app' },
-                  { icon: <Sparkles className="w-4 h-4" />, text: 'Siri shortcuts' },
+                  { icon: <Mic className="w-4 h-4" />, text: 'One-tap voice capture for thoughts on the go' },
+                  { icon: <Smartphone className="w-4 h-4" />, text: 'Handheld' },
+                  { icon: <Sparkles className="w-4 h-4" />, text: 'Easy search through phone' },
                 ].map((feature, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-[#BD6750]/10 flex items-center justify-center text-[#BD6750]">
@@ -101,7 +108,6 @@ export default function DownloadPage() {
                 ))}
               </div>
 
-              <p className="text-xs text-[#999] font-body mt-6 text-center">Requires iOS 15 or later</p>
             </motion.div>
 
             {/* Web App Card */}
@@ -233,7 +239,7 @@ export default function DownloadPage() {
             Start capturing ideas for free
           </h2>
           <p className="text-lg md:text-xl text-[#666] font-body mb-8 max-w-lg mx-auto">
-            Join thousands of founders who trust Founder Note to capture their best ideas.
+            Join thousands of founders who trust Founder Notes to capture their best ideas.
           </p>
 
           <Link

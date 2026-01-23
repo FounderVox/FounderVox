@@ -35,7 +35,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo<RecordingContextType | null>(() => {
     if (!recordingHook) {
-      console.error('[FounderNote:RecordingProvider] useRecording returned null')
+      console.error('[Founder Notes:RecordingProvider] useRecording returned null')
       return null
     }
     return {

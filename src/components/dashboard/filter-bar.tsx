@@ -23,7 +23,7 @@ export function FilterBar({ avatarUrl, displayName, email }: FilterBarProps) {
     : email?.[0].toUpperCase() || 'U'
 
   const handleSignOut = async () => {
-    console.log('[FounderNote:Dashboard:FilterBar] Signing out...')
+    console.log('[Founder Notes:Dashboard:FilterBar] Signing out...')
     await supabase.auth.signOut()
     // Redirect to landing page after sign out
     window.location.href = '/'

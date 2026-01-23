@@ -11,7 +11,7 @@ export async function updateSession(request: NextRequest) {
 
   // Skip auth if Supabase not configured
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('[FounderNote:Middleware] Supabase credentials not configured')
+    console.warn('[Founder Notes:Middleware] Supabase credentials not configured')
     return { user: null, supabaseResponse, supabase: null }
   }
 
@@ -48,11 +48,11 @@ export async function updateSession(request: NextRequest) {
     const result = await getUserWithTimeout
     user = result.data.user
   } catch (e) {
-    console.warn('[FounderNote:Middleware] getUser timed out, treating as unauthenticated:', e)
+    console.warn('[Founder Notes:Middleware] getUser timed out, treating as unauthenticated:', e)
     // Graceful fallback: treat as unauthenticated, user can retry navigation
   }
 
-  console.log('[FounderNote:Middleware] User:', user ? user.email : 'Not authenticated')
+  console.log('[Founder Notes:Middleware] User:', user ? user.email : 'Not authenticated')
 
   return { user, supabaseResponse, supabase }
 }

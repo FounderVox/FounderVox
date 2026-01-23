@@ -16,7 +16,7 @@ const paymentFlowRoutes = ['/payment/success']
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  console.log('[FounderNote:Middleware] Processing:', pathname)
+  console.log('[Founder Notes:Middleware] Processing:', pathname)
 
   // Skip middleware for static files and API routes
   if (
@@ -31,13 +31,13 @@ export async function middleware(request: NextRequest) {
 
   // If Supabase is not configured, allow access to public routes only
   if (!supabase) {
-    console.warn('[FounderNote:Middleware] Supabase not configured, allowing public access')
+    console.warn('[Founder Notes:Middleware] Supabase not configured, allowing public access')
     return supabaseResponse
   }
 
   // Allow landing page at root - no redirect needed
   if (pathname === '/') {
-    console.log('[FounderNote:Middleware] Landing page at root, allowing access')
+    console.log('[Founder Notes:Middleware] Landing page at root, allowing access')
     return supabaseResponse
   }
 
@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
   )
 
   if (isProtectedRoute && !user) {
-    console.log('[FounderNote:Middleware] Protected route without auth, redirecting to login')
+    console.log('[Founder Notes:Middleware] Protected route without auth, redirecting to login')
     // Only redirect if not already on login page to prevent loops
     if (pathname !== '/login') {
       const redirectUrl = new URL('/login', request.url)
@@ -58,7 +58,7 @@ export async function middleware(request: NextRequest) {
 
   // Block users with unconfirmed emails from protected routes
   if (isProtectedRoute && user && !user.email_confirmed_at) {
-    console.log('[FounderNote:Middleware] User email not confirmed, redirecting to login')
+    console.log('[Founder Notes:Middleware] User email not confirmed, redirecting to login')
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('message', 'email_not_confirmed')
     return NextResponse.redirect(redirectUrl)
@@ -77,7 +77,7 @@ export async function middleware(request: NextRequest) {
   
   // Allow payment flow routes without additional checks
   if (user && isPaymentFlowRoute) {
-    console.log('[FounderNote:Middleware] Payment flow route, allowing access')
+    console.log('[Founder Notes:Middleware] Payment flow route, allowing access')
     return supabaseResponse
   }
 
@@ -96,7 +96,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAuthRoute && user) {
-    console.log('[FounderNote:Middleware] Authenticated user on auth page, redirecting')
+    console.log('[Founder Notes:Middleware] Authenticated user on auth page, redirecting')
     // If user has paid, go to dashboard
     if (profile?.is_paid_beta) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
@@ -112,7 +112,7 @@ export async function middleware(request: NextRequest) {
   // For paid routes (dashboard), require is_paid_beta
   if (user && isPaidRoute) {
     if (!profile?.is_paid_beta) {
-      console.log('[FounderNote:Middleware] User has not paid, redirecting to support page')
+      console.log('[Founder Notes:Middleware] User has not paid, redirecting to support page')
       // If onboarding not completed, go to welcome first
       if (!profile?.onboarding_completed) {
         return NextResponse.redirect(new URL('/welcome', request.url))
@@ -127,10 +127,10 @@ export async function middleware(request: NextRequest) {
     if (profile?.onboarding_completed) {
       // If paid, go to dashboard; otherwise go to support
       if (profile?.is_paid_beta) {
-        console.log('[FounderNote:Middleware] Onboarding completed and paid, redirecting to dashboard')
+        console.log('[Founder Notes:Middleware] Onboarding completed and paid, redirecting to dashboard')
         return NextResponse.redirect(new URL('/dashboard', request.url))
       } else {
-        console.log('[FounderNote:Middleware] Onboarding completed but not paid, redirecting to support')
+        console.log('[Founder Notes:Middleware] Onboarding completed but not paid, redirecting to support')
         return NextResponse.redirect(new URL('/support', request.url))
       }
     }
@@ -139,7 +139,7 @@ export async function middleware(request: NextRequest) {
   // For support page, if user has already paid, redirect to dashboard
   if (user && pathname === '/support') {
     if (profile?.is_paid_beta) {
-      console.log('[FounderNote:Middleware] User already paid, redirecting to dashboard')
+      console.log('[Founder Notes:Middleware] User already paid, redirecting to dashboard')
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }

@@ -19,7 +19,7 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
   const reset = context?.reset
 
   const handleClose = useCallback(() => {
-    console.log('[FounderNote:ProcessingModal] Closing and resetting...')
+    console.log('[Founder Notes:ProcessingModal] Closing and resetting...')
     onComplete()
     window.dispatchEvent(new CustomEvent('noteCreated'))
     // Reset the recording context to clear the state
@@ -29,7 +29,7 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
   // Auto-close after success
   useEffect(() => {
     if (isComplete) {
-      console.log('[FounderNote:ProcessingModal] Processing complete, will close in 2.5s...')
+      console.log('[Founder Notes:ProcessingModal] Processing complete, will close in 2.5s...')
       const timer = setTimeout(() => {
         handleClose()
       }, 2500)

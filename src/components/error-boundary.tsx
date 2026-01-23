@@ -20,7 +20,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    console.error('[FounderNote:ErrorBoundary] Error caught:', {
+    console.error('[Founder Notes:ErrorBoundary] Error caught:', {
       message: error.message,
       stack: error.stack,
       name: error.name,
@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[FounderNote:ErrorBoundary] Error details:', {
+    console.error('[Founder Notes:ErrorBoundary] Error details:', {
       error: {
         message: error.message,
         stack: error.stack,

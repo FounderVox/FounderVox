@@ -32,13 +32,13 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
     try {
       setIsSaving(true)
       setLimitError(null)
-      console.log('[FounderNote:ManualNote] Saving text note:', { noteTitle, noteContent })
+      console.log('[Founder Notes:ManualNote] Saving text note:', { noteTitle, noteContent })
 
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        console.error('[FounderNote:ManualNote] Error getting user:', userError)
+        console.error('[Founder Notes:ManualNote] Error getting user:', userError)
         setIsSaving(false)
         return
       }
@@ -70,12 +70,12 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
         .select()
 
       if (error) {
-        console.error('[FounderNote:ManualNote] Error saving note:', error)
+        console.error('[Founder Notes:ManualNote] Error saving note:', error)
         setIsSaving(false)
         return
       }
 
-      console.log('[FounderNote:ManualNote] Note saved successfully:', data)
+      console.log('[Founder Notes:ManualNote] Note saved successfully:', data)
 
       // Generate embedding for the new note (fire and forget)
       if (data && data[0]?.id) {
@@ -83,7 +83,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ noteId: data[0].id })
-        }).catch(err => console.error('[FounderNote:ManualNote] Embedding generation failed:', err))
+        }).catch(err => console.error('[Founder Notes:ManualNote] Embedding generation failed:', err))
       }
 
       // Reset form
@@ -95,7 +95,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
       // Dispatch event to notify other components (pages listen for this)
       window.dispatchEvent(new CustomEvent('noteCreated'))
     } catch (error) {
-      console.error('[FounderNote:ManualNote] Unexpected error:', error)
+      console.error('[Founder Notes:ManualNote] Unexpected error:', error)
       setIsSaving(false)
     }
   }
@@ -103,7 +103,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
   const handleAudioFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      console.log('[FounderNote:ManualNote] Audio file selected:', file.name)
+      console.log('[Founder Notes:ManualNote] Audio file selected:', file.name)
       setAudioFile(file)
     }
   }
@@ -114,13 +114,13 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
     try {
       setIsSaving(true)
       setLimitError(null)
-      console.log('[FounderNote:ManualNote] Uploading audio file:', audioFile.name)
+      console.log('[Founder Notes:ManualNote] Uploading audio file:', audioFile.name)
 
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        console.error('[FounderNote:ManualNote] Error getting user:', userError)
+        console.error('[Founder Notes:ManualNote] Error getting user:', userError)
         setIsSaving(false)
         return
       }
@@ -144,7 +144,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
         .upload(fileName, audioFile)
 
       if (uploadError) {
-        console.error('[FounderNote:ManualNote] Error uploading audio:', uploadError)
+        console.error('[Founder Notes:ManualNote] Error uploading audio:', uploadError)
         setIsSaving(false)
         return
       }
@@ -170,12 +170,12 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
         .select()
 
       if (error) {
-        console.error('[FounderNote:ManualNote] Error creating note:', error)
+        console.error('[Founder Notes:ManualNote] Error creating note:', error)
         setIsSaving(false)
         return
       }
 
-      console.log('[FounderNote:ManualNote] Audio note created successfully:', data)
+      console.log('[Founder Notes:ManualNote] Audio note created successfully:', data)
 
       // Reset form
       setAudioFile(null)
@@ -185,7 +185,7 @@ export function ManualNoteDialog({ open, onOpenChange }: ManualNoteDialogProps) 
       // Dispatch event to notify other components (pages listen for this)
       window.dispatchEvent(new CustomEvent('noteCreated'))
     } catch (error) {
-      console.error('[FounderNote:ManualNote] Unexpected error:', error)
+      console.error('[Founder Notes:ManualNote] Unexpected error:', error)
       setIsSaving(false)
     }
   }
