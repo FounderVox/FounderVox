@@ -66,7 +66,7 @@ export async function startOnboardingCheckout() {
 
     // Create checkout URL with redirect to success page after completion
     // The success page will poll for payment confirmation before redirecting to dashboard
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     console.log('[startOnboardingCheckout] Creating checkout URL with redirect:', `${appUrl}/payment/success`);
     
     const checkoutUrl = await createCheckoutUrl({
