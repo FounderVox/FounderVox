@@ -184,6 +184,25 @@ export async function POST(request: NextRequest) {
 
     console.log('[Ask] User has', totalNotes, 'total notes,', notesWithEmbeddings, 'with embeddings')
 
+    // If user has no notes at all
+    if (totalNotes === 0) {
+      return NextResponse.json({
+        answer: "You haven't recorded any notes yet! Start by creating a voice note, and I'll help you recall information from it later.",
+        citations: [],
+        noteCount: 0
+      })
+    }
+
+    // If user has notes but none indexed
+    if (notesWithEmbeddings === 0) {
+      return NextResponse.json({
+        answer: "Your notes are being prepared for AI search. Click the 'Index notes' button above, or wait a moment and try again.",
+        citations: [],
+        noteCount: 0,
+        needsIndexing: true
+      })
+    }
+
     // Step 1: Generate embedding for the query
     console.log('[Ask] Generating query embedding...')
     const embeddingResponse = await getOpenAI().embeddings.create({
@@ -205,11 +224,11 @@ export async function POST(request: NextRequest) {
       'match_notes',
       {
         query_embedding: embeddingString,
-        match_count: 5,
         match_threshold: 0.5, // Lower threshold to get more results
+        match_count: 5,
         filter_user_id: user.id,
-        filter_start_date: start?.toISOString() || null,
-        filter_end_date: end.toISOString()
+        filter_date_from: start?.toISOString() || null,
+        filter_date_to: end.toISOString()
       }
     )
 
@@ -217,9 +236,11 @@ export async function POST(request: NextRequest) {
       console.error('[Ask] Search error:', searchError)
       console.error('[Ask] Search error details:', JSON.stringify(searchError, null, 2))
       // If pgvector isn't set up yet, provide helpful message
-      if (searchError.message?.includes('function') || searchError.message?.includes('does not exist')) {
+      if (searchError.message?.includes('function') ||
+          searchError.message?.includes('does not exist') ||
+          searchError.message?.includes('match_notes')) {
         return NextResponse.json({
-          answer: "The semantic search feature hasn't been set up yet. Please run the database migration to enable pgvector.",
+          answer: "I'm not quite ready yet! The AI search needs to be configured. Please run the database setup in Supabase SQL Editor.",
           citations: [],
           noteCount: 0,
           setupRequired: true
@@ -284,19 +305,23 @@ export async function POST(request: NextRequest) {
       : ''
 
     // Step 5: Generate answer with GPT-4o
-    const systemPrompt = `You are a helpful assistant that answers questions based on the founder's voice notes and recordings.
+    const systemPrompt = `You are a helpful assistant that helps founders recall information from their voice notes.
 
 CRITICAL RULES:
 1. ONLY use information from the provided note excerpts to answer questions
-2. When citing information, place citation markers like [1], [2] at the END of the relevant sentence or statement
-3. If multiple notes support a point, cite all of them together: [1][2]
-4. If you cannot find relevant information in the notes, respond warmly: "I don't have information about this in your notes yet. Feel free to record a voice note about it, and I'll be able to help you recall it later!"
+2. Place citation markers [1], [2] at the END of relevant sentences
+3. If multiple notes support a point, cite all: [1][2]
+4. If no relevant info found, respond warmly: "I couldn't find that in your notes yet. Try recording a voice note about it!"
 5. Be concise but thorough - founders are busy
-6. For follow-up questions, use the conversation history for context
-7. Format responses with markdown for readability when appropriate
-8. Never make up information that isn't in the notes
+6. Use conversation history for follow-up questions
+7. Format with markdown for readability:
+   - **Bold** for key terms
+   - Bullet points for lists
+   - Keep paragraphs short (2-3 sentences)
+8. Never make up information not in the notes
+9. Be friendly, encouraging, and supportive
 
-TONE: Professional, direct, helpful - like a knowledgeable assistant who knows the founder's context.`
+TONE: Warm, professional, helpful - like a knowledgeable assistant who knows the founder's context.`
 
     let userPrompt: string
 

@@ -38,7 +38,7 @@ export const useSidebar = () => useContext(SidebarContext)
 
 const mainNavItems = [
   { label: 'Dashboard', href: '/dashboard', icon: Home },
-  { label: 'Ask', href: '/dashboard/ask', icon: Sparkles },
+  { label: 'Recall', href: '/dashboard/recall', icon: Sparkles },
 ]
 
 const noteCategories = [

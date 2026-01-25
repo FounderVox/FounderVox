@@ -60,7 +60,7 @@ const EXAMPLE_QUESTIONS = [
   "Find mentions of customer feedback or churn",
 ]
 
-export default function AskPage() {
+export default function RecallPage() {
   const { profile } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -69,40 +69,34 @@ export default function AskPage() {
   const [expandedCitation, setExpandedCitation] = useState<string | null>(null)
   const [indexStatus, setIndexStatus] = useState<{ indexed: number; pending: number; total: number } | null>(null)
   const [isIndexing, setIsIndexing] = useState(false)
+  const [setupRequired, setSetupRequired] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Check index status on mount
+  // Check index status on mount and auto-index if needed
   useEffect(() => {
-    const checkStatus = async () => {
+    const checkAndAutoIndex = async () => {
       try {
         const response = await fetch('/api/embeddings/backfill')
         if (response.ok) {
           const data = await response.json()
           setIndexStatus(data)
+
+          // Auto-trigger indexing if there are pending notes
+          if (data.pending > 0) {
+            autoIndexNotes()
+          }
         }
       } catch (error) {
-        console.error('[Ask] Failed to check index status:', error)
+        console.error('[Recall] Failed to check index status:', error)
       }
     }
-    checkStatus()
+    checkAndAutoIndex()
   }, [])
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  // Auto-resize textarea
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputValue(e.target.value)
-    e.target.style.height = 'auto'
-    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px'
-  }
-
-  // Index notes that need embeddings
-  const handleIndexNotes = async () => {
+  // Auto-index notes silently in background
+  const autoIndexNotes = async () => {
     if (isIndexing) return
     setIsIndexing(true)
 
@@ -115,22 +109,37 @@ export default function AskPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setIndexStatus({
-          indexed: (indexStatus?.total || 0) - data.remaining,
+        setIndexStatus(prev => ({
+          indexed: (prev?.total || 0) - data.remaining,
           pending: data.remaining,
-          total: indexStatus?.total || 0
-        })
+          total: prev?.total || 0
+        }))
 
-        // If more notes need indexing, continue
+        // Continue if more notes need indexing
         if (data.remaining > 0) {
-          setTimeout(handleIndexNotes, 500)
+          setTimeout(autoIndexNotes, 500)
+        } else {
+          setIsIndexing(false)
         }
+      } else {
+        setIsIndexing(false)
       }
     } catch (error) {
-      console.error('[Ask] Indexing error:', error)
-    } finally {
+      console.error('[Recall] Auto-indexing error:', error)
       setIsIndexing(false)
     }
+  }
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // Auto-resize textarea
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value)
+    e.target.style.height = 'auto'
+    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px'
   }
 
   // Submit query
@@ -179,6 +188,9 @@ export default function AskPage() {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to get response')
       }
+
+      // Handle special flags from response
+      if (data.setupRequired) setSetupRequired(true)
 
       const assistantMessage: Message = {
         id: (Date.now() + 2).toString(),
@@ -379,8 +391,6 @@ export default function AskPage() {
     )
   }
 
-  const needsIndexing = indexStatus && indexStatus.pending > 0
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -402,38 +412,20 @@ export default function AskPage() {
             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#BD6750] to-[#a85744] flex items-center justify-center shadow-sm">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
-            Ask Your Notes
+            Recall
           </h1>
           <p className="text-gray-500 mt-1 text-sm">
-            Ask questions about your voice notes using natural language
+            Instantly recall information from your voice notes
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Index status indicator */}
-          {needsIndexing && (
-            <button
-              onClick={handleIndexNotes}
-              disabled={isIndexing}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                isIndexing
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-amber-50 text-amber-600 hover:bg-amber-100"
-              )}
-            >
-              {isIndexing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Indexing...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4" />
-                  Index {indexStatus.pending} notes
-                </>
-              )}
-            </button>
+          {/* Auto-indexing indicator (subtle) */}
+          {isIndexing && (
+            <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Preparing notes...</span>
+            </div>
           )}
 
           {messages.length > 0 && (
@@ -447,6 +439,17 @@ export default function AskPage() {
           )}
         </div>
       </div>
+
+      {/* Setup Required Banner - only show if database isn't configured */}
+      {setupRequired && (
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium text-amber-800">Setup Required</p>
+            <p className="text-sm text-amber-700">The AI search feature needs database configuration. Please contact support or check the setup guide.</p>
+          </div>
+        </div>
+      )}
 
       {/* Time Filter Pills */}
       <div className="flex items-center gap-2 mb-6">
@@ -479,10 +482,10 @@ export default function AskPage() {
               <MessageSquare className="h-7 w-7 text-[#BD6750]" />
             </div>
             <h2 className="text-lg font-medium text-gray-900 mb-1">
-              What would you like to know?
+              What would you like to recall?
             </h2>
             <p className="text-gray-500 max-w-md mb-6 text-sm">
-              Ask questions about your notes and I&apos;ll find relevant information with citations.
+              Search your notes with natural language and I&apos;ll find relevant information with citations.
             </p>
 
             {/* Example Questions - Responsive Grid/Scroll */}
@@ -563,7 +566,7 @@ export default function AskPage() {
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question about your notes..."
+            placeholder="What would you like to recall from your notes?"
             rows={1}
             disabled={isLoading}
             className="w-full resize-none px-4 py-3.5 pr-14 rounded-2xl border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#BD6750]/20 focus:border-[#BD6750] disabled:opacity-50 text-sm"
