@@ -123,7 +123,7 @@ export default function DashboardPage() {
       setIsLoadingNotes(true)
       const { data, error } = await supabase
         .from('notes')
-        .select('id, title, formatted_content, raw_transcript, created_at, updated_at, duration_seconds, template_label, template_type, is_starred, tags, smartified_at')
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(9)
@@ -153,13 +153,13 @@ export default function DashboardPage() {
       const [actionResult, brainResult] = await Promise.all([
         supabase
           .from('action_items')
-          .select('id, task, assignee, deadline, priority, status, created_at, completed_at, recording_id, user_id')
+          .select('*')
           .eq('user_id', user.id)
           .in('status', ['open', 'in_progress'])
           .order('created_at', { ascending: false }),
         supabase
           .from('brain_dump')
-          .select('id, content, category, participants, created_at, recording_id, user_id')
+          .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
       ])
