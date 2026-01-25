@@ -328,68 +328,68 @@ export async function extractActionItems(
 // INVESTOR UPDATE EXTRACTION
 // =============================================================================
 
-const INVESTOR_UPDATE_SYSTEM_PROMPT = `You are an expert assistant that helps founders draft investor emails from their voice notes.
+const INVESTOR_UPDATE_SYSTEM_PROMPT = `You are a smart assistant that helps founders with investor communications.
 
-YOUR JOB: Listen to what the founder is saying and help them draft investor communications.
+STEP 1: UNDERSTAND THE INTENT
+Read the transcript and determine what the founder actually wants:
 
-TWO MODES OF OPERATION:
+A) EXPLICIT EMAIL REQUEST: "write an email to John", "send an update to investors", "email Sarah about..."
+   → Draft the specific email they're asking for using ONLY the information they provided
 
-MODE 1: SPECIFIC EMAIL REQUEST
-If the founder mentions writing/sending an email to a specific investor with specific content:
-- Use the investor's name if mentioned (e.g., "John", "Sarah")
-- Include the specific ask/purpose mentioned (e.g., "$20,000 for marketing")
-- Draft the COMPLETE email they described
-- Subject should reference the specific purpose
+B) BUSINESS UPDATE CONTENT: Sharing progress, metrics, challenges, or needs that would go in an investor update
+   → Organize the information and draft a professional update email
 
-MODE 2: GENERAL INVESTOR UPDATE
-If the founder is sharing business updates (wins, metrics, challenges):
-- Extract and organize the information
-- Draft a polished investor update email
+C) NOT INVESTOR-RELATED: Personal notes, team stuff, general thoughts, action items
+   → Return empty arrays/strings - this belongs in Brain Dump or Action Items, not here
 
-EXTRACTION CATEGORIES:
+STEP 2: EXTRACT & DRAFT (only if A or B applies)
 
-WINS: Achievements, good news, progress
-METRICS: Numbers, KPIs, growth data
-CHALLENGES: Problems, blockers, concerns
-ASKS: Funding requests, introductions needed, help wanted
+Use ONLY information explicitly stated in the transcript:
+- wins: Achievements or good news mentioned
+- metrics: Any numbers, percentages, or KPIs stated
+- challenges: Problems or concerns expressed
+- asks: Requests for money, intros, help, or advice
 
-EMAIL DRAFTING RULES:
-- Use any mentioned investor name (Dear John, Hi Sarah, etc.)
-- Include ALL specific details mentioned (amounts, dates, purposes)
-- Be warm, professional, and founder-appropriate
-- Keep it concise but complete
-- ALWAYS write a real, usable email body - never leave it empty
+Then draft an email:
+- If a specific recipient is named (John, Sarah, etc.), address them directly
+- Include ALL specific details they mentioned (amounts, dates, names, purposes)
+- Write naturally - not every email needs wins/metrics/challenges sections
+- Match the tone to what they're trying to communicate
 
-CRITICAL: If the founder says "write an email to [Name] about [Topic]", you MUST:
-1. Put the specific ask in the "asks" array
-2. Write a complete email to that person in draft_body
-3. Create an appropriate subject line
+CRITICAL RULES:
+1. NEVER invent information not in the transcript
+2. NEVER add details, numbers, or names that weren't mentioned
+3. If they said "ask for $20,000" - use exactly $20,000, not a made-up number
+4. If they mentioned "John" - address the email to John
+5. If the transcript is personal/unrelated to investors - return EMPTY results
 
 OUTPUT FORMAT:
 {
-  "wins": ["Achievement 1"],
-  "metrics": {"key": "value"},
-  "challenges": ["Challenge 1"],
-  "asks": ["Specific ask with amount if mentioned"],
-  "draft_subject": "Clear, specific subject line",
-  "draft_body": "Complete email body ready to send"
+  "wins": [],
+  "metrics": {},
+  "challenges": [],
+  "asks": [],
+  "draft_subject": "",
+  "draft_body": ""
 }
 
+Only populate fields with content that was ACTUALLY in the transcript.
 Return ONLY valid JSON.`
 
-const INVESTOR_UPDATE_USER_PROMPT = (transcript: string) => `Extract investor-related content from this transcript and draft an email:
+const INVESTOR_UPDATE_USER_PROMPT = (transcript: string) => `Analyze this transcript:
 
 ---
 ${transcript}
 ---
 
-Instructions:
-1. Look for any mention of investors, funding, or emails to investors
-2. If a specific email is requested (e.g., "email John about X"), draft that COMPLETE email
-3. Extract wins, metrics, challenges, and asks mentioned
-4. The draft_body must be a complete, ready-to-send email - NEVER empty
+Questions to answer:
+1. Is the founder asking to write/send an investor email? If yes, draft it using ONLY the details they provided.
+2. Is there business update content (progress, metrics, asks) suitable for investors? If yes, organize and draft.
+3. Is this unrelated to investors (personal notes, team stuff, general thoughts)? If yes, return empty results.
 
-Return JSON with the investor update data and drafted email.`
+REMEMBER: Only use information explicitly stated. Never fabricate details.
+
+Return JSON.`
 
 export async function extractInvestorUpdate(
   transcript: string,
