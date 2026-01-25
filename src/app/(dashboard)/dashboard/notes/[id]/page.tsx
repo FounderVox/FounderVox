@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { cn } from '@/lib/utils'
 import { getTagColor } from '@/lib/tag-colors'
+import { AnnotatedMarkdown } from '@/components/ui/annotated-markdown'
 
 interface NoteData {
   id: string
@@ -33,6 +34,7 @@ export default function NoteViewPage() {
   const [note, setNote] = useState<NoteData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const [editedTitle, setEditedTitle] = useState('')
   const [editedContent, setEditedContent] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -328,20 +330,39 @@ export default function NoteViewPage() {
         {/* Divider line to prevent text overlap with floating buttons */}
         <div className="h-px bg-gray-200 mb-6" />
 
-        {/* Content - Editable, Apple Notes style */}
-        <textarea
-          ref={contentTextareaRef}
-          value={editedContent}
-          onChange={(e) => setEditedContent(e.target.value)}
-          placeholder="Start writing..."
-          className="w-full min-h-[60vh] text-gray-900 bg-transparent border-none outline-none resize-none leading-relaxed placeholder:text-gray-300"
-          style={{ 
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-            fontSize: '17px',
-            lineHeight: '1.5',
-            letterSpacing: '-0.01em'
-          }}
-        />
+        {/* Content - View/Edit mode */}
+        {isEditing ? (
+          <textarea
+            ref={contentTextareaRef}
+            value={editedContent}
+            onChange={(e) => setEditedContent(e.target.value)}
+            onBlur={() => {
+              // Only exit edit mode if no unsaved changes
+              if (!hasUnsavedChanges) {
+                setIsEditing(false)
+              }
+            }}
+            placeholder="Start writing..."
+            className="w-full min-h-[60vh] text-gray-900 bg-transparent border-none outline-none resize-none leading-relaxed placeholder:text-gray-300"
+            style={{
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+              fontSize: '17px',
+              lineHeight: '1.5',
+              letterSpacing: '-0.01em'
+            }}
+            autoFocus
+          />
+        ) : (
+          <div
+            onClick={() => setIsEditing(true)}
+            className="cursor-text min-h-[60vh]"
+          >
+            <AnnotatedMarkdown
+              content={editedContent || 'Click to start writing...'}
+              className="text-gray-900"
+            />
+          </div>
+        )}
         
         {/* Spacer to ensure content doesn't overlap with floating buttons */}
         <div className="h-32" />
@@ -367,6 +388,7 @@ export default function NoteViewPage() {
           }}
           noteId={note.id}
           noteTitle={note.title || 'Untitled Note'}
+          noteContent={note.formatted_content || note.content || note.raw_transcript || undefined}
         />
       )}
     </div>

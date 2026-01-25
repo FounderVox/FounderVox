@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Save, Edit2, Calendar, Clock, Star, Tag as TagIcon, Wand2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { AnnotatedMarkdown } from '@/components/ui/annotated-markdown'
 
 interface NoteDetailModalProps {
   open: boolean
@@ -427,11 +428,10 @@ export function NoteDetailModal({ open, onOpenChange, noteId }: NoteDetailModalP
                     placeholder="Start typing your note..."
                   />
                 ) : (
-                  <div className="prose prose-lg max-w-none">
-                    <div className="whitespace-pre-wrap text-gray-900 text-base leading-relaxed p-4 bg-gray-50 rounded-xl border border-gray-200 min-h-[500px]">
-                      {note.formatted_content || note.content || note.raw_transcript || 'No content'}
-                    </div>
-                  </div>
+                  <AnnotatedMarkdown
+                    content={note.formatted_content || note.content || note.raw_transcript || 'No content'}
+                    className="p-4 bg-gray-50 rounded-xl border border-gray-200 min-h-[500px]"
+                  />
                 )}
 
                 {/* Error Message */}

@@ -730,3 +730,94 @@ export async function extractPreviewCounts(transcript: string): Promise<{
     return { actionItems: 0, investorUpdates: 0, brainDump: 0 }
   }
 }
+
+// =============================================================================
+// NOTE ORGANIZATION
+// =============================================================================
+
+const ORGANIZE_NOTE_SYSTEM_PROMPT = `You are an expert assistant that organizes voice note transcripts into clean, readable notes.
+
+CRITICAL GUARDRAILS:
+1. PRESERVE ALL MEANING - Every idea and detail from the original MUST appear in the output
+2. NEVER FABRICATE - Do not add information that wasn't in the original
+3. NEVER OMIT - Do not skip any meaningful content
+4. Keep the original voice and tone
+
+FORMATTING:
+- Use ## headings when there are distinct topics
+- Use bullet points for lists or related points
+- Use paragraphs for narrative content
+- Use **bold** for key terms or names
+- Remove filler words (um, uh, like) but keep substance
+- Fix grammar without changing meaning
+
+ENTITY ANNOTATION:
+When organizing the note, annotate key entities using double-bracket syntax:
+- Names of people: [[person:Name Here]]
+- Dates and times: [[date:January 15, 2024]] or [[date:next Friday]]
+- Money and currencies: [[money:$50,000]] or [[money:100k]]
+- Metrics and percentages: [[metric:25% growth]] or [[metric:500 users]]
+
+ANNOTATION RULES:
+1. Only annotate the FIRST occurrence of each unique entity
+2. Do NOT annotate vague terms like "today", "soon", "some money"
+3. Only annotate specific, meaningful entities mentioned by the user
+4. Preserve the original text exactly - just wrap it with the marker
+5. When in doubt, leave it plain - avoid over-annotating
+
+EXAMPLES:
+- "Meeting with [[person:Sarah Chen]] on [[date:Tuesday at 3pm]]"
+- "We raised [[money:$2.5M]] at a [[metric:$15M valuation]]"
+- "Revenue grew [[metric:40% MoM]] to [[money:$80k ARR]]"
+
+WHAT NOT TO DO:
+- Don't add introductions/conclusions that weren't there
+- Don't add "Summary:" sections unless user mentioned them
+- Don't make the note longer than necessary
+
+OUTPUT: Return ONLY the organized markdown text. No JSON, no explanation.`
+
+export async function organizeNoteContent(transcript: string): Promise<{
+  success: boolean
+  organizedContent: string | null
+  error?: string
+}> {
+  const logPrefix = '[Smartify:Organize]'
+
+  const validation = validateTranscript(transcript)
+  if (!validation.valid) {
+    console.log(`${logPrefix} Skipping - ${validation.reason}`)
+    return { success: true, organizedContent: null }
+  }
+
+  console.log(`${logPrefix} Starting note organization`)
+
+  try {
+    const response = await getOpenAI().chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: ORGANIZE_NOTE_SYSTEM_PROMPT },
+        { role: 'user', content: `Organize this voice note transcript into a clean, readable note:\n\n${transcript}` }
+      ],
+      temperature: 0.3,
+      max_tokens: 4000
+    })
+
+    const content = response.choices[0]?.message?.content
+    if (!content) {
+      console.log(`${logPrefix} No response content from GPT`)
+      return { success: true, organizedContent: null }
+    }
+
+    console.log(`${logPrefix} Successfully organized note (${content.length} chars)`)
+    return { success: true, organizedContent: content.trim() }
+
+  } catch (error) {
+    console.error(`${logPrefix} Unexpected error:`, error)
+    return {
+      success: false,
+      organizedContent: null,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
