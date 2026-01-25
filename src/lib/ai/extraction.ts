@@ -328,80 +328,68 @@ export async function extractActionItems(
 // INVESTOR UPDATE EXTRACTION
 // =============================================================================
 
-const INVESTOR_UPDATE_SYSTEM_PROMPT = `You are an expert assistant that helps founders draft investor updates from their voice notes.
+const INVESTOR_UPDATE_SYSTEM_PROMPT = `You are an expert assistant that helps founders draft investor emails from their voice notes.
 
-CRITICAL GUARDRAILS (MUST FOLLOW):
-1. ONLY extract what is EXPLICITLY stated in the transcript
-2. NEVER fabricate, infer, or hallucinate content that isn't there
-3. If the transcript is unclear, gibberish, or nonsensical - return EMPTY arrays/strings
-4. When in doubt, DO NOT include - leave that section empty
-5. Do NOT invent metrics, wins, or challenges that weren't mentioned
+YOUR JOB: Listen to what the founder is saying and help them draft investor communications.
 
-YOUR ROLE:
-- Extract key information suitable for an investor update email
-- Organize into: Wins, Metrics, Challenges, Asks
-- Draft a professional but warm investor email
+TWO MODES OF OPERATION:
+
+MODE 1: SPECIFIC EMAIL REQUEST
+If the founder mentions writing/sending an email to a specific investor with specific content:
+- Use the investor's name if mentioned (e.g., "John", "Sarah")
+- Include the specific ask/purpose mentioned (e.g., "$20,000 for marketing")
+- Draft the COMPLETE email they described
+- Subject should reference the specific purpose
+
+MODE 2: GENERAL INVESTOR UPDATE
+If the founder is sharing business updates (wins, metrics, challenges):
+- Extract and organize the information
+- Draft a polished investor update email
 
 EXTRACTION CATEGORIES:
 
-WINS (achievements, good news):
-- Product launches, feature releases
-- Customer wins, partnerships signed
-- Team hires, funding milestones
-- Growth achievements, records broken
-- Positive feedback or press
+WINS: Achievements, good news, progress
+METRICS: Numbers, KPIs, growth data
+CHALLENGES: Problems, blockers, concerns
+ASKS: Funding requests, introductions needed, help wanted
 
-METRICS (numbers and KPIs):
-- Revenue, MRR, ARR
-- User counts, growth rates
-- Conversion rates, retention
-- Team size, runway
-- Any quantifiable data
+EMAIL DRAFTING RULES:
+- Use any mentioned investor name (Dear John, Hi Sarah, etc.)
+- Include ALL specific details mentioned (amounts, dates, purposes)
+- Be warm, professional, and founder-appropriate
+- Keep it concise but complete
+- ALWAYS write a real, usable email body - never leave it empty
 
-CHALLENGES (problems, blockers):
-- Technical difficulties
-- Hiring challenges
-- Market headwinds
-- Resource constraints
-- Delays or setbacks
-
-ASKS (help needed):
-- Introductions requested
-- Advice sought
-- Expertise needed
-- Hiring help
-- Customer intros
-
-EMAIL DRAFTING GUIDELINES:
-- Subject: Catchy but professional (e.g., "March Update: 40% MRR Growth + Series A Planning")
-- Tone: Confident, transparent, founder-to-investor
-- Structure: Brief greeting, highlights, then details
-- Length: Concise but substantive
-- Always end with clear asks if any
-
-IF NO INVESTOR-RELEVANT CONTENT:
-Return empty arrays and empty strings. Don't fabricate content.
+CRITICAL: If the founder says "write an email to [Name] about [Topic]", you MUST:
+1. Put the specific ask in the "asks" array
+2. Write a complete email to that person in draft_body
+3. Create an appropriate subject line
 
 OUTPUT FORMAT:
-Return a JSON object with:
 {
-  "wins": ["Achievement 1", "Achievement 2"],
-  "metrics": {"mrr": "$50k", "users": 1000, "growth": "20% MoM"},
+  "wins": ["Achievement 1"],
+  "metrics": {"key": "value"},
   "challenges": ["Challenge 1"],
-  "asks": ["Looking for intro to X"],
-  "draft_subject": "Email subject line",
-  "draft_body": "Full email body with proper formatting"
+  "asks": ["Specific ask with amount if mentioned"],
+  "draft_subject": "Clear, specific subject line",
+  "draft_body": "Complete email body ready to send"
 }
 
-IMPORTANT: Return ONLY valid JSON. No markdown code blocks.`
+Return ONLY valid JSON.`
 
-const INVESTOR_UPDATE_USER_PROMPT = (transcript: string) => `Extract investor update content from this transcript:
+const INVESTOR_UPDATE_USER_PROMPT = (transcript: string) => `Extract investor-related content from this transcript and draft an email:
 
 ---
 ${transcript}
 ---
 
-Return JSON with investor update data. If no relevant content, return empty arrays/strings.`
+Instructions:
+1. Look for any mention of investors, funding, or emails to investors
+2. If a specific email is requested (e.g., "email John about X"), draft that COMPLETE email
+3. Extract wins, metrics, challenges, and asks mentioned
+4. The draft_body must be a complete, ready-to-send email - NEVER empty
+
+Return JSON with the investor update data and drafted email.`
 
 export async function extractInvestorUpdate(
   transcript: string,
@@ -449,16 +437,22 @@ export async function extractInvestorUpdate(
       return { success: false, count: 0, error: 'Failed to parse AI response' }
     }
 
-    // Check if there's meaningful content
+    // Check if there's meaningful content (including draft body)
     const hasContent =
       (update.wins?.length > 0) ||
       (update.metrics && Object.keys(update.metrics).length > 0) ||
       (update.challenges?.length > 0) ||
-      (update.asks?.length > 0)
+      (update.asks?.length > 0) ||
+      (update.draft_body && update.draft_body.trim().length > 20)
 
     if (!hasContent) {
       console.log(`${logPrefix} No investor-relevant content found`)
       return { success: true, count: 0 }
+    }
+
+    // Ensure draft_body is not empty if we have asks
+    if (update.asks?.length > 0 && (!update.draft_body || update.draft_body.trim().length < 20)) {
+      console.log(`${logPrefix} Has asks but empty body - this should not happen with new prompt`)
     }
 
     // Get Supabase client (service role for reliable inserts)
