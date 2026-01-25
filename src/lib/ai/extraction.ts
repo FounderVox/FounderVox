@@ -504,71 +504,66 @@ export async function extractInvestorUpdate(
 // BRAIN DUMP EXTRACTION
 // =============================================================================
 
-const BRAIN_DUMP_SYSTEM_PROMPT = `You are an assistant that organizes raw brain-dump notes from voice transcripts into predefined categories.
+const BRAIN_DUMP_SYSTEM_PROMPT = `You are an assistant that captures thoughts and ideas from voice note transcripts.
+
+YOUR JOB: Extract meaningful content from the transcript and organize it into categories. Be INCLUSIVE - capture anything the user said that has substance.
 
 CRITICAL RULES:
 1. ONLY extract what is EXPLICITLY stated in the transcript
-2. NEVER fabricate, infer, or hallucinate content that isn't there
-3. If the transcript is unclear, gibberish, or nonsensical - return EMPTY array
-4. When uncertain about an item, DO NOT extract it
-5. Place each item into the SINGLE most appropriate category
-6. You may summarize or clean up wording, but NEVER alter specific details (dates, times, names, numbers, amounts)
+2. NEVER fabricate or hallucinate content
+3. If the transcript is complete gibberish or just noise - return EMPTY array
+4. You may summarize or clean up wording, but preserve specific details (dates, names, numbers)
+5. BE INCLUSIVE - if someone said it and it has meaning, capture it
 
-CATEGORY DEFINITIONS (use exactly these values):
+CATEGORIES (use exactly these values):
 
-"meeting" - Discussions, conversations, sync-ups
-  MUST contain one or more of: participant names, meeting topics, discussion points, agendas, outcomes, or scheduled times
-  Examples: "Synced with Sarah about Q4 roadmap", "Team standup - discussed launch blockers"
-  NOT for: General thoughts that don't involve other people
+"meeting" - Anything involving other people
+  Examples: "Talked to Sarah about the project", "Team meeting about launch", "Call with investor"
+  Use when: Names are mentioned, or discussions/conversations are referenced
 
-"blocker" - Obstacles, issues, problems
-  MUST describe something that is actively blocking or hindering progress
-  Examples: "API rate limits preventing Stripe integration", "Waiting on legal approval before launch"
-  NOT for: General concerns or things that might become problems
+"blocker" - Problems, issues, obstacles, concerns
+  Examples: "The API is slow", "Can't figure out the bug", "Worried about timeline"
+  Use when: Something negative or problematic is mentioned
 
-"decision" - Choices made or pending
-  MUST be a clear decision that was made OR a decision that explicitly needs to be made
-  Examples: "Decided to use AWS instead of GCP", "Need to choose between React and Vue by Friday"
-  NOT for: Options being casually mentioned, opinions, or preferences
+"decision" - Choices, conclusions, determinations
+  Examples: "Going with React", "Decided to hire two more people", "Will use AWS"
+  Use when: A choice was made or needs to be made
 
-"question" - Things to research or ask
-  MUST be a clear question or something explicitly marked for investigation
-  Examples: "Research competitor pricing models", "Ask Mike about the deployment process"
-  NOT for: Rhetorical questions or general wondering
+"question" - Things to find out, research, or ask
+  Examples: "Need to look into pricing", "What's the best approach for this?", "Ask team about timeline"
+  Use when: Uncertainty or need for information is expressed
 
-"followup" - Action items and reminders
-  MUST describe a specific action to be taken or a reminder for later
-  Examples: "Follow up with investor next Tuesday", "Remember to send the proposal"
-  NOT for: Vague intentions, ideas, or general thoughts
+"followup" - Everything else: ideas, reminders, thoughts, observations, plans
+  Examples: "Should build the mobile app", "The product is coming along well", "Thinking about new features"
+  Use when: General thoughts, ideas, observations, or anything that doesn't fit above categories
+  THIS IS THE DEFAULT CATEGORY - use it for anything meaningful that doesn't clearly fit elsewhere
 
 CONTENT GUIDELINES:
-1. Each item should be a single, coherent thought
-2. Preserve all specific details: dates, times, names, numbers, amounts
-3. You may clean up filler words and improve clarity
-4. For meetings, always extract participant names into the participants array
-5. Combine closely related points into single items when appropriate
-6. Skip generic filler, greetings, or meaningless fragments
+1. Each item = one coherent thought or point
+2. Clean up filler words but keep the meaning
+3. For meetings, extract participant names into participants array
+4. Combine related points when natural
+5. Skip only meaningless filler (um, uh, "so yeah", "anyway")
 
 OUTPUT FORMAT:
-Return a JSON object with an "items" array:
 {
   "items": [
     {
-      "content": "Discussed Q4 roadmap with Sarah and Mike - agreed to prioritize mobile app",
+      "content": "Discussed Q4 roadmap with Sarah and Mike",
       "category": "meeting",
       "participants": ["Sarah", "Mike"]
     },
     {
-      "content": "API rate limits blocking Stripe integration",
-      "category": "blocker",
+      "content": "The new feature is working great",
+      "category": "followup",
       "participants": []
     }
   ]
 }
 
-If NO extractable content, return: {"items": []}
+If transcript has no meaningful content, return: {"items": []}
 
-IMPORTANT: Return ONLY valid JSON. No markdown, no explanation.`
+IMPORTANT: Return ONLY valid JSON.`
 
 const BRAIN_DUMP_USER_PROMPT = (transcript: string) => `Extract and categorize thoughts from this transcript:
 
@@ -685,18 +680,19 @@ export async function extractBrainDump(
 // PREVIEW EXTRACTION (for Smartify modal)
 // =============================================================================
 
-const PREVIEW_SYSTEM_PROMPT = `You are an assistant that analyzes transcripts to estimate what structured data can be extracted.
+const PREVIEW_SYSTEM_PROMPT = `You are an assistant that analyzes transcripts to estimate extractable content.
 
-CRITICAL GUARDRAILS:
-1. ONLY count items that are EXPLICITLY stated in the transcript
-2. If the transcript is unclear or gibberish, return all zeros
-3. Do NOT over-estimate - be conservative
-4. When in doubt, count lower rather than higher
+RULES:
+1. Only count items that are EXPLICITLY in the transcript
+2. If transcript is gibberish/noise, return all zeros
 
-Analyze the transcript and count:
-1. ACTION ITEMS: Tasks, todos, things someone explicitly said they need to do
-2. INVESTOR UPDATE: Is there REAL investor-relevant content? (1 or 0)
-3. BRAIN DUMP: Distinct, meaningful thoughts or notes (not filler words)
+COUNT THESE:
+1. ACTION ITEMS: Tasks, todos, things to do (e.g., "need to", "should", "will", "have to")
+2. INVESTOR UPDATE: Business updates suitable for investors? (1 if yes, 0 if no)
+3. BRAIN DUMP: ANY meaningful thoughts, ideas, observations, concerns, or notes - be INCLUSIVE here
+
+For BRAIN DUMP, count generously - any coherent thought or statement with meaning counts.
+A 30-second voice note typically has 3-8 brain dump items.
 
 Return JSON: {"actionItems": N, "investorUpdates": N, "brainDump": N}`
 

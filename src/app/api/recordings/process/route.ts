@@ -1,11 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createDeepgramClient, DeepgramClient } from '@deepgram/sdk'
-import {
-  extractActionItems,
-  extractInvestorUpdate,
-  extractBrainDump
-} from '@/lib/ai/extraction'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -309,12 +304,8 @@ export async function POST(request: NextRequest) {
         console.error('[Process] Embedding generation failed:', err)
       )
 
-      // Extract action items from transcript (fire and forget)
-      try {
-        await extractActionItems(cleanedTranscript, recordingId, user.id)
-      } catch (extractError) {
-        console.error('[Process] Error extracting action items:', extractError)
-      }
+      // NOTE: Extraction is NOT automatic - user must click Smartify button
+      // This gives users control over when to run detection and extraction
     }
 
     console.log('='.repeat(60))

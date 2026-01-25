@@ -117,7 +117,7 @@ export default function AllNotesPage() {
 
       const { data: notesData, error: notesError } = await supabase
         .from('notes')
-        .select('*')
+        .select('id, title, formatted_content, raw_transcript, created_at, updated_at, duration_seconds, template_label, template_type, is_starred, tags, smartified_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(NOTES_PAGE_SIZE)
@@ -146,7 +146,7 @@ export default function AllNotesPage() {
 
       const { data: notesData, error: notesError } = await supabase
         .from('notes')
-        .select('*')
+        .select('id, title, formatted_content, raw_transcript, created_at, updated_at, duration_seconds, template_label, template_type, is_starred, tags, smartified_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .range(notes.length, notes.length + NOTES_PAGE_SIZE - 1)

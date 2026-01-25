@@ -67,19 +67,11 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
 
   const toggleCollapse = () => setIsCollapsed(!isCollapsed)
 
-  // Calculate widths: 20% reduction from original, collapsed gets additional 15% reduction
-  const expandedWidth = 256 * 0.8 // 204.8px, rounded to 205px
-  const collapsedWidth = 72 * 0.85 // 61.2px, rounded to 61px
-  
-  const currentWidth = isCollapsed ? collapsedWidth : expandedWidth
-
   return (
-      <motion.aside
-        initial={false}
-        animate={{ width: currentWidth }}
-        transition={{ duration: 0.2, ease: 'easeInOut' }}
+      <aside
         className={cn(
-          "fixed left-0 top-0 bottom-0 bg-surface-sunken border-r border-gray-200 flex flex-col z-[200] shadow-sm",
+          "fixed left-0 top-0 bottom-0 bg-surface-sunken border-r border-gray-200 flex flex-col z-[200] shadow-sm transition-[width] duration-200 ease-in-out",
+          isCollapsed ? "w-[61px]" : "w-[205px]",
           isCollapsed && "overflow-visible"
         )}
         style={{ height: '100vh' }}
@@ -356,6 +348,6 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
             </div>
           )}
         </div>
-      </motion.aside>
+      </aside>
   )
 }

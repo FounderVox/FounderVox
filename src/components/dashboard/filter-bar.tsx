@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/auth-context'
 import { Search, ChevronDown, LogOut, Settings } from 'lucide-react'
 import { SearchPanel } from './search-panel'
 
@@ -16,13 +16,14 @@ export function FilterBar({ avatarUrl, displayName, email }: FilterBarProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+  const { supabase } = useAuth()
 
   const initials = displayName
     ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : email?.[0].toUpperCase() || 'U'
 
   const handleSignOut = async () => {
+    if (!supabase) return
     console.log('[Founder Notes:Dashboard:FilterBar] Signing out...')
     await supabase.auth.signOut()
     // Redirect to landing page after sign out

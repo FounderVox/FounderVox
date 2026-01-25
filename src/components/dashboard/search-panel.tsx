@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/auth-context'
 import {
   Search,
   X,
@@ -79,7 +79,7 @@ export function SearchPanel({ open, onClose }: SearchPanelProps) {
   const [isPeopleSearch, setIsPeopleSearch] = useState(false)
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
+  const { supabase, user } = useAuth()
 
   // Debounced search
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -133,14 +133,13 @@ export function SearchPanel({ open, onClose }: SearchPanelProps) {
       return
     }
 
+    if (!supabase || !user) {
+      return
+    }
+
     setIsSearching(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setIsSearching(false)
-        return
-      }
 
       // Handle @ people search
       if (query.startsWith('@')) {
@@ -267,19 +266,18 @@ export function SearchPanel({ open, onClose }: SearchPanelProps) {
     } finally {
       setIsSearching(false)
     }
-  }, [supabase])
+  }, [supabase, user])
 
   // Search for a specific person
   const searchPerson = useCallback(async (personName: string) => {
+    if (!supabase || !user) {
+      return
+    }
+
     setIsSearching(true)
     setSelectedPerson(personName)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setIsSearching(false)
-        return
-      }
 
       // Get all recordings first
       const { data: recordings } = await supabase
@@ -338,7 +336,7 @@ export function SearchPanel({ open, onClose }: SearchPanelProps) {
     } finally {
       setIsSearching(false)
     }
-  }, [supabase])
+  }, [supabase, user])
 
   // Debounced search effect
   useEffect(() => {
