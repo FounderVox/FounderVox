@@ -28,6 +28,18 @@ export async function GET(request: Request) {
 
     if (exchangeError) {
       console.error('[Auth Callback] Code exchange error:', exchangeError)
+
+      // Check if this is a PKCE error (different browser scenario)
+      const isPKCEError = exchangeError.message?.includes('PKCE') ||
+                          exchangeError.message?.includes('code verifier')
+
+      if (isPKCEError) {
+        // Email is confirmed, just redirect to login with success message
+        return NextResponse.redirect(
+          `${origin}/login?confirmed=true`
+        )
+      }
+
       return NextResponse.redirect(
         `${origin}/login?error=exchange_failed&message=${encodeURIComponent(exchangeError.message)}`
       )

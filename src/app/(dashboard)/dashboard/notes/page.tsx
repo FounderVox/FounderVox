@@ -22,12 +22,18 @@ interface Note {
   raw_transcript: string | null
   created_at: string
   updated_at: string
-  duration: string | null
+  duration_seconds: number | null
   template_label: string | null
   template_type: string | null
   is_starred: boolean
   tags: string[] | null
   smartified_at: string | null
+}
+
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
 interface GroupedNotes {
@@ -460,12 +466,11 @@ export default function AllNotesPage() {
                         title={note.title || 'Untitled Note'}
                         preview={note.formatted_content?.substring(0, 150) || note.raw_transcript?.substring(0, 150) || 'No content'}
                         createdAt={formatTime(note.created_at)}
-                        duration={note.duration || '0:00'}
+                        duration={note.duration_seconds ? formatDuration(note.duration_seconds) : undefined}
                         template={note.template_label || note.template_type || 'Note'}
                         isStarred={note.is_starred}
                         tags={note.tags || []}
                         onStar={() => toggleStar(note.id)}
-                        onPlay={() => console.log('[Founder Notes:AllNotes] Playing note:', note.id)}
                         onEdit={() => handleEditNote(note.id)}
                         onDelete={() => handleDeleteNote(note.id)}
                         onAddTag={() => handleAddTag(note.id)}

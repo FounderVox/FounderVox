@@ -16,6 +16,7 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [showResendOption, setShowResendOption] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
   const [isResending, setIsResending] = useState(false)
@@ -59,6 +60,11 @@ function LoginContent() {
     // Show success message if coming from signup
     if (searchParams.get('signup') === 'success') {
       // Could show a success message here
+    }
+
+    // Handle email confirmation from different browser (PKCE scenario)
+    if (searchParams.get('confirmed') === 'true') {
+      setSuccessMessage('Email confirmed! Please sign in with your email and password.')
     }
 
     // Handle OAuth callback errors
@@ -269,7 +275,7 @@ function LoginContent() {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={isLoading}
-              className="h-12 bg-[#faf8f6] border-[#e5e0db] text-[#1a1a1a] placeholder:text-[#999] focus:border-[#BD6750] focus-visible:ring-[#BD6750]/20 focus:ring-offset-0 rounded-xl font-body pr-12"
+              className="h-12 bg-[#faf8f6] border-[#e5e0db] text-[#1a1a1a] placeholder:text-[#999] focus:border-[#BD6750] focus-visible:ring-[#BD6750]/20 focus:ring-offset-0 rounded-xl font-body pr-12 [&::-ms-reveal]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
             />
             <button
               type="button"
@@ -285,14 +291,16 @@ function LoginContent() {
           </div>
         </div>
 
-        {resendSuccess && (
+        {(resendSuccess || successMessage) && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="p-3 rounded-xl bg-green-50 border border-green-100 flex items-start gap-2"
           >
             <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-green-600 font-body">Confirmation email sent! Please check your inbox.</p>
+            <p className="text-sm text-green-600 font-body">
+              {successMessage || 'Confirmation email sent! Please check your inbox.'}
+            </p>
           </motion.div>
         )}
 

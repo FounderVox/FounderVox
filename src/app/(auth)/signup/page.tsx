@@ -168,7 +168,7 @@ export default function SignupPage() {
               required
               minLength={8}
               disabled={isLoading}
-              className="h-12 bg-[#faf8f6] border-[#e5e0db] text-[#1a1a1a] placeholder:text-[#999] focus:border-[#BD6750] focus-visible:ring-[#BD6750]/20 focus:ring-offset-0 rounded-xl font-body pr-12"
+              className="h-12 bg-[#faf8f6] border-[#e5e0db] text-[#1a1a1a] placeholder:text-[#999] focus:border-[#BD6750] focus-visible:ring-[#BD6750]/20 focus:ring-offset-0 rounded-xl font-body pr-12 [&::-ms-reveal]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
             />
             <button
               type="button"

@@ -92,18 +92,16 @@ export function ProcessingModal({ isOpen, onComplete }: ProcessingModalProps) {
                 <p className="text-gray-500 text-sm">
                   Transcribing audio with AI...
                 </p>
-                {/* Progress indicator - smooth continuous fill animation */}
-                <div className="mt-6 h-1.5 bg-brand-light rounded-full overflow-hidden">
+                {/* Progress indicator - indeterminate shimmer */}
+                <div className="mt-6 h-1.5 bg-brand-light rounded-full overflow-hidden relative">
                   <motion.div
-                    initial={{ width: '0%' }}
-                    animate={{ width: '100%' }}
+                    className="absolute inset-0 h-full bg-gradient-to-r from-transparent via-brand to-transparent"
+                    animate={{ x: ['-100%', '100%'] }}
                     transition={{
-                      duration: 8,
-                      ease: [0.4, 0, 0.2, 1],
+                      duration: 1.5,
+                      ease: 'easeInOut',
                       repeat: Infinity,
-                      repeatType: 'loop'
                     }}
-                    className="h-full bg-brand rounded-full"
                   />
                 </div>
               </div>
