@@ -3,8 +3,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   extractActionItems,
   extractInvestorUpdate,
-  extractBrainDump
+  extractBrainDump,
 } from '@/lib/ai/extraction'
+
+// Type for extraction results
+interface ExtractionResult {
+  success: boolean
+  count: number
+  error?: string
+}
 
 // Server-side metrics tracking helper
 async function trackServerEvent(
@@ -154,11 +161,12 @@ export async function POST(request: NextRequest) {
     await trackServerEvent(user.id, 'smartify_started', 'feature', { note_id: noteId })
 
     // Find or create a recording record for this note
-    // Use note_id for stable lookups to prevent phantom recordings
+    // Use service role client for reliable DB operations (bypasses RLS)
+    const serviceClient = createServiceRoleClient()
     let recordingId: string | null = null
 
     // First, try to find existing recording by note_id (most reliable)
-    const { data: existingByNoteId } = await supabase
+    const { data: existingByNoteId } = await serviceClient
       .from('recordings')
       .select('id')
       .eq('note_id', noteId)
@@ -170,7 +178,7 @@ export async function POST(request: NextRequest) {
       console.log('[Smartify] Found existing recording by note_id:', recordingId)
     } else if (note.audio_url) {
       // Fallback: try to find by audio_url
-      const { data: existingByAudio } = await supabase
+      const { data: existingByAudio } = await serviceClient
         .from('recordings')
         .select('id')
         .eq('audio_url', note.audio_url)
@@ -182,7 +190,7 @@ export async function POST(request: NextRequest) {
         console.log('[Smartify] Found existing recording by audio_url:', recordingId)
 
         // Update the recording to include note_id for future lookups
-        await supabase
+        await serviceClient
           .from('recordings')
           .update({ note_id: noteId })
           .eq('id', recordingId)
@@ -192,7 +200,7 @@ export async function POST(request: NextRequest) {
     // If no recording found, create a new one with note_id
     if (!recordingId) {
       console.log('[Smartify] Creating new recording record for note:', noteId)
-      const { data: newRecording, error: recError } = await supabase
+      const { data: newRecording, error: recError } = await serviceClient
         .from('recordings')
         .insert({
           user_id: user.id,
@@ -208,64 +216,82 @@ export async function POST(request: NextRequest) {
 
       if (recError) {
         console.error('[Smartify] Error creating recording:', recError)
-        // Continue anyway - we'll try to extract without recordingId
-      } else {
-        recordingId = newRecording.id
+        return NextResponse.json(
+          { error: 'Failed to prepare note for extraction', details: recError.message },
+          { status: 500 }
+        )
       }
+      recordingId = newRecording.id
+      console.log('[Smartify] Created new recording:', recordingId)
     }
 
     // Run extraction functions in parallel (only selected categories)
-    if (recordingId) {
-      console.log('[Smartify] Running extraction with recording ID:', recordingId)
-      console.log('[Smartify] Selected categories:', selectedCategories)
-
-      // Build extraction promises based on selected categories
-      const extractionPromises: { name: string; promise: Promise<void> }[] = []
-
-      if (selectedCategories.actionItems) {
-        extractionPromises.push({
-          name: 'ActionItems',
-          promise: extractActionItems(transcript, recordingId, user.id)
-        })
-      }
-      if (selectedCategories.investorUpdates) {
-        extractionPromises.push({
-          name: 'InvestorUpdate',
-          promise: extractInvestorUpdate(transcript, recordingId, user.id)
-        })
-      }
-      if (selectedCategories.brainDump) {
-        extractionPromises.push({
-          name: 'BrainDump',
-          promise: extractBrainDump(transcript, recordingId, user.id)
-        })
-      }
-
-      if (extractionPromises.length > 0) {
-        const results = await Promise.allSettled(extractionPromises.map(e => e.promise))
-
-        // Log any failures
-        results.forEach((result, index) => {
-          const name = extractionPromises[index].name
-          if (result.status === 'rejected') {
-            console.error(`[Smartify] ${name} extraction failed:`, result.reason)
-          } else {
-            console.log(`[Smartify] ${name} extraction completed`)
-          }
-        })
-      } else {
-        console.log('[Smartify] No categories selected for extraction')
-      }
-    } else {
-      console.warn('[Smartify] No recording ID available - extraction requires a recording record')
-      // Return empty counts if we couldn't create a recording
+    const extractionResults: {
+      actionItems: ExtractionResult
+      investorUpdates: ExtractionResult
+      brainDump: ExtractionResult
+    } = {
+      actionItems: { success: true, count: 0 },
+      investorUpdates: { success: true, count: 0 },
+      brainDump: { success: true, count: 0 }
     }
 
-    // Get counts of extracted items
-    const counts = recordingId ? await getExtractionCounts(supabase, recordingId) : {
-      actionItems: 0,
-      investorUpdates: 0,
-      brainDump: 0
+    // recordingId is guaranteed to be set at this point (we return error above if creation fails)
+    const recId = recordingId as string
+
+    console.log('[Smartify] Running extraction with recording ID:', recId)
+    console.log('[Smartify] Selected categories:', selectedCategories)
+
+    // Build extraction promises based on selected categories
+    const extractionPromises: Promise<void>[] = []
+
+    if (selectedCategories.actionItems) {
+      extractionPromises.push(
+        extractActionItems(transcript, recId, user.id)
+          .then(result => { extractionResults.actionItems = result })
+      )
+    }
+    if (selectedCategories.investorUpdates) {
+      extractionPromises.push(
+        extractInvestorUpdate(transcript, recId, user.id)
+          .then(result => { extractionResults.investorUpdates = result })
+      )
+    }
+    if (selectedCategories.brainDump) {
+      extractionPromises.push(
+        extractBrainDump(transcript, recId, user.id)
+          .then(result => { extractionResults.brainDump = result })
+      )
+    }
+
+    if (extractionPromises.length > 0) {
+      await Promise.all(extractionPromises)
+
+      // Log results
+      console.log('[Smartify] Extraction results:', {
+        actionItems: extractionResults.actionItems,
+        investorUpdates: extractionResults.investorUpdates,
+        brainDump: extractionResults.brainDump
+      })
+
+      // Check for any failures
+      const failures = []
+      if (!extractionResults.actionItems.success) failures.push(`ActionItems: ${extractionResults.actionItems.error}`)
+      if (!extractionResults.investorUpdates.success) failures.push(`InvestorUpdates: ${extractionResults.investorUpdates.error}`)
+      if (!extractionResults.brainDump.success) failures.push(`BrainDump: ${extractionResults.brainDump.error}`)
+
+      if (failures.length > 0) {
+        console.error('[Smartify] Some extractions failed:', failures)
+      }
+    } else {
+      console.log('[Smartify] No categories selected for extraction')
+    }
+
+    // Use the counts from extraction results (more accurate than re-querying)
+    const counts = {
+      actionItems: extractionResults.actionItems.count,
+      investorUpdates: extractionResults.investorUpdates.count,
+      brainDump: extractionResults.brainDump.count
     }
 
     console.log('[Smartify] Extraction complete for note:', noteId)
@@ -360,17 +386,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function getExtractionCounts(supabase: any, recordingId: string) {
-  const [actionItems, investorUpdates, brainDump] = await Promise.all([
-    supabase.from('action_items').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId),
-    supabase.from('investor_updates').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId),
-    supabase.from('brain_dump').select('id', { count: 'exact', head: true }).eq('recording_id', recordingId)
-  ])
-
-  return {
-    actionItems: actionItems.count || 0,
-    investorUpdates: investorUpdates.count || 0,
-    brainDump: brainDump.count || 0
-  }
-}
 

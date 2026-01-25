@@ -1,5 +1,13 @@
 import OpenAI from 'openai'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+
+// =============================================================================
+// SMARTIFY EXTRACTION MODULE - Production Grade
+// =============================================================================
+// This module handles AI-powered extraction of structured data from transcripts.
+// Each extraction type (action items, investor updates, brain dump) has its own
+// focused GPT call with production-grade prompts and guardrails.
+// =============================================================================
 
 // Lazy initialization to avoid build-time errors
 let openaiClient: OpenAI | null = null
@@ -13,6 +21,10 @@ function getOpenAI(): OpenAI {
   return openaiClient
 }
 
+// =============================================================================
+// TYPE DEFINITIONS
+// =============================================================================
+
 interface ActionItem {
   task: string
   assignee: string | null
@@ -22,7 +34,7 @@ interface ActionItem {
 
 interface InvestorUpdate {
   wins: string[]
-  metrics: Record<string, any>
+  metrics: Record<string, string | number>
   challenges: string[]
   asks: string[]
   draft_subject: string
@@ -35,23 +47,41 @@ interface BrainDumpItem {
   participants: string[]
 }
 
+interface ExtractionResult {
+  success: boolean
+  count: number
+  error?: string
+}
+
+// =============================================================================
+// VALIDATION HELPERS
+// =============================================================================
+
 /**
- * Validate that transcript contains meaningful content worth extracting.
- * Returns false for empty, gibberish, or too-short transcripts.
+ * Validates transcript has enough meaningful content to process.
+ * More lenient than before - we trust GPT to handle edge cases.
  */
-function isTranscriptMeaningful(transcript: string): boolean {
-  if (!transcript) return false
-  // Remove non-alphabetic characters and extra whitespace
-  const cleaned = transcript.replace(/[^a-z\s]/gi, ' ').trim()
-  // Split into words with at least 3 characters
-  const words = cleaned.split(/\s+/).filter(w => w.length > 2)
-  // Require at least 10 meaningful words
-  return words.length >= 10
+function validateTranscript(transcript: string): { valid: boolean; reason?: string } {
+  if (!transcript || typeof transcript !== 'string') {
+    return { valid: false, reason: 'No transcript provided' }
+  }
+
+  const trimmed = transcript.trim()
+  if (trimmed.length === 0) {
+    return { valid: false, reason: 'Transcript is empty' }
+  }
+
+  // Very minimal check - just need SOME content
+  // Let GPT decide if there's anything meaningful to extract
+  if (trimmed.length < 20) {
+    return { valid: false, reason: 'Transcript too short (minimum 20 characters)' }
+  }
+
+  return { valid: true }
 }
 
 /**
  * Normalize task text for duplicate comparison.
- * Converts to lowercase, removes punctuation, normalizes whitespace.
  */
 function normalizeTask(task: string): string {
   return task
@@ -61,36 +91,98 @@ function normalizeTask(task: string): string {
     .replace(/\s+/g, ' ')
 }
 
-export async function extractActionItems(transcript: string, recordingId: string, userId: string): Promise<void> {
-  // Validate transcript has meaningful content
-  if (!isTranscriptMeaningful(transcript)) {
-    console.log('[Extraction] Transcript has no meaningful content, skipping action items extraction')
-    return
+/**
+ * Parse deadline string into ISO date format.
+ * Returns null if parsing fails or date is invalid.
+ */
+function parseDeadline(deadline: string | null): string | null {
+  if (!deadline) return null
+
+  try {
+    // Handle relative dates
+    const lower = deadline.toLowerCase().trim()
+    const now = new Date()
+
+    if (lower === 'today') {
+      return now.toISOString()
+    }
+    if (lower === 'tomorrow') {
+      now.setDate(now.getDate() + 1)
+      return now.toISOString()
+    }
+    if (lower.includes('end of week') || lower === 'friday' || lower === 'eow') {
+      const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7
+      now.setDate(now.getDate() + daysUntilFriday)
+      return now.toISOString()
+    }
+    if (lower.includes('next week')) {
+      now.setDate(now.getDate() + 7)
+      return now.toISOString()
+    }
+    if (lower === 'asap' || lower === 'urgent' || lower === 'immediately') {
+      return now.toISOString() // Due today
+    }
+
+    // Try parsing as date
+    const parsed = new Date(deadline)
+    if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2020) {
+      return parsed.toISOString()
+    }
+
+    return null
+  } catch {
+    return null
   }
+}
 
-  const prompt = `Analyze this transcript and extract ALL action items, tasks, and todos.
+// =============================================================================
+// ACTION ITEMS EXTRACTION
+// =============================================================================
 
-CRITICAL RULES:
-1. ONLY extract what is EXPLICITLY stated in the transcript
-2. If content is unclear or gibberish, return EMPTY arrays
-3. NEVER fabricate, infer, or hallucinate content
-4. When in doubt, return empty results
+const ACTION_ITEMS_SYSTEM_PROMPT = `You are an expert assistant that extracts action items from voice note transcripts.
 
-For each action item, identify:
-1. The task description (be specific and clear)
-2. Who is responsible (look for patterns like "@Name", "Name needs to", "Name should", or "I need to")
-3. Any deadline mentioned (dates, "by Friday", "end of week", "ASAP", etc.)
-4. Priority level based on language:
-   - HIGH: Contains "urgent", "ASAP", "critical", "immediately", "top priority"
-   - MEDIUM: Contains "important", "should", "need to"
-   - LOW: Contains "maybe", "consider", "when possible", "eventually"
+YOUR ROLE:
+- Extract clear, actionable tasks from the transcript
+- Identify who is responsible (if mentioned)
+- Capture deadlines (if mentioned)
+- Assess priority based on language cues
 
-Return a JSON object with an "action_items" array. If no action items found, return empty array.
+EXTRACTION RULES:
+1. Only extract tasks that are EXPLICITLY stated or clearly implied
+2. A task must be actionable (something someone can DO)
+3. If the speaker says "I need to..." or "We should..." - that's a task
+4. If someone is assigned something - that's a task
+5. Vague statements like "think about X" are valid tasks
 
-Transcript:
+PRIORITY GUIDELINES:
+- HIGH: Words like "urgent", "ASAP", "critical", "immediately", "top priority", "must", "deadline"
+- MEDIUM: Words like "important", "should", "need to", "soon", "this week"
+- LOW: Words like "eventually", "when possible", "nice to have", "consider", "maybe"
+- Default to MEDIUM if unclear
+
+ASSIGNEE DETECTION:
+- Look for patterns like "@Name", "Name will...", "Name needs to...", "assign to Name"
+- "I need to..." means the speaker (use null for assignee - it's self-assigned)
+- If no assignee mentioned, use null
+
+OUTPUT FORMAT:
+Return a JSON object with an "action_items" array. Each item has:
+- task: Clear description of what needs to be done (string, required)
+- assignee: Person responsible or null (string or null)
+- deadline: When it's due or null (string or null)
+- priority: "high", "medium", or "low" (string, required)
+
+If NO action items found, return: {"action_items": []}
+
+IMPORTANT: Return ONLY valid JSON. No markdown, no explanation.`
+
+const ACTION_ITEMS_USER_PROMPT = (transcript: string) => `Extract action items from this transcript:
+
+---
 ${transcript}
+---
 
-Return format (must be valid JSON object):
+Return JSON with format:
 {
   "action_items": [
     {
@@ -102,286 +194,535 @@ Return format (must be valid JSON object):
   ]
 }`
 
+export async function extractActionItems(
+  transcript: string,
+  recordingId: string,
+  userId: string
+): Promise<ExtractionResult> {
+  const logPrefix = '[Smartify:ActionItems]'
+
+  // Validate input
+  const validation = validateTranscript(transcript)
+  if (!validation.valid) {
+    console.log(`${logPrefix} Skipping - ${validation.reason}`)
+    return { success: true, count: 0 }
+  }
+
+  console.log(`${logPrefix} Starting extraction for recording: ${recordingId}`)
+
   try {
+    // Call GPT-4o for extraction
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'You ONLY extract information EXPLICITLY stated. NEVER fabricate content. Return empty results if unsure. Return only valid JSON in the exact format specified.' },
-        { role: 'user', content: prompt }
+        { role: 'system', content: ACTION_ITEMS_SYSTEM_PROMPT },
+        { role: 'user', content: ACTION_ITEMS_USER_PROMPT(transcript) }
       ],
       temperature: 0.3,
-      response_format: { type: 'json_object' }
+      response_format: { type: 'json_object' },
+      max_tokens: 2000
     })
 
     const content = response.choices[0]?.message?.content
     if (!content) {
-      console.log('[Extraction] No content in response for action items')
-      return
+      console.log(`${logPrefix} No response content from GPT`)
+      return { success: true, count: 0 }
     }
 
-    console.log('[Extraction] Raw action items response:', content)
+    console.log(`${logPrefix} Raw GPT response:`, content.substring(0, 500))
 
-    const parsed = JSON.parse(content)
-    const actionItems: ActionItem[] = parsed.action_items || []
+    // Parse response
+    let parsed: { action_items: ActionItem[] }
+    try {
+      parsed = JSON.parse(content)
+    } catch (parseError) {
+      console.error(`${logPrefix} Failed to parse GPT response:`, parseError)
+      return { success: false, count: 0, error: 'Failed to parse AI response' }
+    }
 
-    console.log('[Extraction] Parsed action items:', actionItems.length)
+    const actionItems = parsed.action_items || []
+    console.log(`${logPrefix} Extracted ${actionItems.length} action items`)
 
     if (actionItems.length === 0) {
-      console.log('[Extraction] No action items found in transcript')
-      return
+      return { success: true, count: 0 }
     }
 
-    // Save to database
-    const supabase = await createClient()
+    // Get Supabase client (service role for reliable inserts)
+    const supabase = createServiceRoleClient()
 
-    // Get existing open tasks for this user to check for duplicates
-    const { data: existingItems } = await supabase
+    // Check for duplicates
+    const { data: existingItems, error: fetchError } = await supabase
       .from('action_items')
       .select('task')
       .eq('user_id', userId)
       .eq('status', 'open')
 
+    if (fetchError) {
+      console.error(`${logPrefix} Error fetching existing items:`, fetchError)
+      // Continue anyway - better to have duplicates than missing items
+    }
+
     const existingTasks = new Set(
       (existingItems || []).map(item => normalizeTask(item.task))
     )
 
-    console.log('[Extraction] Found', existingTasks.size, 'existing open tasks')
-
-    // Filter out duplicates based on normalized task text
-    const newItems = actionItems.filter(item => {
-      const normalized = normalizeTask(item.task || '')
-      const isDuplicate = existingTasks.has(normalized)
-      if (isDuplicate) {
-        console.log('[Extraction] Skipping duplicate task:', item.task)
-      }
-      return !isDuplicate
-    })
+    // Filter duplicates and prepare for insert
+    const newItems = actionItems
+      .filter(item => {
+        if (!item.task || typeof item.task !== 'string') return false
+        const normalized = normalizeTask(item.task)
+        if (existingTasks.has(normalized)) {
+          console.log(`${logPrefix} Skipping duplicate: "${item.task.substring(0, 50)}..."`)
+          return false
+        }
+        return true
+      })
+      .map(item => ({
+        recording_id: recordingId,
+        user_id: userId,
+        task: item.task.trim(),
+        assignee: item.assignee?.trim() || null,
+        deadline: parseDeadline(item.deadline),
+        priority: ['high', 'medium', 'low'].includes(item.priority) ? item.priority : 'medium',
+        status: 'open' as const
+      }))
 
     if (newItems.length === 0) {
-      console.log('[Extraction] All action items were duplicates, nothing to insert')
-      return
+      console.log(`${logPrefix} All items were duplicates, nothing to insert`)
+      return { success: true, count: 0 }
     }
 
-    console.log('[Extraction] After dedup:', newItems.length, 'new items (filtered out', actionItems.length - newItems.length, 'duplicates)')
+    console.log(`${logPrefix} Inserting ${newItems.length} new action items`)
 
-    const itemsToInsert = newItems.map(item => ({
-      recording_id: recordingId,
-      user_id: userId,
-      task: item.task || 'Untitled task',
-      assignee: item.assignee || null,
-      deadline: item.deadline ? (isNaN(Date.parse(item.deadline)) ? null : new Date(item.deadline).toISOString()) : null,
-      priority: (item.priority || 'medium').toLowerCase() as 'high' | 'medium' | 'low',
-      status: 'open' as const
-    }))
+    // Insert into database
+    const { data, error: insertError } = await supabase
+      .from('action_items')
+      .insert(newItems)
+      .select('id')
 
-    console.log('[Extraction] Inserting action items:', itemsToInsert.length)
-
-    const { data, error } = await supabase.from('action_items').insert(itemsToInsert).select()
-    if (error) {
-      // Handle unique constraint violation gracefully
-      if (error.code === '23505') {
-        console.log('[Extraction] Some items already exist (unique constraint), continuing...')
-        return
-      }
-      console.error('[Extraction] Error saving action items:', error)
-      throw error
-    } else {
-      console.log(`[Extraction] Successfully saved ${newItems.length} action items to database:`, data?.map(i => i.id))
+    if (insertError) {
+      console.error(`${logPrefix} Database insert error:`, insertError)
+      return { success: false, count: 0, error: `Database error: ${insertError.message}` }
     }
+
+    console.log(`${logPrefix} Successfully inserted ${data?.length || 0} action items`)
+    return { success: true, count: data?.length || 0 }
+
   } catch (error) {
-    console.error('[Extraction] Action items error:', error)
-    throw error
+    console.error(`${logPrefix} Unexpected error:`, error)
+    return {
+      success: false,
+      count: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
   }
 }
 
-export async function extractInvestorUpdate(transcript: string, recordingId: string, userId: string): Promise<void> {
-  // Validate transcript has meaningful content
-  if (!isTranscriptMeaningful(transcript)) {
-    console.log('[Extraction] Transcript has no meaningful content, skipping investor update extraction')
-    return
+// =============================================================================
+// INVESTOR UPDATE EXTRACTION
+// =============================================================================
+
+const INVESTOR_UPDATE_SYSTEM_PROMPT = `You are an expert assistant that helps founders draft investor updates from their voice notes.
+
+YOUR ROLE:
+- Extract key information suitable for an investor update email
+- Organize into: Wins, Metrics, Challenges, Asks
+- Draft a professional but warm investor email
+
+EXTRACTION CATEGORIES:
+
+WINS (achievements, good news):
+- Product launches, feature releases
+- Customer wins, partnerships signed
+- Team hires, funding milestones
+- Growth achievements, records broken
+- Positive feedback or press
+
+METRICS (numbers and KPIs):
+- Revenue, MRR, ARR
+- User counts, growth rates
+- Conversion rates, retention
+- Team size, runway
+- Any quantifiable data
+
+CHALLENGES (problems, blockers):
+- Technical difficulties
+- Hiring challenges
+- Market headwinds
+- Resource constraints
+- Delays or setbacks
+
+ASKS (help needed):
+- Introductions requested
+- Advice sought
+- Expertise needed
+- Hiring help
+- Customer intros
+
+EMAIL DRAFTING GUIDELINES:
+- Subject: Catchy but professional (e.g., "March Update: 40% MRR Growth + Series A Planning")
+- Tone: Confident, transparent, founder-to-investor
+- Structure: Brief greeting, highlights, then details
+- Length: Concise but substantive
+- Always end with clear asks if any
+
+IF NO INVESTOR-RELEVANT CONTENT:
+Return empty arrays and empty strings. Don't fabricate content.
+
+OUTPUT FORMAT:
+Return a JSON object with:
+{
+  "wins": ["Achievement 1", "Achievement 2"],
+  "metrics": {"mrr": "$50k", "users": 1000, "growth": "20% MoM"},
+  "challenges": ["Challenge 1"],
+  "asks": ["Looking for intro to X"],
+  "draft_subject": "Email subject line",
+  "draft_body": "Full email body with proper formatting"
+}
+
+IMPORTANT: Return ONLY valid JSON. No markdown code blocks.`
+
+const INVESTOR_UPDATE_USER_PROMPT = (transcript: string) => `Extract investor update content from this transcript:
+
+---
+${transcript}
+---
+
+Return JSON with investor update data. If no relevant content, return empty arrays/strings.`
+
+export async function extractInvestorUpdate(
+  transcript: string,
+  recordingId: string,
+  userId: string
+): Promise<ExtractionResult> {
+  const logPrefix = '[Smartify:InvestorUpdate]'
+
+  // Validate input
+  const validation = validateTranscript(transcript)
+  if (!validation.valid) {
+    console.log(`${logPrefix} Skipping - ${validation.reason}`)
+    return { success: true, count: 0 }
   }
 
-  const prompt = `Analyze this transcript and extract information suitable for an investor update email.
-
-CRITICAL RULES:
-1. ONLY extract what is EXPLICITLY stated in the transcript
-2. If content is unclear or gibberish, return EMPTY arrays/objects
-3. NEVER fabricate, infer, or hallucinate content
-4. When in doubt, return empty results
-5. Do NOT generate an email draft if there is no meaningful content
-
-Extract:
-1. WINS: Positive achievements, milestones, successes, good news
-2. METRICS: Numbers, KPIs, growth figures, user counts, revenue, etc.
-3. CHALLENGES: Problems, obstacles, concerns, what's not going well
-4. ASKS: What help is needed, introductions requested, advice sought
-
-Then draft a professional investor update email with:
-- A compelling subject line
-- Well-structured email body with clear sections
-- Professional yet personal tone
-- Specific and concrete information
-
-Transcript:
-${transcript}
-
-Return format:
-{
-  "wins": ["Launched new feature X", "Signed deal with Company Y"],
-  "metrics": {"users": 1000, "revenue": "$50k MRR", "growth": "20% WoW"},
-  "challenges": ["Hiring is taking longer than expected"],
-  "asks": ["Introduction to VP of Sales at TechCorp"],
-  "draft_subject": "November Update: Strong Growth + New Partnership",
-  "draft_body": "Hi team,\\n\\nHere's what's new..."
-}`
+  console.log(`${logPrefix} Starting extraction for recording: ${recordingId}`)
 
   try {
+    // Call GPT-4o for extraction
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'You ONLY extract information EXPLICITLY stated. NEVER fabricate content. Return empty results if unsure. Be concise, specific, and professional. Return only valid JSON.' },
-        { role: 'user', content: prompt }
+        { role: 'system', content: INVESTOR_UPDATE_SYSTEM_PROMPT },
+        { role: 'user', content: INVESTOR_UPDATE_USER_PROMPT(transcript) }
       ],
       temperature: 0.5,
-      response_format: { type: 'json_object' }
+      response_format: { type: 'json_object' },
+      max_tokens: 3000
     })
 
     const content = response.choices[0]?.message?.content
-    if (!content) return
+    if (!content) {
+      console.log(`${logPrefix} No response content from GPT`)
+      return { success: true, count: 0 }
+    }
 
-    const update: InvestorUpdate = JSON.parse(content)
+    console.log(`${logPrefix} Raw GPT response:`, content.substring(0, 500))
 
-    // Check if there's actually meaningful content before saving
+    // Parse response
+    let update: InvestorUpdate
+    try {
+      update = JSON.parse(content)
+    } catch (parseError) {
+      console.error(`${logPrefix} Failed to parse GPT response:`, parseError)
+      return { success: false, count: 0, error: 'Failed to parse AI response' }
+    }
+
+    // Check if there's meaningful content
     const hasContent =
       (update.wins?.length > 0) ||
-      (Object.keys(update.metrics || {}).length > 0) ||
+      (update.metrics && Object.keys(update.metrics).length > 0) ||
       (update.challenges?.length > 0) ||
       (update.asks?.length > 0)
 
     if (!hasContent) {
-      console.log('[Extraction] No investor update content found, skipping')
-      return
+      console.log(`${logPrefix} No investor-relevant content found`)
+      return { success: true, count: 0 }
     }
 
-    // Save to database
-    const supabase = await createClient()
-    const { data, error } = await supabase.from('investor_updates').insert({
-      recording_id: recordingId,
-      user_id: userId,
-      draft_subject: update.draft_subject,
-      draft_body: update.draft_body,
-      wins: update.wins,
-      metrics: update.metrics,
-      challenges: update.challenges,
-      asks: update.asks,
-      status: 'draft'
-    }).select()
+    // Get Supabase client (service role for reliable inserts)
+    const supabase = createServiceRoleClient()
 
-    if (error) {
-      console.error('[Extraction] Error saving investor update:', error)
-    } else {
-      console.log('[Extraction] Saved investor update to database:', data?.[0]?.id)
+    console.log(`${logPrefix} Inserting investor update`)
+
+    // Insert into database
+    const { data, error: insertError } = await supabase
+      .from('investor_updates')
+      .insert({
+        recording_id: recordingId,
+        user_id: userId,
+        draft_subject: update.draft_subject || 'Investor Update',
+        draft_body: update.draft_body || '',
+        wins: update.wins || [],
+        metrics: update.metrics || {},
+        challenges: update.challenges || [],
+        asks: update.asks || [],
+        status: 'draft'
+      })
+      .select('id')
+
+    if (insertError) {
+      console.error(`${logPrefix} Database insert error:`, insertError)
+      return { success: false, count: 0, error: `Database error: ${insertError.message}` }
     }
+
+    console.log(`${logPrefix} Successfully inserted investor update:`, data?.[0]?.id)
+    return { success: true, count: 1 }
+
   } catch (error) {
-    console.error('[Extraction] Investor update error:', error)
+    console.error(`${logPrefix} Unexpected error:`, error)
+    return {
+      success: false,
+      count: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
   }
 }
 
-export async function extractBrainDump(transcript: string, recordingId: string, userId: string): Promise<void> {
-  // Validate transcript has meaningful content
-  if (!isTranscriptMeaningful(transcript)) {
-    console.log('[Extraction] Transcript has no meaningful content, skipping brain dump extraction')
-    return
-  }
+// =============================================================================
+// BRAIN DUMP EXTRACTION
+// =============================================================================
 
-  const prompt = `Analyze this transcript and extract all relevant notes, discussions, and key information.
+const BRAIN_DUMP_SYSTEM_PROMPT = `You are an expert assistant that organizes unstructured thoughts from voice notes into categorized items.
 
-CRITICAL RULES:
-1. ONLY extract what is EXPLICITLY stated in the transcript
-2. If content is unclear or gibberish, return EMPTY arrays
-3. NEVER fabricate, infer, or hallucinate content
-4. When in doubt, return empty results
+YOUR ROLE:
+- Extract distinct thoughts, notes, and information from the transcript
+- Categorize each item into the appropriate bucket
+- Identify participants when applicable
 
-Categorize each item into ONE of these functional categories:
-1. MEETING: Discussions with others, conversations (include participant names if mentioned)
-2. BLOCKER: Obstacles, risks, issues blocking progress, concerns that need addressing
-3. DECISION: Decisions that were made or need to be made, choices and their rationale
-4. QUESTION: Questions to research, ask others, or investigate further
-5. FOLLOWUP: Action items, things to follow up on, reminders, next steps
+CATEGORIES (use exactly these values):
 
-For meetings, identify participant names when possible.
-Be specific and actionable in your extractions.
+"meeting" - Discussions, conversations, sync-ups
+- Notes from conversations with others
+- Meeting summaries or key points
+- Discussion topics and outcomes
+- Always try to identify participants by name
 
-Transcript:
-${transcript}
+"blocker" - Obstacles, issues, problems
+- Things blocking progress
+- Technical issues
+- Resource constraints
+- Dependencies on others
+- Risks and concerns
 
-Return format:
+"decision" - Choices made or needed
+- Decisions that were made
+- Options being considered
+- Conclusions reached
+- Strategic choices
+
+"question" - Things to research or ask
+- Questions to investigate
+- Things to ask someone
+- Uncertainties to resolve
+- Research needed
+
+"followup" - Next steps, reminders
+- Things to do later
+- People to contact
+- Items to revisit
+- Reminders and notes-to-self
+
+EXTRACTION GUIDELINES:
+1. Each item should be a single, coherent thought
+2. Be specific - include context and details
+3. For meetings, always list participants if names are mentioned
+4. Don't create items for generic filler words
+5. Combine related points into single items when appropriate
+
+OUTPUT FORMAT:
+Return a JSON object with an "items" array:
 {
   "items": [
     {
-      "content": "Discussed Q4 roadmap with Sarah and Mike - agreed on 3 main priorities",
+      "content": "Discussed Q4 roadmap - agreed to prioritize mobile app",
       "category": "meeting",
       "participants": ["Sarah", "Mike"]
     },
     {
-      "content": "Decided to use AWS instead of GCP for the new infrastructure",
-      "category": "decision",
-      "participants": []
-    },
-    {
-      "content": "API rate limits are blocking the integration work",
+      "content": "API rate limits blocking integration with Stripe",
       "category": "blocker",
-      "participants": []
-    },
-    {
-      "content": "Need to research competitor pricing models before next meeting",
-      "category": "question",
-      "participants": []
-    },
-    {
-      "content": "Follow up with legal team about the contract terms",
-      "category": "followup",
       "participants": []
     }
   ]
-}`
+}
+
+If NO extractable content, return: {"items": []}
+
+IMPORTANT: Return ONLY valid JSON. No markdown.`
+
+const BRAIN_DUMP_USER_PROMPT = (transcript: string) => `Extract and categorize thoughts from this transcript:
+
+---
+${transcript}
+---
+
+Return JSON with categorized items. If no meaningful content, return empty array.`
+
+export async function extractBrainDump(
+  transcript: string,
+  recordingId: string,
+  userId: string
+): Promise<ExtractionResult> {
+  const logPrefix = '[Smartify:BrainDump]'
+
+  // Validate input
+  const validation = validateTranscript(transcript)
+  if (!validation.valid) {
+    console.log(`${logPrefix} Skipping - ${validation.reason}`)
+    return { success: true, count: 0 }
+  }
+
+  console.log(`${logPrefix} Starting extraction for recording: ${recordingId}`)
+
+  try {
+    // Call GPT-4o for extraction
+    const response = await getOpenAI().chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: BRAIN_DUMP_SYSTEM_PROMPT },
+        { role: 'user', content: BRAIN_DUMP_USER_PROMPT(transcript) }
+      ],
+      temperature: 0.4,
+      response_format: { type: 'json_object' },
+      max_tokens: 3000
+    })
+
+    const content = response.choices[0]?.message?.content
+    if (!content) {
+      console.log(`${logPrefix} No response content from GPT`)
+      return { success: true, count: 0 }
+    }
+
+    console.log(`${logPrefix} Raw GPT response:`, content.substring(0, 500))
+
+    // Parse response
+    let parsed: { items: BrainDumpItem[] }
+    try {
+      parsed = JSON.parse(content)
+    } catch (parseError) {
+      console.error(`${logPrefix} Failed to parse GPT response:`, parseError)
+      return { success: false, count: 0, error: 'Failed to parse AI response' }
+    }
+
+    const items = parsed.items || []
+    console.log(`${logPrefix} Extracted ${items.length} brain dump items`)
+
+    if (items.length === 0) {
+      return { success: true, count: 0 }
+    }
+
+    // Validate and prepare items
+    const validCategories = ['meeting', 'blocker', 'decision', 'question', 'followup']
+    const validItems = items
+      .filter(item => {
+        if (!item.content || typeof item.content !== 'string') return false
+        if (item.content.trim().length < 5) return false
+        return true
+      })
+      .map(item => ({
+        recording_id: recordingId,
+        user_id: userId,
+        content: item.content.trim(),
+        category: validCategories.includes(item.category) ? item.category : 'followup',
+        participants: Array.isArray(item.participants) ? item.participants : []
+      }))
+
+    if (validItems.length === 0) {
+      console.log(`${logPrefix} No valid items after filtering`)
+      return { success: true, count: 0 }
+    }
+
+    // Get Supabase client (service role for reliable inserts)
+    const supabase = createServiceRoleClient()
+
+    console.log(`${logPrefix} Inserting ${validItems.length} brain dump items`)
+
+    // Insert into database
+    const { data, error: insertError } = await supabase
+      .from('brain_dump')
+      .insert(validItems)
+      .select('id')
+
+    if (insertError) {
+      console.error(`${logPrefix} Database insert error:`, insertError)
+      return { success: false, count: 0, error: `Database error: ${insertError.message}` }
+    }
+
+    console.log(`${logPrefix} Successfully inserted ${data?.length || 0} brain dump items`)
+    return { success: true, count: data?.length || 0 }
+
+  } catch (error) {
+    console.error(`${logPrefix} Unexpected error:`, error)
+    return {
+      success: false,
+      count: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+// =============================================================================
+// PREVIEW EXTRACTION (for Smartify modal)
+// =============================================================================
+
+const PREVIEW_SYSTEM_PROMPT = `You are an assistant that analyzes transcripts to estimate what structured data can be extracted.
+
+Analyze the transcript and count:
+1. ACTION ITEMS: Tasks, todos, things to do (count each distinct task)
+2. INVESTOR UPDATE: Is there content suitable for an investor update? (1 or 0)
+3. BRAIN DUMP: Distinct thoughts, notes, discussion points (count each)
+
+Be accurate - your counts should reflect what would actually be extracted.
+Don't over-count or under-count.
+
+Return JSON: {"actionItems": N, "investorUpdates": N, "brainDump": N}`
+
+export async function extractPreviewCounts(transcript: string): Promise<{
+  actionItems: number
+  investorUpdates: number
+  brainDump: number
+}> {
+  const logPrefix = '[Smartify:Preview]'
+
+  const validation = validateTranscript(transcript)
+  if (!validation.valid) {
+    return { actionItems: 0, investorUpdates: 0, brainDump: 0 }
+  }
 
   try {
     const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'You ONLY extract information EXPLICITLY stated. NEVER fabricate content. Return empty results if unsure. Return only valid JSON.' },
-        { role: 'user', content: prompt }
+        { role: 'system', content: PREVIEW_SYSTEM_PROMPT },
+        { role: 'user', content: `Analyze and count extractable items:\n\n${transcript.substring(0, 4000)}` }
       ],
-      temperature: 0.4,
-      response_format: { type: 'json_object' }
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+      max_tokens: 200
     })
 
     const content = response.choices[0]?.message?.content
-    if (!content) return
+    if (!content) {
+      return { actionItems: 0, investorUpdates: 0, brainDump: 0 }
+    }
 
     const parsed = JSON.parse(content)
-    const items: BrainDumpItem[] = parsed.items || []
-
-    if (items.length === 0) return
-
-    // Save to database
-    const supabase = await createClient()
-    const itemsToInsert = items.map(item => ({
-      recording_id: recordingId,
-      user_id: userId,
-      content: item.content,
-      category: item.category,
-      participants: item.participants || []
-    }))
-
-    const { data, error } = await supabase.from('brain_dump').insert(itemsToInsert).select()
-    if (error) {
-      console.error('[Extraction] Error saving brain dump items:', error)
-    } else {
-      console.log(`[Extraction] Saved ${items.length} brain dump items to database:`, data?.map(i => i.id))
+    return {
+      actionItems: Math.max(0, parseInt(parsed.actionItems) || 0),
+      investorUpdates: Math.max(0, Math.min(1, parseInt(parsed.investorUpdates) || 0)),
+      brainDump: Math.max(0, parseInt(parsed.brainDump) || 0)
     }
   } catch (error) {
-    console.error('[Extraction] Brain dump error:', error)
+    console.error(`${logPrefix} Error:`, error)
+    return { actionItems: 0, investorUpdates: 0, brainDump: 0 }
   }
 }
