@@ -184,6 +184,41 @@ export async function POST(request: NextRequest) {
 
     console.log('[Ask] User has', totalNotes, 'total notes,', notesWithEmbeddings, 'with embeddings')
 
+    // Handle meta-questions directly (before semantic search)
+    const lowerQuery = query.toLowerCase().trim()
+
+    // Check for "what are you" type questions
+    if (lowerQuery.includes('what are you') || lowerQuery.includes('who are you') ||
+        lowerQuery.includes('what can you do') || lowerQuery.includes('help me')) {
+      return NextResponse.json({
+        answer: `I'm **Recall**, your AI assistant for searching through your voice notes! 🎙️
+
+Here's what I can help you with:
+- **Find information** from your past recordings ("What did I say about the product launch?")
+- **Summarize topics** across multiple notes ("What are my main concerns this month?")
+- **Recall decisions** and action items you've mentioned
+- **Search by time** - filter by last week, month, or all time
+
+You currently have **${totalNotes || 0} notes**${notesWithEmbeddings ? ` (${notesWithEmbeddings} indexed for search)` : ''}.
+
+Just ask me anything about what you've recorded!`,
+        citations: [],
+        noteCount: 0
+      })
+    }
+
+    // Check for count/stats questions
+    if (lowerQuery.includes('how many notes') || lowerQuery.includes('how many recordings') ||
+        lowerQuery.match(/count|total|number of.*(notes|recordings)/)) {
+      return NextResponse.json({
+        answer: `You have **${totalNotes || 0} notes** in total${notesWithEmbeddings ? ` (${notesWithEmbeddings} indexed for AI search)` : ''}.
+
+Want me to help you find something specific in your notes? Try asking about a topic, person, or decision you've mentioned!`,
+        citations: [],
+        noteCount: totalNotes || 0
+      })
+    }
+
     // If user has no notes at all
     if (totalNotes === 0) {
       return NextResponse.json({
@@ -196,7 +231,7 @@ export async function POST(request: NextRequest) {
     // If user has notes but none indexed
     if (notesWithEmbeddings === 0) {
       return NextResponse.json({
-        answer: "Your notes are being prepared for AI search. Click the 'Index notes' button above, or wait a moment and try again.",
+        answer: "Your notes are being prepared for AI search. This happens automatically - please wait a moment and try again.",
         citations: [],
         noteCount: 0,
         needsIndexing: true
@@ -336,9 +371,21 @@ Question: ${query}
 
 Answer based on the information in these notes, using citation markers [1], [2], etc. when referencing specific notes.`
     } else {
-      userPrompt = `${conversationContext ? `Previous conversation:\n${conversationContext}\n\n---\n\n` : ''}Question: ${query}
+      // No relevant notes found - provide a direct, helpful response
+      const noResultsAnswer = `I searched through your ${notesWithEmbeddings} indexed notes but couldn't find anything about "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}".
 
-I searched your notes but couldn't find any relevant content. Provide a helpful, encouraging response that invites the user to add this information via a voice note.`
+**Tips:**
+- Try different keywords or phrasing
+- Check if you've recorded about this topic yet
+- Try expanding the time filter to "All time"
+
+Would you like to record a note about this topic? 🎙️`
+
+      return NextResponse.json({
+        answer: noResultsAnswer,
+        citations: [],
+        noteCount: 0
+      })
     }
 
     const completion = await getOpenAI().chat.completions.create({
