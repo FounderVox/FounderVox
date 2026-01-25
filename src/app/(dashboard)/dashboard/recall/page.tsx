@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { FilterBar } from '@/components/dashboard/filter-bar'
+import ReactMarkdown from 'react-markdown'
 
 export const dynamic = 'force-dynamic'
 
@@ -262,39 +263,54 @@ export default function RecallPage() {
     const content = message.content
     const citations = message.citations || []
 
-    // Parse citation markers and render clickable badges
-    const parts = content.split(/(\[\d+\])/)
+    // Function to render text with citation badges
+    const renderWithCitations = (text: string) => {
+      const parts = text.split(/(\[\d+\])/)
+      return parts.map((part, index) => {
+        const match = part.match(/\[(\d+)\]/)
+        if (match) {
+          const citationIndex = parseInt(match[1]) - 1
+          const citation = citations[citationIndex]
+          if (citation) {
+            return (
+              <button
+                key={index}
+                onClick={() => setExpandedCitation(
+                  expandedCitation === citation.id ? null : citation.id
+                )}
+                className={cn(
+                  "inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded text-xs font-semibold transition-all mx-0.5 align-middle",
+                  expandedCitation === citation.id
+                    ? "bg-[#BD6750] text-white scale-110"
+                    : "bg-gray-200 text-gray-700 hover:bg-[#BD6750]/20 hover:text-[#BD6750]"
+                )}
+              >
+                {match[1]}
+              </button>
+            )
+          }
+        }
+        return <span key={index}>{part}</span>
+      })
+    }
 
     return (
       <div className="space-y-3">
-        {/* Main content with inline citations */}
-        <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-          {parts.map((part, index) => {
-            const match = part.match(/\[(\d+)\]/)
-            if (match) {
-              const citationIndex = parseInt(match[1]) - 1
-              const citation = citations[citationIndex]
-              if (citation) {
-                return (
-                  <button
-                    key={index}
-                    onClick={() => setExpandedCitation(
-                      expandedCitation === citation.id ? null : citation.id
-                    )}
-                    className={cn(
-                      "inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded text-xs font-semibold transition-all mx-0.5 align-middle",
-                      expandedCitation === citation.id
-                        ? "bg-[#BD6750] text-white scale-110"
-                        : "bg-gray-200 text-gray-700 hover:bg-[#BD6750]/20 hover:text-[#BD6750]"
-                    )}
-                  >
-                    {match[1]}
-                  </button>
-                )
-              }
-            }
-            return <span key={index}>{part}</span>
-          })}
+        {/* Main content with markdown and inline citations */}
+        <div className="text-sm text-gray-800 leading-relaxed prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-strong:text-gray-900">
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <p className="my-2">{typeof children === 'string' ? renderWithCitations(children as string) : children}</p>,
+              strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+              em: ({ children }) => <em className="italic">{children}</em>,
+              ul: ({ children }) => <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal list-inside my-2 space-y-1">{children}</ol>,
+              li: ({ children }) => <li className="text-gray-700">{typeof children === 'string' ? renderWithCitations(children as string) : children}</li>,
+              a: ({ href, children }) => <a href={href} className="text-[#BD6750] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+            }}
+          >
+            {content}
+          </ReactMarkdown>
         </div>
 
         {/* Expanded citation card */}

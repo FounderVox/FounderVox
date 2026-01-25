@@ -238,54 +238,104 @@ Want me to help you find something specific in your notes? Try asking about a to
       })
     }
 
-    // Step 1: Generate embedding for the query
-    console.log('[Ask] Generating query embedding...')
-    const embeddingResponse = await getOpenAI().embeddings.create({
-      model: 'text-embedding-3-small',
-      input: query,
-    })
-    const queryEmbedding = embeddingResponse.data[0].embedding
-    console.log('[Ask] Query embedding generated, dimensions:', queryEmbedding.length)
-
-    // Step 2: Search for relevant notes using pgvector
+    // Get date range for filtering
     const { start, end } = getDateRange(timeFilter)
     console.log('[Ask] Date range:', start?.toISOString() || 'null', 'to', end.toISOString())
 
-    // Format embedding for Postgres
-    const embeddingString = `[${queryEmbedding.join(',')}]`
+    let relevantNotes: any[] = []
 
-    console.log('[Ask] Calling match_notes RPC...')
-    const { data: relevantNotes, error: searchError } = await dbClient.rpc(
-      'match_notes',
-      {
-        query_embedding: embeddingString,
-        match_threshold: 0.5, // Lower threshold to get more results
-        match_count: 5,
-        filter_user_id: user.id,
-        filter_date_from: start?.toISOString() || null,
-        filter_date_to: end.toISOString()
-      }
-    )
+    // STRATEGY: For small note counts (< 20), fetch ALL notes and let GPT find relevant info
+    // This is more reliable than semantic search for small datasets
+    const SMALL_DATASET_THRESHOLD = 20
 
-    if (searchError) {
-      console.error('[Ask] Search error:', searchError)
-      console.error('[Ask] Search error details:', JSON.stringify(searchError, null, 2))
-      // If pgvector isn't set up yet, provide helpful message
-      if (searchError.message?.includes('function') ||
-          searchError.message?.includes('does not exist') ||
-          searchError.message?.includes('match_notes')) {
-        return NextResponse.json({
-          answer: "I'm not quite ready yet! The AI search needs to be configured. Please run the database setup in Supabase SQL Editor.",
-          citations: [],
-          noteCount: 0,
-          setupRequired: true
-        })
+    if ((totalNotes || 0) < SMALL_DATASET_THRESHOLD) {
+      console.log('[Ask] Small dataset - fetching all notes directly')
+
+      // Build query with date filters
+      let notesQuery = dbClient
+        .from('notes')
+        .select('id, title, content, formatted_content, raw_transcript, template_type, template_label, is_starred, tags, created_at, updated_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (start) {
+        notesQuery = notesQuery.gte('created_at', start.toISOString())
       }
-      throw new Error('Failed to search notes')
+      if (end) {
+        notesQuery = notesQuery.lte('created_at', end.toISOString())
+      }
+
+      const { data: allNotes, error: fetchError } = await notesQuery
+
+      if (fetchError) {
+        console.error('[Ask] Error fetching notes:', fetchError)
+        throw new Error('Failed to fetch notes')
+      }
+
+      relevantNotes = (allNotes || []).map((note: any) => ({
+        ...note,
+        similarity: 1.0 // All notes included
+      }))
+
+      console.log('[Ask] Fetched', relevantNotes.length, 'notes directly')
+    } else {
+      // For larger datasets, use semantic search
+      console.log('[Ask] Large dataset - using semantic search')
+
+      // Generate embedding for the query
+      const embeddingResponse = await getOpenAI().embeddings.create({
+        model: 'text-embedding-3-small',
+        input: query,
+      })
+      const queryEmbedding = embeddingResponse.data[0].embedding
+      console.log('[Ask] Query embedding generated')
+
+      // Format embedding for Postgres
+      const embeddingString = `[${queryEmbedding.join(',')}]`
+
+      const { data: searchResults, error: searchError } = await dbClient.rpc(
+        'match_notes',
+        {
+          query_embedding: embeddingString,
+          match_threshold: 0.3, // Lower threshold for better recall
+          match_count: 8,
+          filter_user_id: user.id,
+          filter_date_from: start?.toISOString() || null,
+          filter_date_to: end.toISOString()
+        }
+      )
+
+      if (searchError) {
+        console.error('[Ask] Search error:', searchError)
+        // If pgvector isn't set up, fall back to direct fetch
+        if (searchError.message?.includes('function') ||
+            searchError.message?.includes('does not exist') ||
+            searchError.message?.includes('match_notes')) {
+          console.log('[Ask] Falling back to direct fetch due to pgvector error')
+          const { data: fallbackNotes } = await dbClient
+            .from('notes')
+            .select('id, title, content, formatted_content, raw_transcript, template_type, template_label, is_starred, tags, created_at, updated_at')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(10)
+
+          relevantNotes = (fallbackNotes || []).map((note: any) => ({
+            ...note,
+            similarity: 1.0
+          }))
+        } else {
+          throw new Error('Failed to search notes')
+        }
+      } else {
+        relevantNotes = searchResults || []
+      }
+
+      console.log('[Ask] Found', relevantNotes.length, 'relevant notes via semantic search')
     }
 
-    console.log('[Ask] Found', relevantNotes?.length || 0, 'relevant notes')
-    if (relevantNotes && relevantNotes.length > 0) {
+    // Log what we found
+    if (relevantNotes.length > 0) {
       relevantNotes.forEach((note: any, i: number) => {
         console.log(`[Ask] Note ${i + 1}:`, {
           id: note.id,
@@ -295,7 +345,7 @@ Want me to help you find something specific in your notes? Try asking about a to
         })
       })
     } else {
-      console.log('[Ask] No notes matched the query with threshold 0.5')
+      console.log('[Ask] No notes found')
     }
 
     // Step 3: Build context from relevant notes with citations
@@ -340,49 +390,46 @@ Want me to help you find something specific in your notes? Try asking about a to
       : ''
 
     // Step 5: Generate answer with GPT-4o
-    const systemPrompt = `You are a helpful assistant that helps founders recall information from their voice notes.
+    const systemPrompt = `You are Recall, a friendly AI assistant that helps founders search and recall information from their voice notes.
 
-CRITICAL RULES:
-1. ONLY use information from the provided note excerpts to answer questions
-2. Place citation markers [1], [2] at the END of relevant sentences
-3. If multiple notes support a point, cite all: [1][2]
-4. If no relevant info found, respond warmly: "I couldn't find that in your notes yet. Try recording a voice note about it!"
-5. Be concise but thorough - founders are busy
-6. Use conversation history for follow-up questions
-7. Format with markdown for readability:
-   - **Bold** for key terms
-   - Bullet points for lists
-   - Keep paragraphs short (2-3 sentences)
-8. Never make up information not in the notes
-9. Be friendly, encouraging, and supportive
+YOUR PERSONALITY:
+- Warm, supportive, and encouraging
+- Like a helpful colleague who knows their context
+- Use emojis sparingly but naturally (1-2 per response max)
 
-TONE: Warm, professional, helpful - like a knowledgeable assistant who knows the founder's context.`
+ANSWERING RULES:
+1. Search the provided notes thoroughly for ANY relevant information
+2. Be generous in finding connections - if a note mentions the topic, use it
+3. Use citation markers [1], [2] at the END of sentences that reference specific notes
+4. If you genuinely can't find relevant info, say so warmly and suggest recording about it
+5. NEVER make up information not in the notes
+
+FORMATTING (use markdown):
+- **Bold** for key names, terms, and important points
+- Use bullet points for lists
+- Keep paragraphs short (2-3 sentences max)
+- Be concise - founders are busy
+
+WHEN NO INFO FOUND:
+If the notes don't contain relevant information, respond like:
+"I looked through your notes but didn't find anything about [topic]. You might want to record a quick note about it! 🎙️"`
 
     let userPrompt: string
 
     if (contextParts.length > 0) {
-      userPrompt = `${conversationContext ? `Previous conversation:\n${conversationContext}\n\n---\n\n` : ''}Here are relevant excerpts from your notes:
+      userPrompt = `${conversationContext ? `Previous conversation:\n${conversationContext}\n\n---\n\n` : ''}Here are the user's notes to search through:
 
 ${contextParts.join('\n\n---\n\n')}
 
 ---
 
-Question: ${query}
+User's question: ${query}
 
-Answer based on the information in these notes, using citation markers [1], [2], etc. when referencing specific notes.`
+Search through these notes and answer the question. Use citation markers [1], [2] when referencing specific notes. If you can't find relevant information, say so warmly.`
     } else {
-      // No relevant notes found - provide a direct, helpful response
-      const noResultsAnswer = `I searched through your ${notesWithEmbeddings} indexed notes but couldn't find anything about "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}".
-
-**Tips:**
-- Try different keywords or phrasing
-- Check if you've recorded about this topic yet
-- Try expanding the time filter to "All time"
-
-Would you like to record a note about this topic? 🎙️`
-
+      // No notes at all (shouldn't happen with new logic, but handle gracefully)
       return NextResponse.json({
-        answer: noResultsAnswer,
+        answer: `I don't have any notes to search through yet. Record a voice note and I'll be able to help you recall information from it! 🎙️`,
         citations: [],
         noteCount: 0
       })
