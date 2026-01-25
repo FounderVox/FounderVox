@@ -141,6 +141,13 @@ function parseDeadline(deadline: string | null): string | null {
 
 const ACTION_ITEMS_SYSTEM_PROMPT = `You are an expert assistant that extracts action items from voice note transcripts.
 
+CRITICAL GUARDRAILS (MUST FOLLOW):
+1. ONLY extract what is EXPLICITLY stated in the transcript
+2. NEVER fabricate, infer, or hallucinate content that isn't there
+3. If the transcript is unclear, gibberish, or nonsensical - return EMPTY array
+4. When in doubt, DO NOT extract - return empty results
+5. Quality over quantity - only extract clear, real tasks
+
 YOUR ROLE:
 - Extract clear, actionable tasks from the transcript
 - Identify who is responsible (if mentioned)
@@ -148,11 +155,10 @@ YOUR ROLE:
 - Assess priority based on language cues
 
 EXTRACTION RULES:
-1. Only extract tasks that are EXPLICITLY stated or clearly implied
+1. A task must be EXPLICITLY stated (e.g., "I need to...", "We should...", "Remember to...")
 2. A task must be actionable (something someone can DO)
-3. If the speaker says "I need to..." or "We should..." - that's a task
-4. If someone is assigned something - that's a task
-5. Vague statements like "think about X" are valid tasks
+3. If someone is assigned something - that's a task
+4. Do NOT create tasks from general discussion or opinions
 
 PRIORITY GUIDELINES:
 - HIGH: Words like "urgent", "ASAP", "critical", "immediately", "top priority", "must", "deadline"
@@ -324,6 +330,13 @@ export async function extractActionItems(
 
 const INVESTOR_UPDATE_SYSTEM_PROMPT = `You are an expert assistant that helps founders draft investor updates from their voice notes.
 
+CRITICAL GUARDRAILS (MUST FOLLOW):
+1. ONLY extract what is EXPLICITLY stated in the transcript
+2. NEVER fabricate, infer, or hallucinate content that isn't there
+3. If the transcript is unclear, gibberish, or nonsensical - return EMPTY arrays/strings
+4. When in doubt, DO NOT include - leave that section empty
+5. Do NOT invent metrics, wins, or challenges that weren't mentioned
+
 YOUR ROLE:
 - Extract key information suitable for an investor update email
 - Organize into: Wins, Metrics, Challenges, Asks
@@ -492,6 +505,13 @@ export async function extractInvestorUpdate(
 // =============================================================================
 
 const BRAIN_DUMP_SYSTEM_PROMPT = `You are an expert assistant that organizes unstructured thoughts from voice notes into categorized items.
+
+CRITICAL GUARDRAILS (MUST FOLLOW):
+1. ONLY extract what is EXPLICITLY stated in the transcript
+2. NEVER fabricate, infer, or hallucinate content that isn't there
+3. If the transcript is unclear, gibberish, or nonsensical - return EMPTY array
+4. When in doubt, DO NOT extract - return empty results
+5. Each item must be a REAL thought/note from the transcript, not invented
 
 YOUR ROLE:
 - Extract distinct thoughts, notes, and information from the transcript
@@ -676,13 +696,16 @@ export async function extractBrainDump(
 
 const PREVIEW_SYSTEM_PROMPT = `You are an assistant that analyzes transcripts to estimate what structured data can be extracted.
 
-Analyze the transcript and count:
-1. ACTION ITEMS: Tasks, todos, things to do (count each distinct task)
-2. INVESTOR UPDATE: Is there content suitable for an investor update? (1 or 0)
-3. BRAIN DUMP: Distinct thoughts, notes, discussion points (count each)
+CRITICAL GUARDRAILS:
+1. ONLY count items that are EXPLICITLY stated in the transcript
+2. If the transcript is unclear or gibberish, return all zeros
+3. Do NOT over-estimate - be conservative
+4. When in doubt, count lower rather than higher
 
-Be accurate - your counts should reflect what would actually be extracted.
-Don't over-count or under-count.
+Analyze the transcript and count:
+1. ACTION ITEMS: Tasks, todos, things someone explicitly said they need to do
+2. INVESTOR UPDATE: Is there REAL investor-relevant content? (1 or 0)
+3. BRAIN DUMP: Distinct, meaningful thoughts or notes (not filler words)
 
 Return JSON: {"actionItems": N, "investorUpdates": N, "brainDump": N}`
 
