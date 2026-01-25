@@ -504,71 +504,62 @@ export async function extractInvestorUpdate(
 // BRAIN DUMP EXTRACTION
 // =============================================================================
 
-const BRAIN_DUMP_SYSTEM_PROMPT = `You are an expert assistant that organizes unstructured thoughts from voice notes into categorized items.
+const BRAIN_DUMP_SYSTEM_PROMPT = `You are an assistant that organizes raw brain-dump notes from voice transcripts into predefined categories.
 
-CRITICAL GUARDRAILS (MUST FOLLOW):
+CRITICAL RULES:
 1. ONLY extract what is EXPLICITLY stated in the transcript
 2. NEVER fabricate, infer, or hallucinate content that isn't there
 3. If the transcript is unclear, gibberish, or nonsensical - return EMPTY array
-4. When in doubt, DO NOT extract - return empty results
-5. Each item must be a REAL thought/note from the transcript, not invented
+4. When uncertain about an item, DO NOT extract it
+5. Place each item into the SINGLE most appropriate category
+6. You may summarize or clean up wording, but NEVER alter specific details (dates, times, names, numbers, amounts)
 
-YOUR ROLE:
-- Extract distinct thoughts, notes, and information from the transcript
-- Categorize each item into the appropriate bucket
-- Identify participants when applicable
-
-CATEGORIES (use exactly these values):
+CATEGORY DEFINITIONS (use exactly these values):
 
 "meeting" - Discussions, conversations, sync-ups
-- Notes from conversations with others
-- Meeting summaries or key points
-- Discussion topics and outcomes
-- Always try to identify participants by name
+  MUST contain one or more of: participant names, meeting topics, discussion points, agendas, outcomes, or scheduled times
+  Examples: "Synced with Sarah about Q4 roadmap", "Team standup - discussed launch blockers"
+  NOT for: General thoughts that don't involve other people
 
 "blocker" - Obstacles, issues, problems
-- Things blocking progress
-- Technical issues
-- Resource constraints
-- Dependencies on others
-- Risks and concerns
+  MUST describe something that is actively blocking or hindering progress
+  Examples: "API rate limits preventing Stripe integration", "Waiting on legal approval before launch"
+  NOT for: General concerns or things that might become problems
 
-"decision" - Choices made or needed
-- Decisions that were made
-- Options being considered
-- Conclusions reached
-- Strategic choices
+"decision" - Choices made or pending
+  MUST be a clear decision that was made OR a decision that explicitly needs to be made
+  Examples: "Decided to use AWS instead of GCP", "Need to choose between React and Vue by Friday"
+  NOT for: Options being casually mentioned, opinions, or preferences
 
 "question" - Things to research or ask
-- Questions to investigate
-- Things to ask someone
-- Uncertainties to resolve
-- Research needed
+  MUST be a clear question or something explicitly marked for investigation
+  Examples: "Research competitor pricing models", "Ask Mike about the deployment process"
+  NOT for: Rhetorical questions or general wondering
 
-"followup" - Next steps, reminders
-- Things to do later
-- People to contact
-- Items to revisit
-- Reminders and notes-to-self
+"followup" - Action items and reminders
+  MUST describe a specific action to be taken or a reminder for later
+  Examples: "Follow up with investor next Tuesday", "Remember to send the proposal"
+  NOT for: Vague intentions, ideas, or general thoughts
 
-EXTRACTION GUIDELINES:
+CONTENT GUIDELINES:
 1. Each item should be a single, coherent thought
-2. Be specific - include context and details
-3. For meetings, always list participants if names are mentioned
-4. Don't create items for generic filler words
-5. Combine related points into single items when appropriate
+2. Preserve all specific details: dates, times, names, numbers, amounts
+3. You may clean up filler words and improve clarity
+4. For meetings, always extract participant names into the participants array
+5. Combine closely related points into single items when appropriate
+6. Skip generic filler, greetings, or meaningless fragments
 
 OUTPUT FORMAT:
 Return a JSON object with an "items" array:
 {
   "items": [
     {
-      "content": "Discussed Q4 roadmap - agreed to prioritize mobile app",
+      "content": "Discussed Q4 roadmap with Sarah and Mike - agreed to prioritize mobile app",
       "category": "meeting",
       "participants": ["Sarah", "Mike"]
     },
     {
-      "content": "API rate limits blocking integration with Stripe",
+      "content": "API rate limits blocking Stripe integration",
       "category": "blocker",
       "participants": []
     }
@@ -577,7 +568,7 @@ Return a JSON object with an "items" array:
 
 If NO extractable content, return: {"items": []}
 
-IMPORTANT: Return ONLY valid JSON. No markdown.`
+IMPORTANT: Return ONLY valid JSON. No markdown, no explanation.`
 
 const BRAIN_DUMP_USER_PROMPT = (transcript: string) => `Extract and categorize thoughts from this transcript:
 
