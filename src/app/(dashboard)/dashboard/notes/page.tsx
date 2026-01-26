@@ -8,7 +8,6 @@ import { NoteCard } from '@/components/dashboard/note-card'
 import { cn } from '@/lib/utils'
 import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
 import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
-import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
 import { DeleteNoteDialog } from '@/components/dashboard/delete-note-dialog'
 import { useAuth } from '@/contexts/auth-context'
@@ -56,8 +55,6 @@ export default function AllNotesPage() {
   const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedNoteForEdit, setSelectedNoteForEdit] = useState<string | null>(null)
-  const [showSmartifyModal, setShowSmartifyModal] = useState(false)
-  const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -211,6 +208,7 @@ export default function AllNotesPage() {
     }
   }, [loadNotes])
 
+
   const toggleStar = async (noteId: string) => {
     if (!user || !supabase) return
 
@@ -308,12 +306,7 @@ export default function AllNotesPage() {
   }
 
   const handleSmartify = (noteId: string) => {
-    const note = notes.find(n => n.id === noteId)
-    setSelectedNoteForSmartify({
-      id: noteId,
-      title: note?.title || 'Untitled Note'
-    })
-    setShowSmartifyModal(true)
+    window.location.href = `/dashboard/notes/${noteId}?smartify=true`
   }
 
   const handleViewNote = (noteId: string) => {
@@ -554,23 +547,6 @@ export default function AllNotesPage() {
         }}
         noteId={selectedNoteForEdit}
       />
-
-      {/* Smartify Modal */}
-      {selectedNoteForSmartify && (
-        <SmartifyModal
-          open={showSmartifyModal}
-          onOpenChange={(open) => {
-            setShowSmartifyModal(open)
-            if (!open) {
-              setSelectedNoteForSmartify(null)
-            }
-          }}
-          noteId={selectedNoteForSmartify.id}
-          noteTitle={selectedNoteForSmartify.title}
-          noteContent={notes.find(n => n.id === selectedNoteForSmartify?.id)?.formatted_content
-            || notes.find(n => n.id === selectedNoteForSmartify?.id)?.raw_transcript || undefined}
-        />
-      )}
 
       {/* Note Detail Modal */}
       <NoteDetailModal

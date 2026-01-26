@@ -45,11 +45,17 @@ export function NoteDetailModal({ open, onOpenChange, noteId }: NoteDetailModalP
     if (open && noteId) {
       loadNote()
       setIsEditing(false)
+      // Dispatch event to hide recording buttons
+      window.dispatchEvent(new Event('noteDetailOpened'))
     } else {
       setNote(null)
       setEditedTitle('')
       setEditedContent('')
       setError(null)
+      // Dispatch event to show recording buttons
+      if (!open) {
+        window.dispatchEvent(new Event('noteDetailClosed'))
+      }
     }
   }, [open, noteId])
 

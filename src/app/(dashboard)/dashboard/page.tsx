@@ -7,7 +7,6 @@ import { motion } from 'framer-motion'
 import { NoteCard } from '@/components/dashboard/note-card'
 import { FilterBar } from '@/components/dashboard/filter-bar'
 import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
-import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
 import { DeleteNoteDialog } from '@/components/dashboard/delete-note-dialog'
 import { Toast } from '@/components/ui/toast'
@@ -107,8 +106,6 @@ export default function DashboardPage() {
   })
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedNoteForEdit, setSelectedNoteForEdit] = useState<string | null>(null)
-  const [showSmartifyModal, setShowSmartifyModal] = useState(false)
-  const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -433,12 +430,7 @@ export default function DashboardPage() {
   }
 
   const handleSmartify = (noteId: string) => {
-    const note = notes.find(n => n.id === noteId)
-    setSelectedNoteForSmartify({
-      id: noteId,
-      title: note?.title || 'Untitled Note'
-    })
-    setShowSmartifyModal(true)
+    window.location.href = `/dashboard/notes/${noteId}?smartify=true`
   }
 
   const handleViewNote = (noteId: string) => {
@@ -956,20 +948,6 @@ export default function DashboardPage() {
         noteId={selectedNoteForEdit}
       />
 
-      {selectedNoteForSmartify && (
-        <SmartifyModal
-          open={showSmartifyModal}
-          onOpenChange={(open) => {
-            setShowSmartifyModal(open)
-            if (!open) setSelectedNoteForSmartify(null)
-          }}
-          noteId={selectedNoteForSmartify.id}
-          noteTitle={selectedNoteForSmartify.title}
-          noteContent={notes.find(n => n.id === selectedNoteForSmartify?.id)?.formatted_content
-            || notes.find(n => n.id === selectedNoteForSmartify?.id)?.content
-            || notes.find(n => n.id === selectedNoteForSmartify?.id)?.raw_transcript}
-        />
-      )}
 
       <NoteDetailModal
         open={showDetailModal}

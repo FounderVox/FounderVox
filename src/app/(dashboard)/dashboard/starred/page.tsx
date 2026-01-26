@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { NoteCard } from '@/components/dashboard/note-card'
 import { AddTagDialog } from '@/components/dashboard/add-tag-dialog'
 import { EditNoteDialog } from '@/components/dashboard/edit-note-dialog'
-import { SmartifyModal } from '@/components/dashboard/smartify-modal'
 import { NoteDetailModal } from '@/components/dashboard/note-detail-modal'
 import { Star, Mic } from 'lucide-react'
 
@@ -30,8 +29,6 @@ export default function StarredPage() {
   const [selectedNoteForTag, setSelectedNoteForTag] = useState<{id: string, tags: string[]} | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedNoteForEdit, setSelectedNoteForEdit] = useState<string | null>(null)
-  const [showSmartifyModal, setShowSmartifyModal] = useState(false)
-  const [selectedNoteForSmartify, setSelectedNoteForSmartify] = useState<{id: string, title: string} | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedNoteForDetail, setSelectedNoteForDetail] = useState<string | null>(null)
   const supabase = createClient()
@@ -139,12 +136,7 @@ export default function StarredPage() {
   }
 
   const handleSmartify = (noteId: string) => {
-    const note = notes.find(n => n.id === noteId)
-    setSelectedNoteForSmartify({ 
-      id: noteId, 
-      title: note?.title || 'Untitled Note' 
-    })
-    setShowSmartifyModal(true)
+    window.location.href = `/dashboard/notes/${noteId}?smartify=true`
   }
 
   const handleViewNote = (noteId: string) => {
@@ -317,21 +309,6 @@ export default function StarredPage() {
         }}
         noteId={selectedNoteForEdit}
       />
-
-      {/* Smartify Modal */}
-      {selectedNoteForSmartify && (
-        <SmartifyModal
-          open={showSmartifyModal}
-          onOpenChange={(open) => {
-            setShowSmartifyModal(open)
-            if (!open) {
-              setSelectedNoteForSmartify(null)
-            }
-          }}
-          noteId={selectedNoteForSmartify.id}
-          noteTitle={selectedNoteForSmartify.title}
-        />
-      )}
 
       {/* Note Detail Modal */}
       <NoteDetailModal

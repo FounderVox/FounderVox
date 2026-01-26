@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Save, Wand2, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { SmartifyModal } from '@/components/dashboard/smartify-modal'
@@ -28,9 +29,10 @@ interface NoteData {
 export default function NoteViewPage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const noteId = params.id as string
   const { user, supabase } = useAuth()
-  
+
   const [note, setNote] = useState<NoteData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -40,7 +42,10 @@ export default function NoteViewPage() {
   const [error, setError] = useState<string | null>(null)
   const [showSmartifyModal, setShowSmartifyModal] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  
+  const [isSmartifying, setIsSmartifying] = useState(false)
+  const [smartifyPreviewData, setSmartifyPreviewData] = useState<{actionItems: number, investorUpdates: number, brainDump: number} | null>(null)
+  const smartifyTriggered = useRef(false)
+
   const titleInputRef = useRef<HTMLInputElement>(null)
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -49,6 +54,22 @@ export default function NoteViewPage() {
       loadNote()
     }
   }, [noteId, user])
+
+  // Reset smartify trigger when noteId changes
+  useEffect(() => {
+    smartifyTriggered.current = false
+  }, [noteId])
+
+  // Auto-trigger smartify when navigated with ?smartify=true
+  useEffect(() => {
+    if (searchParams.get('smartify') === 'true' && note && !smartifyTriggered.current) {
+      smartifyTriggered.current = true
+      // Clean the URL without reloading
+      window.history.replaceState({}, '', `/dashboard/notes/${noteId}`)
+      // Trigger the shimmer + preview flow
+      triggerSmartify()
+    }
+  }, [searchParams, note, noteId])
 
   useEffect(() => {
     if (note) {
@@ -151,9 +172,38 @@ export default function NoteViewPage() {
     }
   }
 
+  const triggerSmartify = async () => {
+    if (isSmartifying) return
+    setIsSmartifying(true)
+    setSmartifyPreviewData(null)
+
+    try {
+      const response = await fetch('/api/notes/smartify/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noteId })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Preview failed')
+      }
+
+      const data = await response.json()
+      setSmartifyPreviewData(data.preview)
+      setIsSmartifying(false)
+      setShowSmartifyModal(true)
+    } catch (err) {
+      console.error('[NoteView] Smartify preview error:', err)
+      setIsSmartifying(false)
+      // Fallback: open modal and let it handle its own preview
+      setShowSmartifyModal(true)
+    }
+  }
+
   const handleSmartify = () => {
     if (note && note.canSmartify) {
-      setShowSmartifyModal(true)
+      triggerSmartify()
     }
   }
 
@@ -331,38 +381,79 @@ export default function NoteViewPage() {
         <div className="h-px bg-gray-200 mb-6" />
 
         {/* Content - View/Edit mode */}
-        {isEditing ? (
-          <textarea
-            ref={contentTextareaRef}
-            value={editedContent}
-            onChange={(e) => setEditedContent(e.target.value)}
-            onBlur={() => {
-              // Only exit edit mode if no unsaved changes
-              if (!hasUnsavedChanges) {
-                setIsEditing(false)
-              }
-            }}
-            placeholder="Start writing..."
-            className="w-full min-h-[60vh] text-gray-900 bg-transparent border-none outline-none resize-none leading-relaxed placeholder:text-gray-300"
-            style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-              fontSize: '17px',
-              lineHeight: '1.5',
-              letterSpacing: '-0.01em'
-            }}
-            autoFocus
-          />
-        ) : (
-          <div
-            onClick={() => setIsEditing(true)}
-            className="cursor-text min-h-[60vh]"
-          >
-            <AnnotatedMarkdown
-              content={editedContent || 'Click to start writing...'}
-              className="text-gray-900"
+        <div className="relative">
+          {isEditing ? (
+            <textarea
+              ref={contentTextareaRef}
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              onBlur={() => {
+                // Only exit edit mode if no unsaved changes
+                if (!hasUnsavedChanges) {
+                  setIsEditing(false)
+                }
+              }}
+              placeholder="Start writing..."
+              className="w-full min-h-[60vh] text-gray-900 bg-transparent border-none outline-none resize-none leading-relaxed placeholder:text-gray-300"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                fontSize: '17px',
+                lineHeight: '1.5',
+                letterSpacing: '-0.01em'
+              }}
+              autoFocus
             />
-          </div>
-        )}
+          ) : (
+            <div
+              onClick={() => !isSmartifying && setIsEditing(true)}
+              className={cn("min-h-[60vh]", isSmartifying ? "cursor-default" : "cursor-text")}
+            >
+              <AnnotatedMarkdown
+                content={editedContent || 'Click to start writing...'}
+                className="text-gray-900"
+              />
+            </div>
+          )}
+
+          {/* Smartify shimmer overlay on content */}
+          <AnimatePresence>
+            {isSmartifying && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="absolute inset-0 z-10 rounded-xl overflow-hidden pointer-events-none"
+              >
+                {/* Shimmer sweep across the content */}
+                <motion.div
+                  className="absolute inset-0"
+                  style={{
+                    background: 'linear-gradient(110deg, transparent 20%, rgba(189, 103, 80, 0.08) 40%, rgba(189, 103, 80, 0.15) 50%, rgba(189, 103, 80, 0.08) 60%, transparent 80%)',
+                    backgroundSize: '200% 100%',
+                  }}
+                  animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                  transition={{ duration: 2, ease: 'linear', repeat: Infinity }}
+                />
+                {/* Subtle pulsing overlay */}
+                <motion.div
+                  className="absolute inset-0 bg-[#BD6750]/[0.02]"
+                  animate={{ opacity: [0.3, 0.7, 0.3] }}
+                  transition={{ duration: 2.5, ease: 'easeInOut', repeat: Infinity }}
+                />
+                {/* Centered processing indicator */}
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2.5 bg-white/95 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-[#BD6750]/20">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                    className="w-4 h-4 border-2 border-[#BD6750]/30 border-t-[#BD6750] rounded-full"
+                  />
+                  <span className="text-sm font-medium text-[#BD6750]">Analyzing note...</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
         
         {/* Spacer to ensure content doesn't overlap with floating buttons */}
         <div className="h-32" />
@@ -382,6 +473,7 @@ export default function NoteViewPage() {
           onOpenChange={(open) => {
             setShowSmartifyModal(open)
             if (!open) {
+              setSmartifyPreviewData(null)
               // Reload note after smartify to update canSmartify status
               loadNote()
             }
@@ -389,6 +481,7 @@ export default function NoteViewPage() {
           noteId={note.id}
           noteTitle={note.title || 'Untitled Note'}
           noteContent={note.formatted_content || note.content || note.raw_transcript || undefined}
+          previewData={smartifyPreviewData}
         />
       )}
     </div>

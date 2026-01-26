@@ -184,24 +184,33 @@ export async function POST(request: NextRequest) {
 
     console.log('[Ask] User has', totalNotes, 'total notes,', notesWithEmbeddings, 'with embeddings')
 
-    // Handle meta-questions directly (before semantic search)
+    // Handle meta-questions and greetings directly (before semantic search)
     const lowerQuery = query.toLowerCase().trim()
+
+    // Check for casual greetings
+    const greetingPatterns = /^(hey|hi|hello|howdy|yo|sup|what'?s up|good morning|good afternoon|good evening|hiya|heya)\b/
+    if (greetingPatterns.test(lowerQuery) && lowerQuery.length < 30) {
+      return NextResponse.json({
+        answer: `Hey! I'm **Recall** — your AI assistant for searching through your voice notes. Ask me anything about what you've recorded and I'll find it for you.`,
+        citations: [],
+        noteCount: 0
+      })
+    }
 
     // Check for "what are you" type questions
     if (lowerQuery.includes('what are you') || lowerQuery.includes('who are you') ||
         lowerQuery.includes('what can you do') || lowerQuery.includes('help me')) {
       return NextResponse.json({
-        answer: `I'm **Recall**, your AI assistant for searching through your voice notes! 🎙️
+        answer: `I'm **Recall**, your AI assistant for searching through your voice notes.
 
 Here's what I can help you with:
 - **Find information** from your past recordings ("What did I say about the product launch?")
 - **Summarize topics** across multiple notes ("What are my main concerns this month?")
 - **Recall decisions** and action items you've mentioned
-- **Search by time** - filter by last week, month, or all time
 
 You currently have **${totalNotes || 0} notes**${notesWithEmbeddings ? ` (${notesWithEmbeddings} indexed for search)` : ''}.
 
-Just ask me anything about what you've recorded!`,
+Just ask me anything about what you've recorded.`,
         citations: [],
         noteCount: 0
       })
@@ -393,26 +402,33 @@ Want me to help you find something specific in your notes? Try asking about a to
     const systemPrompt = `You are Recall, a friendly AI assistant that helps founders search and recall information from their voice notes.
 
 YOUR PERSONALITY:
-- Warm, supportive, and encouraging
-- Like a helpful colleague who knows their context
+- Natural, conversational, and helpful — like a sharp colleague who remembers everything
+- Respond to casual messages naturally (greetings, thanks, follow-ups) without forcing note references
 - Do NOT use emojis in responses
+- Be warm but concise — founders are busy
 
 ANSWERING RULES:
-1. Search the provided notes thoroughly for ANY relevant information
-2. Be generous in finding connections - if a note mentions the topic, use it
-3. Use citation markers [1], [2] at the END of sentences that reference specific notes
-4. If you genuinely can't find relevant info, say so warmly and suggest recording about it
-5. NEVER make up information not in the notes
+1. Search the provided notes for information that DIRECTLY answers the user's question
+2. ONLY cite notes that contain relevant information to the specific question asked. Do NOT cite a note just because it was provided — most queries will only need 1-2 citations, not all notes
+3. Use citation markers [1], [2] at the END of sentences that reference a specific note
+4. If the user's message is conversational (greetings, thanks, small talk), respond naturally WITHOUT searching notes or adding citations
+5. If you genuinely can't find relevant info, say so warmly and suggest recording about it
+6. NEVER make up information not in the notes
+
+CITATION RULES (IMPORTANT):
+- Only cite a note if you are directly quoting or paraphrasing information FROM that note
+- Never cite all notes — be selective and precise
+- If a note has no relevant content to the question, do not cite it at all
+- It is better to have zero citations than to cite irrelevant notes
 
 FORMATTING (use markdown):
 - **Bold** for key names, terms, and important points
 - Use bullet points for lists
 - Keep paragraphs short (2-3 sentences max)
-- Be concise - founders are busy
 
 WHEN NO INFO FOUND:
 If the notes don't contain relevant information, respond like:
-"I looked through your notes but didn't find anything about [topic]. You might want to record a quick note about it!"`
+"I couldn't find anything about [topic] in your notes. Try recording a note about it and I'll remember it for next time."`
 
     let userPrompt: string
 
@@ -425,11 +441,11 @@ ${contextParts.join('\n\n---\n\n')}
 
 User's question: ${query}
 
-Search through these notes and answer the question. Use citation markers [1], [2] when referencing specific notes. If you can't find relevant information, say so warmly.`
+Search through these notes and answer the question. Only cite notes that directly contain relevant information — do NOT cite all notes. If the question is conversational, respond naturally without citations.`
     } else {
       // No notes at all (shouldn't happen with new logic, but handle gracefully)
       return NextResponse.json({
-        answer: `I don't have any notes to search through yet. Record a voice note and I'll be able to help you recall information from it! 🎙️`,
+        answer: `I don't have any notes to search through yet. Record a voice note and I'll be able to help you recall information from it.`,
         citations: [],
         noteCount: 0
       })

@@ -10,6 +10,7 @@ interface SmartifyModalProps {
   noteId: string | null
   noteTitle?: string
   noteContent?: string
+  previewData?: ExtractionPreview | null
 }
 
 interface ExtractionPreview {
@@ -27,7 +28,7 @@ interface SelectedCategories {
   brainDump: boolean
 }
 
-export function SmartifyModal({ open, onOpenChange, noteId, noteTitle, noteContent }: SmartifyModalProps) {
+export function SmartifyModal({ open, onOpenChange, noteId, noteTitle, noteContent, previewData }: SmartifyModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [preview, setPreview] = useState<ExtractionPreview | null>(null)
@@ -41,7 +42,15 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle, noteConte
 
   useEffect(() => {
     if (open && noteId) {
-      handlePreview()
+      // If preview data was pre-loaded (shimmer happened on the note card), skip processing
+      if (previewData) {
+        setPreview(previewData)
+        setShowPreview(true)
+        setIsProcessing(false)
+      } else {
+        // Fallback: fetch preview inside modal (e.g., note detail page)
+        handlePreview()
+      }
     } else {
       // Reset state when modal closes
       setIsProcessing(false)
@@ -55,7 +64,7 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle, noteConte
         brainDump: true
       })
     }
-  }, [open, noteId])
+  }, [open, noteId, previewData])
 
   const handlePreview = async () => {
     if (!noteId) return

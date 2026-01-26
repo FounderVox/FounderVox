@@ -181,19 +181,15 @@ function SidebarContent({
     </div>
   ) : children
 
-  // For note detail page, render with sidebar offset but full width content
+  // For note detail page, render with sidebar offset but full width content (no recording buttons)
   if (isNoteDetailPage) {
     return (
-      <>
-        <div
-          className="fixed top-0 bottom-0 right-0 transition-[left] duration-200 z-10"
-          style={{ left: sidebarWidth }}
-        >
-          {contentToRender}
-        </div>
-        {/* Floating Record Button - visible on note detail page */}
-        {!isAuthLoading && <FloatingRecordButton sidebarWidth={sidebarWidth} />}
-      </>
+      <div
+        className="fixed top-0 bottom-0 right-0 transition-[left] duration-200 z-10"
+        style={{ left: sidebarWidth }}
+      >
+        {contentToRender}
+      </div>
     )
   }
 
@@ -219,6 +215,7 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
   const [showRecordingModal, setShowRecordingModal] = useState(false)
   const [showManualNoteDialog, setShowManualNoteDialog] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isNoteDetailOpen, setIsNoteDetailOpen] = useState(false)
 
   // Listen for search state changes
   useEffect(() => {
@@ -226,9 +223,22 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
       setIsSearchOpen(event.detail.isOpen)
     }
 
+    const handleNoteDetailOpened = () => {
+      setIsNoteDetailOpen(true)
+    }
+
+    const handleNoteDetailClosed = () => {
+      setIsNoteDetailOpen(false)
+    }
+
     window.addEventListener('searchStateChanged', handleSearchStateChanged as EventListener)
+    window.addEventListener('noteDetailOpened', handleNoteDetailOpened as EventListener)
+    window.addEventListener('noteDetailClosed', handleNoteDetailClosed as EventListener)
+
     return () => {
       window.removeEventListener('searchStateChanged', handleSearchStateChanged as EventListener)
+      window.removeEventListener('noteDetailOpened', handleNoteDetailOpened as EventListener)
+      window.removeEventListener('noteDetailClosed', handleNoteDetailClosed as EventListener)
     }
   }, [])
 
@@ -244,8 +254,8 @@ function FloatingRecordButton({ sidebarWidth }: { sidebarWidth: number }) {
     // Processing modal handles its own closing
   }
 
-  // Don't render buttons when search is open
-  if (isSearchOpen) {
+  // Don't render buttons when search is open or note detail is open
+  if (isSearchOpen || isNoteDetailOpen) {
     return (
       <>
         {/* Dialogs still need to be mounted */}

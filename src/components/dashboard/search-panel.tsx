@@ -362,10 +362,10 @@ export function SearchPanel({ open, onClose }: SearchPanelProps) {
     }
   }, [searchQuery, performSearch])
 
-  // Handle note click - dispatch event to open note detail
+  // Handle note click - navigate to full-page note view
   const handleNoteClick = (noteId: string) => {
-    window.dispatchEvent(new CustomEvent('openNoteDetail', { detail: { noteId } }))
     handleClose()
+    window.location.href = `/dashboard/notes/${noteId}`
   }
 
   // Handle task click - navigate to action items page

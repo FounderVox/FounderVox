@@ -365,7 +365,7 @@ export default function InvestorUpdatePage() {
               <Briefcase className="h-7 w-7 text-white" strokeWidth={1.5} />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Investor Updates</h1>
+              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Emails</h1>
               <p className="text-gray-500 mt-1 text-sm">
                 Manage and send professional updates to your investors
               </p>

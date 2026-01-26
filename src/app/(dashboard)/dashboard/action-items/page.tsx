@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { FilterBar } from '@/components/dashboard/filter-bar'
 import {
@@ -13,13 +12,11 @@ import {
   Trash2,
   ArrowRight,
   Circle,
-  Target,
   Zap,
   Flag,
-  GripVertical,
+  Target,
   ChevronDown,
   Check,
-  X,
   Edit3,
   CalendarDays
 } from 'lucide-react'
@@ -59,7 +56,6 @@ export default function ActionItemsPage() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingTaskText, setEditingTaskText] = useState('')
   const [priorityDropdownId, setPriorityDropdownId] = useState<string | null>(null)
-  const [priorityDropdownPosition, setPriorityDropdownPosition] = useState<{ top: number; left: number } | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [toast, setToast] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({ open: false, message: '', variant: 'success' })
@@ -79,7 +75,6 @@ export default function ActionItemsPage() {
     if (editingTaskId && editTextareaRef.current) {
       editTextareaRef.current.focus()
       editTextareaRef.current.select()
-      // Auto-resize textarea
       editTextareaRef.current.style.height = 'auto'
       editTextareaRef.current.style.height = editTextareaRef.current.scrollHeight + 'px'
     }
@@ -96,38 +91,16 @@ export default function ActionItemsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Handle priority dropdown position updates and Escape key
+  // Close priority dropdown on Escape
   useEffect(() => {
-    if (!priorityDropdownId || !priorityDropdownPosition) return
-
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setPriorityDropdownId(null)
-        setPriorityDropdownPosition(null)
       }
     }
-
-    const updatePosition = () => {
-      const button = document.querySelector(`[data-priority-button="${priorityDropdownId}"]`) as HTMLElement
-      if (button) {
-        const rect = button.getBoundingClientRect()
-        setPriorityDropdownPosition({
-          top: rect.bottom + 4,
-          left: rect.left
-        })
-      }
-    }
-
     document.addEventListener('keydown', handleEscape)
-    window.addEventListener('scroll', updatePosition, true)
-    window.addEventListener('resize', updatePosition)
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-      window.removeEventListener('scroll', updatePosition, true)
-      window.removeEventListener('resize', updatePosition)
-    }
-  }, [priorityDropdownId, priorityDropdownPosition])
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [])
 
   const loadData = async () => {
     if (typeof window === 'undefined') return
@@ -151,7 +124,6 @@ export default function ActionItemsPage() {
 
       setProfile(profileData)
 
-      // Direct query using user_id (no need for 2-query pattern)
       const { data: items, error: itemsError } = await supabase
         .from('action_items')
         .select('*')
@@ -180,7 +152,6 @@ export default function ActionItemsPage() {
   useEffect(() => {
     loadData()
 
-    // Listen for cross-page sync events from dashboard
     const handleActionItemEvent = () => {
       loadData()
     }
@@ -193,6 +164,10 @@ export default function ActionItemsPage() {
       window.removeEventListener('actionItemUpdated', handleActionItemEvent as EventListener)
     }
   }, [])
+
+  // ============================================================================
+  // DRAG AND DROP - Simplified without layout animations
+  // ============================================================================
 
   const handleDragStart = (e: React.DragEvent, itemId: string, status: StatusColumn, index: number) => {
     setDraggedItem({ itemId, status, index })
@@ -225,16 +200,19 @@ export default function ActionItemsPage() {
       return
     }
 
-    // Store original values for rollback on error
-    const originalStatus = item.status
+    // Store values before clearing draggedItem to avoid race conditions
+    const itemId = draggedItem.itemId
+    const originalStatus = draggedItem.status
     const originalCompletedAt = item.completed_at
-
     const completedAt = targetStatus === 'done' ? new Date().toISOString() : null
 
-    // Optimistic update - immediately update UI
+    // Clear drag state immediately
+    setDraggedItem(null)
+
+    // Update state optimistically
     setActionItems(prevItems =>
       prevItems.map(i =>
-        i.id === draggedItem.itemId
+        i.id === itemId
           ? { ...i, status: targetStatus, completed_at: completedAt }
           : i
       )
@@ -250,40 +228,163 @@ export default function ActionItemsPage() {
           status: targetStatus,
           completed_at: completedAt
         })
-        .eq('id', draggedItem.itemId)
+        .eq('id', itemId)
 
       if (error) {
         console.error('[ActionItems] Error updating status:', error)
-        // Revert optimistic update on error instead of full reload
+        // Revert optimistic update on error
         setActionItems(prevItems =>
           prevItems.map(i =>
-            i.id === draggedItem.itemId
+            i.id === itemId
               ? { ...i, status: originalStatus, completed_at: originalCompletedAt }
               : i
           )
         )
         setToast({ open: true, message: 'Failed to update task status', variant: 'error' })
       } else {
-        // Dispatch event for cross-page sync (e.g., dashboard)
         window.dispatchEvent(new CustomEvent('actionItemUpdated', {
-          detail: { itemId: draggedItem.itemId, status: targetStatus }
+          detail: { itemId: itemId, status: targetStatus }
         }))
       }
     } catch (error) {
       console.error('[ActionItems] Unexpected error updating status:', error)
-      // Revert optimistic update on error instead of full reload
+      // Revert optimistic update on error
       setActionItems(prevItems =>
         prevItems.map(i =>
-          i.id === draggedItem.itemId
+          i.id === itemId
             ? { ...i, status: originalStatus, completed_at: originalCompletedAt }
             : i
         )
       )
       setToast({ open: true, message: 'Failed to update task status', variant: 'error' })
     }
-
-    setDraggedItem(null)
   }
+
+  // ============================================================================
+  // TASK EDITING
+  // ============================================================================
+
+  const startEditingTask = (item: ActionItem) => {
+    setEditingTaskId(item.id)
+    setEditingTaskText(item.task)
+  }
+
+  const saveTaskEdit = async () => {
+    if (!editingTaskId || !editingTaskText.trim()) {
+      setEditingTaskId(null)
+      return
+    }
+
+    const originalItem = actionItems.find(i => i.id === editingTaskId)
+    if (!originalItem || originalItem.task === editingTaskText.trim()) {
+      setEditingTaskId(null)
+      return
+    }
+
+    const originalTask = originalItem.task
+    const newTask = editingTaskText.trim()
+    const itemId = editingTaskId
+
+    setActionItems(prevItems =>
+      prevItems.map(i =>
+        i.id === itemId ? { ...i, task: newTask } : i
+      )
+    )
+
+    try {
+      const supabase = getSupabase()
+      if (!supabase) return
+
+      const { error } = await supabase
+        .from('action_items')
+        .update({ task: newTask })
+        .eq('id', itemId)
+
+      if (error) {
+        console.error('[ActionItems] Error updating task:', error)
+        setActionItems(prevItems =>
+          prevItems.map(i =>
+            i.id === itemId ? { ...i, task: originalTask } : i
+          )
+        )
+        setToast({ open: true, message: 'Failed to update task', variant: 'error' })
+      } else {
+        window.dispatchEvent(new CustomEvent('actionItemUpdated', {
+          detail: { itemId, task: newTask }
+        }))
+      }
+    } catch (error) {
+      console.error('[ActionItems] Unexpected error updating task:', error)
+      setActionItems(prevItems =>
+        prevItems.map(i =>
+          i.id === itemId ? { ...i, task: originalTask } : i
+        )
+      )
+      setToast({ open: true, message: 'Failed to update task', variant: 'error' })
+    }
+
+    setEditingTaskId(null)
+  }
+
+  const cancelTaskEdit = () => {
+    setEditingTaskId(null)
+    setEditingTaskText('')
+  }
+
+  // ============================================================================
+  // PRIORITY UPDATE
+  // ============================================================================
+
+  const updatePriority = async (itemId: string, newPriority: 'high' | 'medium' | 'low') => {
+    setPriorityDropdownId(null)
+
+    const item = actionItems.find(i => i.id === itemId)
+    if (!item || item.priority === newPriority) return
+
+    const originalPriority = item.priority
+
+    setActionItems(prevItems =>
+      prevItems.map(i =>
+        i.id === itemId ? { ...i, priority: newPriority } : i
+      )
+    )
+
+    try {
+      const supabase = getSupabase()
+      if (!supabase) return
+
+      const { error } = await supabase
+        .from('action_items')
+        .update({ priority: newPriority })
+        .eq('id', itemId)
+
+      if (error) {
+        console.error('[ActionItems] Error updating priority:', error)
+        setActionItems(prevItems =>
+          prevItems.map(i =>
+            i.id === itemId ? { ...i, priority: originalPriority } : i
+          )
+        )
+        setToast({ open: true, message: 'Failed to update priority', variant: 'error' })
+      } else {
+        window.dispatchEvent(new CustomEvent('actionItemUpdated', {
+          detail: { itemId, priority: newPriority }
+        }))
+      }
+    } catch (error) {
+      console.error('[ActionItems] Unexpected error updating priority:', error)
+      setActionItems(prevItems =>
+        prevItems.map(i =>
+          i.id === itemId ? { ...i, priority: originalPriority } : i
+        )
+      )
+      setToast({ open: true, message: 'Failed to update priority', variant: 'error' })
+    }
+  }
+
+  // ============================================================================
+  // DELETE
+  // ============================================================================
 
   const handleDeleteClick = (itemId: string) => {
     setDeleteConfirmId(itemId)
@@ -319,129 +420,9 @@ export default function ActionItemsPage() {
     }
   }
 
-  // Inline task text editing
-  const startEditingTask = (item: ActionItem) => {
-    setEditingTaskId(item.id)
-    setEditingTaskText(item.task)
-  }
-
-  const saveTaskEdit = async () => {
-    if (!editingTaskId || !editingTaskText.trim()) {
-      setEditingTaskId(null)
-      return
-    }
-
-    const originalItem = actionItems.find(i => i.id === editingTaskId)
-    if (!originalItem || originalItem.task === editingTaskText.trim()) {
-      setEditingTaskId(null)
-      return
-    }
-
-    const originalTask = originalItem.task
-    const newTask = editingTaskText.trim()
-    const itemId = editingTaskId
-
-    // Optimistic update
-    setActionItems(prevItems =>
-      prevItems.map(i =>
-        i.id === itemId ? { ...i, task: newTask } : i
-      )
-    )
-
-    try {
-      const supabase = getSupabase()
-      if (!supabase) return
-
-      const { error } = await supabase
-        .from('action_items')
-        .update({ task: newTask })
-        .eq('id', itemId)
-
-      if (error) {
-        console.error('[ActionItems] Error updating task:', error)
-        // Revert optimistic update on error
-        setActionItems(prevItems =>
-          prevItems.map(i =>
-            i.id === itemId ? { ...i, task: originalTask } : i
-          )
-        )
-        setToast({ open: true, message: 'Failed to update task', variant: 'error' })
-      } else {
-        // Dispatch event for cross-page sync
-        window.dispatchEvent(new CustomEvent('actionItemUpdated', {
-          detail: { itemId, task: newTask }
-        }))
-      }
-    } catch (error) {
-      console.error('[ActionItems] Unexpected error updating task:', error)
-      // Revert optimistic update on error
-      setActionItems(prevItems =>
-        prevItems.map(i =>
-          i.id === itemId ? { ...i, task: originalTask } : i
-        )
-      )
-      setToast({ open: true, message: 'Failed to update task', variant: 'error' })
-    }
-
-    setEditingTaskId(null)
-  }
-
-  const cancelTaskEdit = () => {
-    setEditingTaskId(null)
-    setEditingTaskText('')
-  }
-
-  // Inline priority editing
-  const updatePriority = async (itemId: string, newPriority: 'high' | 'medium' | 'low') => {
-    setPriorityDropdownId(null)
-
-    const item = actionItems.find(i => i.id === itemId)
-    if (!item || item.priority === newPriority) return
-
-    const originalPriority = item.priority
-
-    // Optimistic update
-    setActionItems(prevItems =>
-      prevItems.map(i =>
-        i.id === itemId ? { ...i, priority: newPriority } : i
-      )
-    )
-
-    try {
-      const supabase = getSupabase()
-      if (!supabase) return
-
-      const { error } = await supabase
-        .from('action_items')
-        .update({ priority: newPriority })
-        .eq('id', itemId)
-
-      if (error) {
-        console.error('[ActionItems] Error updating priority:', error)
-        // Revert optimistic update on error
-        setActionItems(prevItems =>
-          prevItems.map(i =>
-            i.id === itemId ? { ...i, priority: originalPriority } : i
-          )
-        )
-        setToast({ open: true, message: 'Failed to update priority', variant: 'error' })
-      } else {
-        // Dispatch event for cross-page sync
-        window.dispatchEvent(new CustomEvent('actionItemUpdated', {
-          detail: { itemId, priority: newPriority }
-        }))
-      }
-    } catch (error) {
-      console.error('[ActionItems] Unexpected error updating priority:', error)
-      // Revert optimistic update on error
-      setActionItems(prevItems =>
-        prevItems.map(i =>
-          i.id === itemId ? { ...i, priority: originalPriority } : i
-        )
-      )
-      setToast({ open: true, message: 'Failed to update priority', variant: 'error' })
-    }
-  }
+  // ============================================================================
+  // DATE HELPERS
+  // ============================================================================
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return null
@@ -488,6 +469,10 @@ export default function ActionItemsPage() {
     return date.toDateString() === today.toDateString()
   }
 
+  // ============================================================================
+  // CONFIG HELPERS
+  // ============================================================================
+
   const getPriorityConfig = (priority: string) => {
     switch (priority) {
       case 'high':
@@ -497,8 +482,7 @@ export default function ActionItemsPage() {
           border: 'border-red-200',
           dot: 'bg-red-500',
           icon: Zap,
-          label: 'Urgent',
-          order: 1
+          label: 'Urgent'
         }
       case 'medium':
         return {
@@ -507,8 +491,7 @@ export default function ActionItemsPage() {
           border: 'border-amber-200',
           dot: 'bg-amber-500',
           icon: Flag,
-          label: 'Medium',
-          order: 2
+          label: 'Medium'
         }
       case 'low':
         return {
@@ -517,8 +500,7 @@ export default function ActionItemsPage() {
           border: 'border-emerald-200',
           dot: 'bg-emerald-500',
           icon: Target,
-          label: 'Low',
-          order: 3
+          label: 'Low'
         }
       default:
         return {
@@ -527,8 +509,7 @@ export default function ActionItemsPage() {
           border: 'border-gray-200',
           dot: 'bg-gray-400',
           icon: Flag,
-          label: 'Normal',
-          order: 4
+          label: 'Normal'
         }
     }
   }
@@ -538,57 +519,55 @@ export default function ActionItemsPage() {
       case 'open':
         return {
           label: 'To Do',
-          sublabel: 'Waiting to start',
+          sublabel: 'Not started',
           icon: Circle,
-          bg: 'bg-slate-50/80',
-          headerBg: 'bg-gradient-to-r from-slate-100 to-slate-50',
-          border: 'border-slate-200/60',
-          text: 'text-slate-800',
-          iconColor: 'text-slate-500',
-          ringColor: 'ring-slate-300'
+          bg: 'bg-slate-50/50',
+          headerBg: 'bg-gradient-to-br from-slate-100 via-slate-50 to-white',
+          border: 'border-slate-200',
+          text: 'text-slate-900',
+          iconColor: 'text-slate-600',
+          count: 'bg-slate-100 text-slate-700'
         }
       case 'in_progress':
         return {
           label: 'In Progress',
-          sublabel: 'Currently working',
+          sublabel: 'Working on it',
           icon: Clock,
-          bg: 'bg-blue-50/80',
-          headerBg: 'bg-gradient-to-r from-blue-100 to-blue-50',
-          border: 'border-blue-200/60',
-          text: 'text-blue-800',
+          bg: 'bg-blue-50/50',
+          headerBg: 'bg-gradient-to-br from-blue-100 via-blue-50 to-white',
+          border: 'border-blue-200',
+          text: 'text-blue-900',
           iconColor: 'text-blue-600',
-          ringColor: 'ring-blue-300'
+          count: 'bg-blue-100 text-blue-700'
         }
       case 'done':
         return {
-          label: 'Completed',
-          sublabel: 'All finished',
+          label: 'Done',
+          sublabel: 'Completed',
           icon: CheckCircle2,
-          bg: 'bg-emerald-50/80',
-          headerBg: 'bg-gradient-to-r from-emerald-100 to-emerald-50',
-          border: 'border-emerald-200/60',
-          text: 'text-emerald-800',
+          bg: 'bg-emerald-50/50',
+          headerBg: 'bg-gradient-to-br from-emerald-100 via-emerald-50 to-white',
+          border: 'border-emerald-200',
+          text: 'text-emerald-900',
           iconColor: 'text-emerald-600',
-          ringColor: 'ring-emerald-300'
+          count: 'bg-emerald-100 text-emerald-700'
         }
     }
   }
 
-  // Filter and sort items
+  // ============================================================================
+  // FILTER AND SORT
+  // ============================================================================
+
   const getFilteredAndSortedItems = () => {
     let filtered = actionItems.filter(item => {
-      // Priority filter
       if (filterPriority !== 'all' && item.priority !== filterPriority) return false
-
-      // Date filter
       if (filterDate === 'today' && !isToday(item.deadline)) return false
       if (filterDate === 'week' && !isThisWeek(item.deadline)) return false
       if (filterDate === 'overdue' && (!isOverdue(item.deadline) || item.status === 'done')) return false
-
       return true
     })
 
-    // Sort items
     filtered.sort((a, b) => {
       if (sortBy === 'priority') {
         const priorityOrder = { high: 1, medium: 2, low: 3 }
@@ -614,7 +593,10 @@ export default function ActionItemsPage() {
     done: filteredItems.filter(i => i.status === 'done')
   }
 
-  // Calculate stats
+  // ============================================================================
+  // STATS
+  // ============================================================================
+
   const completedToday = actionItems.filter(item => {
     if (item.status !== 'done' || !item.completed_at) return false
     const completed = new Date(item.completed_at)
@@ -630,103 +612,98 @@ export default function ActionItemsPage() {
     item.status !== 'done' && item.deadline && isThisWeek(item.deadline)
   ).length
 
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-        >
-          <div className="h-10 w-10 rounded-full border-[3px] border-gray-200 border-t-black" />
-        </motion.div>
+        <div className="relative">
+          <div className="h-12 w-12 rounded-full border-4 border-slate-200 border-t-slate-800 animate-spin" />
+        </div>
       </div>
     )
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="pb-8"
-    >
-      {/* Filter Bar */}
+    <div className="pb-8 min-h-screen">
       <FilterBar
         avatarUrl={profile?.avatar_url}
         displayName={profile?.display_name}
         email={profile?.email}
       />
 
-      {/* Premium Header */}
+      {/* Header */}
       <div className="mb-8">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-4">
-            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 shadow-lg shadow-gray-900/20">
+            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 shadow-lg">
               <ClipboardList className="h-7 w-7 text-white" strokeWidth={1.5} />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Action Items</h1>
-              <p className="text-gray-500 mt-1 text-sm">
-                Track and manage your tasks efficiently
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Todos</h1>
+              <p className="text-slate-500 mt-1 text-sm">
+                Manage your tasks across stages
               </p>
             </div>
           </div>
         </div>
 
-        {/* Stats Row */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 shadow-sm">
+          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-slate-100">
                 <Circle className="h-4 w-4 text-slate-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{itemsByStatus.open.length}</p>
-                <p className="text-xs text-gray-500">To Do</p>
+                <p className="text-2xl font-bold text-slate-900">{itemsByStatus.open.length}</p>
+                <p className="text-xs text-slate-500">To Do</p>
               </div>
             </div>
           </div>
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 shadow-sm">
+          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100">
                 <Clock className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{itemsByStatus.in_progress.length}</p>
-                <p className="text-xs text-gray-500">In Progress</p>
+                <p className="text-2xl font-bold text-slate-900">{itemsByStatus.in_progress.length}</p>
+                <p className="text-xs text-slate-500">In Progress</p>
               </div>
             </div>
           </div>
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 shadow-sm">
+          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-emerald-100">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{completedToday}</p>
-                <p className="text-xs text-gray-500">Done Today</p>
+                <p className="text-2xl font-bold text-slate-900">{completedToday}</p>
+                <p className="text-xs text-slate-500">Done Today</p>
               </div>
             </div>
           </div>
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-gray-200/50 shadow-sm">
+          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
-              <div className={cn("p-2 rounded-lg", overdueCount > 0 ? "bg-red-100" : "bg-gray-100")}>
-                <Calendar className={cn("h-4 w-4", overdueCount > 0 ? "text-red-600" : "text-gray-500")} />
+              <div className={cn("p-2 rounded-lg", overdueCount > 0 ? "bg-red-100" : "bg-slate-100")}>
+                <Calendar className={cn("h-4 w-4", overdueCount > 0 ? "text-red-600" : "text-slate-500")} />
               </div>
               <div>
-                <p className={cn("text-2xl font-bold", overdueCount > 0 ? "text-red-600" : "text-gray-900")}>{overdueCount}</p>
-                <p className="text-xs text-gray-500">Overdue</p>
+                <p className={cn("text-2xl font-bold", overdueCount > 0 ? "text-red-600" : "text-slate-900")}>{overdueCount}</p>
+                <p className="text-xs text-slate-500">Overdue</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Filters Row */}
+        {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Priority Filter */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-600">Priority:</span>
-            <div className="inline-flex items-center bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl p-1 shadow-sm">
+            <span className="text-sm font-medium text-slate-600">Priority:</span>
+            <div className="inline-flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
               {(['all', 'high', 'medium', 'low'] as const).map(priority => {
                 const isActive = filterPriority === priority
                 const config = priority !== 'all' ? getPriorityConfig(priority) : null
@@ -736,10 +713,10 @@ export default function ActionItemsPage() {
                     key={priority}
                     onClick={() => setFilterPriority(priority)}
                     className={cn(
-                      'px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200',
+                      'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
                       isActive
-                        ? 'bg-gray-900 text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     )}
                   >
                     <span className="flex items-center gap-1.5">
@@ -754,11 +731,11 @@ export default function ActionItemsPage() {
 
           {/* Date Filter */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-600">Due:</span>
-            <div className="inline-flex items-center bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl p-1 shadow-sm">
+            <span className="text-sm font-medium text-slate-600">Due:</span>
+            <div className="inline-flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
               {([
-                { value: 'all' as DateFilter, label: 'Any', count: undefined },
-                { value: 'today' as DateFilter, label: 'Today', count: undefined },
+                { value: 'all' as DateFilter, label: 'Any' },
+                { value: 'today' as DateFilter, label: 'Today' },
                 { value: 'week' as DateFilter, label: 'This Week', count: dueThisWeek },
                 { value: 'overdue' as DateFilter, label: 'Overdue', count: overdueCount }
               ]).map(({ value, label, count }) => {
@@ -769,10 +746,10 @@ export default function ActionItemsPage() {
                     key={value}
                     onClick={() => setFilterDate(value)}
                     className={cn(
-                      'px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5',
+                      'px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5',
                       isActive
-                        ? 'bg-gray-900 text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     )}
                   >
                     {value === 'overdue' && <CalendarDays className="h-3.5 w-3.5" />}
@@ -780,7 +757,7 @@ export default function ActionItemsPage() {
                     {count !== undefined && count > 0 && (
                       <span className={cn(
                         "text-[10px] px-1.5 py-0.5 rounded-full",
-                        isActive ? "bg-white/20" : value === 'overdue' ? "bg-red-100 text-red-700" : "bg-gray-200 text-gray-600"
+                        isActive ? "bg-white/20" : value === 'overdue' ? "bg-red-100 text-red-700" : "bg-slate-200 text-slate-600"
                       )}>
                         {count}
                       </span>
@@ -791,44 +768,38 @@ export default function ActionItemsPage() {
             </div>
           </div>
 
-          {/* Sort Dropdown */}
+          {/* Sort */}
           <div className="flex items-center gap-2 ml-auto">
-            <span className="text-sm font-medium text-gray-600">Sort:</span>
+            <span className="text-sm font-medium text-slate-600">Sort:</span>
             <div className="relative" ref={sortDropdownRef}>
               <button
                 onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
                 className={cn(
-                  "flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-xl px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm cursor-pointer transition-all",
+                  "flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition-all",
                   sortDropdownOpen
-                    ? "ring-2 ring-gray-200 bg-white"
-                    : "hover:bg-white hover:border-gray-300"
+                    ? "ring-2 ring-slate-300"
+                    : "hover:bg-slate-50"
                 )}
               >
                 <span className="capitalize">{sortBy === 'created' ? 'Created' : sortBy === 'deadline' ? 'Deadline' : 'Priority'}</span>
                 <ChevronDown className={cn(
-                  "h-3.5 w-3.5 text-gray-400 transition-transform duration-200",
+                  "h-3.5 w-3.5 text-slate-400 transition-transform",
                   sortDropdownOpen && "rotate-180"
                 )} />
               </button>
 
-              {/* Sort Dropdown Menu */}
-              <AnimatePresence>
-                {sortDropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                    transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl border border-gray-200/80 py-1 min-w-[140px]"
-                    style={{
-                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08)'
-                    }}
-                  >
+              {sortDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-[100]"
+                    onClick={() => setSortDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 z-[101] bg-white rounded-xl border border-slate-200 py-1 min-w-[140px] shadow-xl">
                     {([
                       { value: 'priority' as SortOption, label: 'Priority', icon: Flag },
                       { value: 'deadline' as SortOption, label: 'Deadline', icon: Calendar },
                       { value: 'created' as SortOption, label: 'Created', icon: Clock }
-                    ]).map(({ value, label, icon: SortIcon }, idx) => (
+                    ]).map(({ value, label, icon: SortIcon }) => (
                       <button
                         key={value}
                         onClick={() => {
@@ -837,23 +808,17 @@ export default function ActionItemsPage() {
                         }}
                         className={cn(
                           "w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors",
-                          sortBy === value
-                            ? "bg-gray-50"
-                            : "hover:bg-gray-50",
-                          idx === 0 && "rounded-t-lg",
-                          idx === 2 && "rounded-b-lg"
+                          sortBy === value ? "bg-slate-50" : "hover:bg-slate-50"
                         )}
                       >
-                        <SortIcon className="h-3.5 w-3.5 text-gray-400" />
-                        <span className="font-medium flex-1 text-left text-gray-700">{label}</span>
-                        {sortBy === value && (
-                          <Check className="h-3.5 w-3.5 text-gray-400" />
-                        )}
+                        <SortIcon className="h-3.5 w-3.5 text-slate-400" />
+                        <span className="font-medium flex-1 text-left text-slate-700">{label}</span>
+                        {sortBy === value && <Check className="h-3.5 w-3.5 text-slate-400" />}
                       </button>
                     ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -862,330 +827,288 @@ export default function ActionItemsPage() {
       {/* Kanban Board */}
       {filteredItems.length > 0 ? (
         <div className="grid md:grid-cols-3 gap-5">
-          {(['open', 'in_progress', 'done'] as StatusColumn[]).map((status, columnIndex) => {
+          {(['open', 'in_progress', 'done'] as StatusColumn[]).map((status) => {
             const config = getStatusConfig(status)
             const Icon = config.icon
             const items = itemsByStatus[status]
 
             return (
-              <motion.div
+              <div
                 key={status}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: columnIndex * 0.1 }}
                 className={cn(
-                  "flex flex-col min-h-[500px] rounded-2xl transition-all duration-300",
+                  "flex flex-col min-h-[500px] rounded-2xl border-2 transition-all",
                   config.bg,
-                  "border",
                   config.border,
-                  dragOverColumn === status && `ring-2 ${config.ringColor} ring-offset-2 shadow-lg`
+                  dragOverColumn === status && "ring-4 ring-offset-2 ring-blue-300 border-blue-400"
                 )}
                 onDragOver={(e) => handleDragOver(e, status)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, status)}
               >
                 {/* Column Header */}
-                <div className={cn(
-                  "flex items-center justify-between p-4 rounded-t-2xl",
-                  config.headerBg
-                )}>
+                <div className={cn("flex items-center justify-between p-4 rounded-t-2xl border-b border-slate-200", config.headerBg)}>
                   <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "p-2.5 rounded-xl",
-                      status === 'open' && "bg-slate-200/80",
-                      status === 'in_progress' && "bg-blue-200/80",
-                      status === 'done' && "bg-emerald-200/80"
-                    )}>
+                    <div className={cn("p-2 rounded-xl bg-white/70 shadow-sm")}>
                       <Icon className={cn("h-5 w-5", config.iconColor)} strokeWidth={2} />
                     </div>
                     <div>
                       <h3 className={cn("font-semibold text-base", config.text)}>
                         {config.label}
                       </h3>
-                      <p className="text-xs text-gray-500">{config.sublabel}</p>
+                      <p className="text-xs text-slate-500">{config.sublabel}</p>
                     </div>
                   </div>
-                  <div className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm",
-                    status === 'open' && "bg-slate-200 text-slate-700",
-                    status === 'in_progress' && "bg-blue-200 text-blue-700",
-                    status === 'done' && "bg-emerald-200 text-emerald-700"
-                  )}>
+                  <div className={cn("flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm shadow-sm", config.count)}>
                     {items.length}
                   </div>
                 </div>
 
-                {/* Items Container */}
+                {/* Items */}
                 <div className="flex-1 p-3 space-y-3 overflow-y-auto">
-                  <AnimatePresence mode="popLayout">
-                    {items.length > 0 ? (
-                      items.map((item, index) => {
-                        const priorityConfig = getPriorityConfig(item.priority)
-                        const PriorityIcon = priorityConfig.icon
-                        const itemOverdue = item.status !== 'done' && isOverdue(item.deadline)
-                        const isEditing = editingTaskId === item.id
-                        const showPriorityDropdown = priorityDropdownId === item.id
+                  {items.length > 0 ? (
+                    items.map((item, index) => {
+                      const priorityConfig = getPriorityConfig(item.priority)
+                      const PriorityIcon = priorityConfig.icon
+                      const itemOverdue = item.status !== 'done' && isOverdue(item.deadline)
+                      const isEditing = editingTaskId === item.id
+                      const isDragging = draggedItem?.itemId === item.id && draggedItem?.status === status
 
-                        return (
-                          <motion.div
-                            key={item.id}
-                            layout
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ delay: index * 0.03 }}
-                            draggable={!isEditing}
-                            onDragStart={(e) => !isEditing && handleDragStart(e as unknown as React.DragEvent, item.id, status, index)}
-                            onMouseEnter={() => setHoveredCard(item.id)}
-                            onMouseLeave={() => setHoveredCard(null)}
-                            className={cn(
-                              "bg-white rounded-xl border border-gray-200/80 transition-all duration-200 group relative overflow-hidden",
-                              isEditing
-                                ? "ring-2 ring-blue-400 shadow-md"
-                                : "cursor-grab active:cursor-grabbing",
-                              draggedItem?.itemId === item.id && draggedItem?.status === status
-                                ? "opacity-40 scale-95 rotate-1"
-                                : !isEditing && "hover:shadow-md hover:border-gray-300 hover:-translate-y-0.5",
-                              item.status === 'done' && "opacity-70"
-                            )}
-                          >
-                            {/* Priority Indicator Bar */}
-                            <div className={cn(
-                              "absolute top-0 left-0 w-1 h-full rounded-l-xl",
-                              priorityConfig.dot
-                            )} />
+                      return (
+                        <div
+                          key={item.id}
+                          draggable={!isEditing}
+                          onDragStart={(e) => !isEditing && handleDragStart(e, item.id, status, index)}
+                          onMouseEnter={() => setHoveredCard(item.id)}
+                          onMouseLeave={() => setHoveredCard(null)}
+                          className={cn(
+                            "bg-white rounded-xl border-2 transition-all group relative",
+                            isEditing
+                              ? "ring-2 ring-blue-400 shadow-md border-blue-300"
+                              : "border-slate-200 cursor-grab active:cursor-grabbing",
+                            isDragging && "opacity-50 scale-95",
+                            !isEditing && !isDragging && "hover:shadow-md hover:border-slate-300"
+                          )}
+                        >
+                          {/* Priority Bar */}
+                          <div className={cn("absolute top-0 left-0 w-1.5 h-full rounded-l-xl", priorityConfig.dot)} />
 
-                            <div className="p-4 pl-5">
-                              {/* Header Row */}
-                              <div className="flex items-start justify-between gap-2 mb-3">
-                                <div className="flex items-start gap-3 flex-1 min-w-0">
-                                  {/* Status Checkbox */}
-                                  <div className="mt-0.5 flex-shrink-0">
-                                    {status === 'done' ? (
-                                      <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
-                                        <CheckCircle2 className="h-3.5 w-3.5 text-white" strokeWidth={3} />
-                                      </div>
-                                    ) : status === 'in_progress' ? (
-                                      <div className="w-5 h-5 rounded-full border-2 border-blue-400 flex items-center justify-center">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                      </div>
-                                    ) : (
-                                      <div className="w-5 h-5 rounded-full border-2 border-gray-300 group-hover:border-gray-400 transition-colors" />
-                                    )}
-                                  </div>
-
-                                  {/* Task Content - Editable */}
-                                  <div className="flex-1 min-w-0">
-                                    {isEditing ? (
-                                      <div className="flex flex-col gap-2">
-                                        <textarea
-                                          ref={editTextareaRef}
-                                          value={editingTaskText}
-                                          onChange={(e) => {
-                                            setEditingTaskText(e.target.value)
-                                            // Auto-resize
-                                            e.target.style.height = 'auto'
-                                            e.target.style.height = e.target.scrollHeight + 'px'
-                                          }}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                                              e.preventDefault()
-                                              saveTaskEdit()
-                                            }
-                                            if (e.key === 'Escape') cancelTaskEdit()
-                                          }}
-                                          className="w-full text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none overflow-hidden min-h-[60px]"
-                                          placeholder="Task description..."
-                                          rows={2}
-                                        />
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-[10px] text-gray-400">
-                                            Press Cmd+Enter to save, Esc to cancel
-                                          </span>
-                                          <div className="flex items-center gap-1.5">
-                                            <button
-                                              onClick={cancelTaskEdit}
-                                              className="px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors text-xs font-medium"
-                                            >
-                                              Cancel
-                                            </button>
-                                            <button
-                                              onClick={saveTaskEdit}
-                                              className="px-2.5 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors text-xs font-medium flex items-center gap-1"
-                                            >
-                                              <Check className="h-3 w-3" />
-                                              Save
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <h3
-                                        onClick={() => startEditingTask(item)}
-                                        className={cn(
-                                          "text-sm font-medium leading-snug cursor-text hover:bg-gray-50 rounded px-1 -mx-1 py-0.5 transition-colors whitespace-pre-wrap",
-                                          item.status === 'done'
-                                            ? "line-through text-gray-400"
-                                            : "text-gray-900"
-                                        )}
-                                      >
-                                        {item.task}
-                                      </h3>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Actions */}
-                                {!isEditing && (
-                                  <div className={cn(
-                                    "flex items-center gap-1 transition-opacity",
-                                    hoveredCard === item.id ? "opacity-100" : "opacity-0"
-                                  )}>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        startEditingTask(item)
-                                      }}
-                                      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-all"
-                                      title="Edit task"
-                                    >
-                                      <Edit3 className="h-3.5 w-3.5" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleDeleteClick(item.id)
-                                      }}
-                                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                                      title="Delete task"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
-                                    <div className="p-1 text-gray-300 cursor-grab">
-                                      <GripVertical className="h-4 w-4" />
+                          <div className="p-4 pl-5">
+                            {/* Task Header */}
+                            <div className="flex items-start justify-between gap-2 mb-3">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                {/* Status Icon */}
+                                <div className="mt-0.5 flex-shrink-0">
+                                  {status === 'done' ? (
+                                    <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-white" strokeWidth={3} />
                                     </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Meta Row */}
-                              <div className="flex items-center justify-between gap-2 mt-3">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {/* Priority Badge - Clickable Dropdown */}
-                                  <div className="relative">
-                                    <button
-                                      data-priority-button={item.id}
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        const button = e.currentTarget
-                                        const rect = button.getBoundingClientRect()
-                                        if (showPriorityDropdown) {
-                                          setPriorityDropdownId(null)
-                                          setPriorityDropdownPosition(null)
-                                        } else {
-                                          setPriorityDropdownId(item.id)
-                                          setPriorityDropdownPosition({
-                                            top: rect.bottom + 4,
-                                            left: rect.left
-                                          })
-                                        }
-                                      }}
-                                      className={cn(
-                                        "inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide border transition-all",
-                                        priorityConfig.bg,
-                                        priorityConfig.text,
-                                        priorityConfig.border,
-                                        "hover:ring-2 hover:ring-offset-1",
-                                        item.priority === 'high' && "hover:ring-red-300",
-                                        item.priority === 'medium' && "hover:ring-amber-300",
-                                        item.priority === 'low' && "hover:ring-emerald-300"
-                                      )}
-                                    >
-                                      <PriorityIcon className="h-3 w-3" />
-                                      {item.priority}
-                                      <ChevronDown className={cn(
-                                        "h-2.5 w-2.5 ml-0.5 transition-transform duration-200",
-                                        showPriorityDropdown && "rotate-180"
-                                      )} />
-                                    </button>
-                                  </div>
-
-                                  {/* Assignee */}
-                                  {item.assignee && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-[10px] font-medium">
-                                      <User className="h-3 w-3" />
-                                      {item.assignee}
-                                    </span>
+                                  ) : status === 'in_progress' ? (
+                                    <div className="w-5 h-5 rounded-full border-2 border-blue-400 flex items-center justify-center">
+                                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                    </div>
+                                  ) : (
+                                    <div className="w-5 h-5 rounded-full border-2 border-slate-300 group-hover:border-slate-400 transition-colors" />
                                   )}
                                 </div>
 
-                                {/* Deadline */}
-                                {item.deadline && (
-                                  <span
-                                    className={cn(
-                                      "inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium",
-                                      itemOverdue
-                                        ? "bg-red-100 text-red-700"
-                                        : isToday(item.deadline)
-                                          ? "bg-amber-100 text-amber-700"
-                                          : "bg-gray-100 text-gray-600"
-                                    )}
-                                    title={formatFullDate(item.deadline) || undefined}
+                                {/* Task Text */}
+                                <div className="flex-1 min-w-0">
+                                  {isEditing ? (
+                                    <div className="flex flex-col gap-2">
+                                      <textarea
+                                        ref={editTextareaRef}
+                                        value={editingTaskText}
+                                        onChange={(e) => {
+                                          setEditingTaskText(e.target.value)
+                                          e.target.style.height = 'auto'
+                                          e.target.style.height = e.target.scrollHeight + 'px'
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                            e.preventDefault()
+                                            saveTaskEdit()
+                                          }
+                                          if (e.key === 'Escape') cancelTaskEdit()
+                                        }}
+                                        className="w-full text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none overflow-hidden min-h-[60px]"
+                                        placeholder="Task description..."
+                                      />
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[10px] text-slate-400">
+                                          Press Cmd+Enter to save
+                                        </span>
+                                        <div className="flex items-center gap-1.5">
+                                          <button
+                                            onClick={cancelTaskEdit}
+                                            className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors text-xs font-medium"
+                                          >
+                                            Cancel
+                                          </button>
+                                          <button
+                                            onClick={saveTaskEdit}
+                                            className="px-2.5 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors text-xs font-medium flex items-center gap-1"
+                                          >
+                                            <Check className="h-3 w-3" />
+                                            Save
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <h3
+                                      onClick={() => startEditingTask(item)}
+                                      className="text-sm font-medium leading-snug cursor-text hover:bg-slate-50 rounded px-1 -mx-1 py-0.5 transition-colors whitespace-pre-wrap text-slate-900"
+                                    >
+                                      {item.task}
+                                    </h3>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Actions */}
+                              {!isEditing && (
+                                <div className={cn(
+                                  "flex items-center gap-1 transition-opacity",
+                                  hoveredCard === item.id ? "opacity-100" : "opacity-0"
+                                )}>
+                                  <button
+                                    onClick={() => startEditingTask(item)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-all"
                                   >
-                                    <Calendar className="h-3 w-3" />
-                                    {formatDate(item.deadline)}
-                                    {itemOverdue && <span className="ml-0.5 text-red-600">!</span>}
+                                    <Edit3 className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteClick(item.id)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Meta Row */}
+                            <div className="flex items-center justify-between gap-2 mt-3">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {/* Priority Badge */}
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setPriorityDropdownId(priorityDropdownId === item.id ? null : item.id)}
+                                    className={cn(
+                                      "inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide border transition-all",
+                                      priorityConfig.bg,
+                                      priorityConfig.text,
+                                      priorityConfig.border,
+                                      "hover:ring-2 hover:ring-offset-1",
+                                      item.priority === 'high' && "hover:ring-red-300",
+                                      item.priority === 'medium' && "hover:ring-amber-300",
+                                      item.priority === 'low' && "hover:ring-emerald-300"
+                                    )}
+                                  >
+                                    <PriorityIcon className="h-3 w-3" />
+                                    {item.priority}
+                                    <ChevronDown className={cn(
+                                      "h-2.5 w-2.5 ml-0.5 transition-transform",
+                                      priorityDropdownId === item.id && "rotate-180"
+                                    )} />
+                                  </button>
+
+                                  {/* Priority Dropdown */}
+                                  {priorityDropdownId === item.id && (
+                                    <>
+                                      <div
+                                        className="fixed inset-0 z-[200]"
+                                        onClick={() => setPriorityDropdownId(null)}
+                                      />
+                                      <div className="absolute left-0 top-full mt-1 z-[201] bg-white rounded-xl border border-slate-200 py-1 min-w-[130px] shadow-xl">
+                                        {(['high', 'medium', 'low'] as const).map((p) => {
+                                          const pConfig = getPriorityConfig(p)
+                                          return (
+                                            <button
+                                              key={p}
+                                              onClick={() => updatePriority(item.id, p)}
+                                              className={cn(
+                                                "w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors",
+                                                item.priority === p ? "bg-slate-50" : "hover:bg-slate-50"
+                                              )}
+                                            >
+                                              <span className={cn("w-2 h-2 rounded-full", pConfig.dot)} />
+                                              <span className={cn("font-medium flex-1 text-left", pConfig.text)}>{pConfig.label}</span>
+                                              {item.priority === p && <Check className="h-3.5 w-3.5 text-slate-400" />}
+                                            </button>
+                                          )
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+
+                                {/* Assignee */}
+                                {item.assignee && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-[10px] font-medium">
+                                    <User className="h-3 w-3" />
+                                    {item.assignee}
                                   </span>
                                 )}
                               </div>
 
-                              {/* Created date for context */}
-                              {item.created_at && (
-                                <div className="mt-2 pt-2 border-t border-gray-100">
-                                  <span className="text-[10px] text-gray-400">
-                                    Created {formatDate(item.created_at)}
-                                  </span>
-                                </div>
+                              {/* Deadline */}
+                              {item.deadline && (
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium",
+                                    itemOverdue
+                                      ? "bg-red-100 text-red-700"
+                                      : isToday(item.deadline)
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-slate-100 text-slate-600"
+                                  )}
+                                  title={formatFullDate(item.deadline) || undefined}
+                                >
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDate(item.deadline)}
+                                  {itemOverdue && <span className="ml-0.5 text-red-600">!</span>}
+                                </span>
                               )}
                             </div>
-                          </motion.div>
-                        )
-                      })
-                    ) : (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className={cn(
-                          "flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed rounded-xl text-center",
-                          config.border
-                        )}
-                      >
-                        <Icon className={cn("h-8 w-8 mb-3", config.iconColor)} strokeWidth={1.5} />
-                        <p className="text-sm text-gray-500 font-medium">Drop tasks here</p>
-                        <p className="text-xs text-gray-400 mt-1">Drag items to move them</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+
+                            {/* Created Date */}
+                            {item.created_at && (
+                              <div className="mt-2 pt-2 border-t border-slate-100">
+                                <span className="text-[10px] text-slate-400">
+                                  Created {formatDate(item.created_at)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className={cn(
+                      "flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed rounded-xl text-center",
+                      config.border
+                    )}>
+                      <Icon className={cn("h-8 w-8 mb-3", config.iconColor)} strokeWidth={1.5} />
+                      <p className="text-sm text-slate-500 font-medium">Drop tasks here</p>
+                    </div>
+                  )}
                 </div>
-              </motion.div>
+              </div>
             )
           })}
         </div>
       ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/80 backdrop-blur-sm shadow-sm rounded-2xl p-16 text-center border border-gray-200/50"
-        >
+        <div className="bg-white shadow-sm rounded-2xl p-16 text-center border border-slate-200">
           <div className="inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 mb-6 shadow-sm">
             <ClipboardList className="h-10 w-10 text-blue-600" strokeWidth={1.5} />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          <h3 className="text-xl font-semibold text-slate-900 mb-2">
             {filterPriority !== 'all' || filterDate !== 'all'
               ? 'No matching tasks'
               : 'No action items yet'}
           </h3>
-          <p className="text-gray-500 text-sm max-w-md mx-auto mb-6">
+          <p className="text-slate-500 text-sm max-w-md mx-auto mb-6">
             {filterPriority !== 'all' || filterDate !== 'all'
               ? 'Try adjusting your filters to see more tasks.'
               : 'Use Smartify on your notes to automatically extract action items and start tracking your tasks.'}
@@ -1196,87 +1119,23 @@ export default function ActionItemsPage() {
                 setFilterPriority('all')
                 setFilterDate('all')
               }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors text-sm font-medium shadow-sm"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors text-sm font-medium shadow-sm"
             >
               Clear Filters
             </button>
           ) : (
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors text-sm font-medium shadow-sm"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors text-sm font-medium shadow-sm"
             >
               Go to Notes
               <ArrowRight className="h-4 w-4" />
             </Link>
           )}
-        </motion.div>
+        </div>
       )}
 
-      {/* Priority Dropdown - Fixed positioned outside overflow container */}
-      <AnimatePresence>
-        {priorityDropdownId && priorityDropdownPosition && (
-          <>
-            {/* Invisible backdrop to close dropdown */}
-            <div
-              className="fixed inset-0 z-[99998]"
-              onClick={(e) => {
-                e.stopPropagation()
-                setPriorityDropdownId(null)
-                setPriorityDropdownPosition(null)
-              }}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 4 }}
-              transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed z-[99999] bg-white rounded-xl border border-gray-200 py-1 min-w-[130px]"
-              style={{
-                top: `${priorityDropdownPosition.top}px`,
-                left: `${priorityDropdownPosition.left}px`,
-                boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08)'
-              }}
-              onClick={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              {(() => {
-                const item = actionItems.find(item => item.id === priorityDropdownId)
-                if (!item) return null
-                return (['high', 'medium', 'low'] as const).map((p, idx) => {
-                  const pConfig = getPriorityConfig(p)
-                  return (
-                    <button
-                      key={p}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        updatePriority(item.id, p)
-                        setPriorityDropdownId(null)
-                        setPriorityDropdownPosition(null)
-                      }}
-                      className={cn(
-                        "w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors",
-                        item.priority === p
-                          ? "bg-gray-50"
-                          : "hover:bg-gray-50",
-                        idx === 0 && "rounded-t-lg",
-                        idx === 2 && "rounded-b-lg"
-                      )}
-                    >
-                      <span className={cn("w-2 h-2 rounded-full flex-shrink-0", pConfig.dot)} />
-                      <span className={cn("font-medium flex-1 text-left", pConfig.text)}>{pConfig.label}</span>
-                      {item.priority === p && (
-                        <Check className="h-3.5 w-3.5 text-gray-400" />
-                      )}
-                    </button>
-                  )
-                })
-              })()}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Delete Confirmation Dialog */}
+      {/* Dialogs */}
       <ConfirmDialog
         open={deleteConfirmId !== null}
         onClose={() => setDeleteConfirmId(null)}
@@ -1289,7 +1148,6 @@ export default function ActionItemsPage() {
         isLoading={isDeleting}
       />
 
-      {/* Toast Notification */}
       <Toast
         open={toast.open}
         onClose={() => setToast({ ...toast, open: false })}
@@ -1297,6 +1155,6 @@ export default function ActionItemsPage() {
         variant={toast.variant}
         position="bottom-right"
       />
-    </motion.div>
+    </div>
   )
 }

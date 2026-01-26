@@ -21,7 +21,7 @@ import {
   Mail,
   Zap,
   CheckSquare,
-  Sparkles,
+  MessageCircle,
 } from 'lucide-react'
 import { getTemplateIconColor } from '@/lib/template-colors'
 
@@ -38,7 +38,7 @@ export const useSidebar = () => useContext(SidebarContext)
 
 const mainNavItems = [
   { label: 'Dashboard', href: '/dashboard', icon: Home },
-  { label: 'Recall', href: '/dashboard/recall', icon: Sparkles },
+  { label: 'Recall', href: '/dashboard/recall', icon: MessageCircle },
 ]
 
 const noteCategories = [
@@ -48,8 +48,8 @@ const noteCategories = [
 ]
 
 const templates = [
-  { label: 'Action Items', icon: CheckSquare, id: 'action_items', href: '/dashboard/action-items' },
-  { label: 'Investor Update', icon: Mail, id: 'investor_update', href: '/dashboard/investor-update' },
+  { label: 'Todos', icon: CheckSquare, id: 'action_items', href: '/dashboard/action-items' },
+  { label: 'Emails', icon: Mail, id: 'investor_update', href: '/dashboard/investor-update' },
   { label: 'Brain Dump', icon: Zap, id: 'brain_dump', href: '/dashboard/brain-dump' },
 ]
 
@@ -240,7 +240,7 @@ export function Sidebar({ notesCount = 0, starredCount = 0 }: SidebarProps) {
               >
                 <span className="flex items-center gap-2">
                   <FileText className="h-3.5 w-3.5" />
-                  Templates
+                  Actions
                 </span>
                 <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', templatesOpen && 'rotate-180')} />
               </button>
