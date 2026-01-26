@@ -4,6 +4,7 @@ import {
   extractActionItems,
   extractInvestorUpdate,
   extractBrainDump,
+  organizeNoteContent,
 } from '@/lib/ai/extraction'
 
 // Type for extraction results
@@ -244,6 +245,7 @@ export async function POST(request: NextRequest) {
 
     // Build extraction promises based on selected categories
     const extractionPromises: Promise<void>[] = []
+    let organizedContent: string | null = null
 
     if (selectedCategories.actionItems) {
       extractionPromises.push(
@@ -263,6 +265,15 @@ export async function POST(request: NextRequest) {
           .then(result => { extractionResults.brainDump = result })
       )
     }
+
+    // Always run note organization to improve note formatting
+    extractionPromises.push(
+      organizeNoteContent(transcript).then(result => {
+        if (result.success && result.organizedContent) {
+          organizedContent = result.organizedContent
+        }
+      })
+    )
 
     if (extractionPromises.length > 0) {
       await Promise.all(extractionPromises)
@@ -351,10 +362,17 @@ export async function POST(request: NextRequest) {
       console.error('[Smartify] Error updating user properties:', rpcError)
     }
 
-    // Update note to mark it as smartified
+    // Update note to mark it as smartified and save organized content
+    const updateData: Record<string, unknown> = {
+      smartified_at: new Date().toISOString()
+    }
+    if (organizedContent) {
+      updateData.formatted_content = organizedContent
+    }
+
     await supabase
       .from('notes')
-      .update({ smartified_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', noteId)
       .eq('user_id', user.id)
 

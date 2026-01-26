@@ -9,6 +9,7 @@ interface SmartifyModalProps {
   onOpenChange: (open: boolean) => void
   noteId: string | null
   noteTitle?: string
+  noteContent?: string
 }
 
 interface ExtractionPreview {
@@ -26,7 +27,7 @@ interface SelectedCategories {
   brainDump: boolean
 }
 
-export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: SmartifyModalProps) {
+export function SmartifyModal({ open, onOpenChange, noteId, noteTitle, noteContent }: SmartifyModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [preview, setPreview] = useState<ExtractionPreview | null>(null)
@@ -172,27 +173,62 @@ export function SmartifyModal({ open, onOpenChange, noteId, noteTitle }: Smartif
             </div>
           </div>
 
-          {/* Processing State - Brand themed spinner */}
+          {/* Processing State - Text shimmer animation */}
           {isProcessing && !showPreview && (
-            <div className="py-12 text-center">
-              <div className="relative inline-flex items-center justify-center w-20 h-20 mx-auto mb-6">
-                {/* Outer spinning ring */}
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
-                  className="absolute inset-0 w-20 h-20 border-4 border-brand-light border-t-brand rounded-full"
-                />
-                {/* Inner icon */}
-                <div className="relative z-10 w-12 h-12 bg-brand rounded-full flex items-center justify-center shadow-lg">
-                  <Wand2 className="h-6 w-6 text-white" />
+            <div className="py-6">
+              {/* Compact header */}
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <div className="relative">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+                    className="w-8 h-8 border-2 border-brand-light border-t-brand rounded-full"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Analyzing your note...</h3>
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Analyzing your note...
-              </h3>
-              <p className="text-gray-600">
-                Using AI to identify what can be extracted from your note.
-              </p>
+
+              {/* Text with shimmer overlay */}
+              {noteContent ? (
+                <div className="relative rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="max-h-[300px] overflow-y-auto p-4 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                    {noteContent}
+                  </div>
+                  {/* Shimmer overlay */}
+                  <motion.div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(110deg, transparent 25%, rgba(189, 103, 80, 0.12) 50%, transparent 75%)',
+                      backgroundSize: '200% 100%',
+                    }}
+                    animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                    transition={{ duration: 2.5, ease: 'linear', repeat: Infinity }}
+                  />
+                  {/* Fade masks */}
+                  <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-white to-transparent pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+                </div>
+              ) : (
+                /* Fallback skeleton shimmer */
+                <div className="relative rounded-xl border border-gray-200 p-4 overflow-hidden">
+                  <div className="space-y-3">
+                    {[85, 70, 90, 60, 75, 80].map((width, i) => (
+                      <div key={i} className="h-4 rounded bg-gray-100" style={{ width: `${width}%` }} />
+                    ))}
+                  </div>
+                  <motion.div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(110deg, transparent 25%, rgba(189, 103, 80, 0.12) 50%, transparent 75%)',
+                      backgroundSize: '200% 100%',
+                    }}
+                    animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                    transition={{ duration: 2.5, ease: 'linear', repeat: Infinity }}
+                  />
+                </div>
+              )}
             </div>
           )}
 

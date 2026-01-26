@@ -395,7 +395,7 @@ Want me to help you find something specific in your notes? Try asking about a to
 YOUR PERSONALITY:
 - Warm, supportive, and encouraging
 - Like a helpful colleague who knows their context
-- Use emojis sparingly but naturally (1-2 per response max)
+- Do NOT use emojis in responses
 
 ANSWERING RULES:
 1. Search the provided notes thoroughly for ANY relevant information
@@ -412,7 +412,7 @@ FORMATTING (use markdown):
 
 WHEN NO INFO FOUND:
 If the notes don't contain relevant information, respond like:
-"I looked through your notes but didn't find anything about [topic]. You might want to record a quick note about it! 🎙️"`
+"I looked through your notes but didn't find anything about [topic]. You might want to record a quick note about it!"`
 
     let userPrompt: string
 

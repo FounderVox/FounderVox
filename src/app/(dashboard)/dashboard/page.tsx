@@ -965,6 +965,9 @@ export default function DashboardPage() {
           }}
           noteId={selectedNoteForSmartify.id}
           noteTitle={selectedNoteForSmartify.title}
+          noteContent={notes.find(n => n.id === selectedNoteForSmartify?.id)?.formatted_content
+            || notes.find(n => n.id === selectedNoteForSmartify?.id)?.content
+            || notes.find(n => n.id === selectedNoteForSmartify?.id)?.raw_transcript}
         />
       )}
 
